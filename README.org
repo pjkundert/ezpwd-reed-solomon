@@ -1,0 +1,12 @@
+#+TITLE: ezpwd-reed-solomon.js
+#+STYLE: <link rel="stylesheet" type="text/css" href="org.css" />
+
+* Reed-Solomon
+
+  Error and erasure detection and correction for Javascript programs.
+
+** RSCodec
+
+   Initializes a Reed-Solomon codec with the following parameters:
+
+*** encode   
