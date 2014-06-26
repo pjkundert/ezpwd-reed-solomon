@@ -2,6 +2,7 @@
 #include <iostream>
 #include <iomanip>
 #include <cctype>
+#include <cstring>
 #include <array>
 #include <vector>
 
@@ -107,19 +108,27 @@ int main()
 {
     typedef RS_255( 253 )	rs_255_253;
     rs_255_253			rs;
-    char			data[255] = "Hello, world!";
-    int				len	= strlen( data );
+    uint8_t			data[255] = "Hello, world!";
+    int				len	= strlen( (char *)data );
     int 			parity	= rs.nroots;
+    int				eras_pos[rs.nroots] = {0};
+    int				no_eras	= 0;
+    uint8_t			corr[rs.nroots] = {0};
 
-    rs.encode( (uint8_t *)data, len, (uint8_t *)data + len );
+    rs.encode( data, len, data + len );
     std::cout << "Encoded: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
 
-    data[2] ^= 0x88;
-    std::cout << "Corrupt: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+    for ( int i = 0; i < len + parity; ++i ) {
+	data[i]			^= 1 << i % 8;
+	std::cout << "Corrupt: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
 
-    int 			count	= rs.decode( (uint8_t*)data, len, (uint8_t*)data + len );
-    std::cout << "Decoded: " << std::vector<uint8_t>( data, data+len+parity )
-	      << " (fixed: " << count << ")"<< std::endl;
+	int 			count	= rs.decode( data, len, data + len, 0, eras_pos, corr );
+	std::vector<uint8_t>	fixes( len+parity, '\0' );
+	for ( int i = 0; i < count; ++i )
+	    fixes[eras_pos[i]] = corr[i];
+	std::cout << "Correct: " << fixes << " (" << count << ")" << std::endl;
+	std::cout << "Decoded: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+    }
 
 
 }

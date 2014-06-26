@@ -1,6 +1,6 @@
 
 SHELL	= /bin/bash
-CXXFLAGS += -I. -Wall -std=c++11
+CXXFLAGS += -I. -Wall -g -O0 -std=c++11
 
 rssimple.o:	rssimple.C rs rs.H
 

@@ -9,15 +9,20 @@
  * Adaption to the kernel by Thomas Gleixner (tglx@linutronix.de)
  * Converted to C++ by Perry Kundert (perry@hardconsulting.com)
  * 
- * Taken 
+ *     The Linux 3.15.1 version of lib/reed_solomon was used, which (in turn) is basically verbatim
+ * copied from Phil Karn's implementation.  I've personally been using Phil's implementation for
+ * years in a heavy industrial use, and it is rock-solid.
  * 
  */
 #ifndef _EZPWDRS
 #define _EZPWDRS
 
-#include <array>
+#include <algorithm>
+#include <array_safe>
 #include <cstdint>
+
 namespace ezpwd {
+
     /**
      * reed_solomon::gfpoly - default field polynomial generator functor.
      */
@@ -51,7 +56,9 @@ namespace ezpwd {
      * @prim:		Primitive element, index form
      * @iprim:		prim-th root of 1, index form
      * @poly:		The primitive generator polynominal functor
-     * 
+     * @mutex_t:	A std::mutex like object, or a dummy
+     * @guard_t:	A std::lock_guard, or anything that can take a mutex_t
+     *
      *     All reed_solomon<T, ...> instances with the same template type parameters share a common
      * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
      * initializes the tables (optionally protected by a std::mutex/std::lock_guard).
@@ -158,7 +165,7 @@ namespace ezpwd {
 	void				encode(
 					    data_t 	       *data,
 					    int			len,
-					    data_t	       *par,
+					    data_t	       *par, // at least nroots
 					    data_t		invmsk	= 0 )
 	    const
 	{
@@ -177,7 +184,7 @@ namespace ezpwd {
 		}
 		/* Shift */
 		std::rotate( par, par + 1, par + nroots );
-		memmove( par, par + 1, ( sizeof *par ) * (nroots - 1));
+		// was: memmove( &par[0], &par[1], ( sizeof par[0] ) * ( nroots - 1 ));
 		if (fb != nn) {
 		    par[nroots - 1] = alpha_to[modnn(fb + genpoly[0])];
 		} else {
@@ -189,14 +196,14 @@ namespace ezpwd {
 	int				decode(
 					    data_t	       *data,
 					    int			len,
-					    data_t	       *par,
+					    data_t	       *par, // at least nroots
 					    int			no_eras	= 0, 
 					    int		       *eras_pos= 0,
-					    data_t		invmsk	= 0,
-					    uint16_t	       *corr	= 0 )
+					    data_t	       *corr	= 0,
+					    data_t		invmsk	= 0 )
 	    const
 	{
-	    std::array<data_t,nroots+1>	lambda;
+	    std::array<data_t,nroots+1>	lambda	= { 0 };
 	    std::array<data_t,nroots>	syn;
 	    std::array<data_t,nroots+1>	b;
 	    std::array<data_t,nroots+1>	t;
@@ -212,8 +219,7 @@ namespace ezpwd {
 	    if (pad < 0 || pad >= nn)
 		throw std::runtime_error( "reed-solomon: data length incompatible with block size and error correction symbols" );
 
-	    /* form the syndromes; i.e., evaluate data(x) at roots of
-	     * g(x) */
+	    /* form the syndromes; i.e., evaluate data(x) at roots of g(x) */
 	    for ( int i = 0; i < nroots; i++ )
 		syn[i]			=  (((uint16_t) data[0]) ^ invmsk) & msk;
 
@@ -260,7 +266,7 @@ namespace ezpwd {
 
 	    lambda[0] 			= 1;
 
-	    if (no_eras > 0) {
+	    if ( no_eras > 0 ) {
 		/* Init lambda to be the erasure locator polynomial */
 		lambda[1]		= alpha_to[modnn(prim * (nn - 1 - eras_pos[0]))];
 		for ( int i = 1; i < no_eras; i++ ) {
@@ -278,19 +284,18 @@ namespace ezpwd {
 		b[i]			= index_of[lambda[i]];
 
 	    /*
-	     * Begin Berlekamp-Massey algorithm to determine error+erasure
-	     * locator polynomial
+	     * Begin Berlekamp-Massey algorithm to determine error+erasure locator polynomial
 	     */
 	    while ( ++r <= nroots ) { /* r is the step number */
 		/* Compute discrepancy at the r-th step in poly-form */
-		data_t discr_r = 0;
+		data_t		discr_r	= 0;
 		for ( int i = 0; i < r; i++ ) {
 		    if ((lambda[i] != 0) && (syn[r - i - 1] != nn)) {
 			discr_r	       ^= alpha_to[modnn(index_of[lambda[i]] + syn[r - i - 1])];
 		    }
 		}
 		discr_r			= index_of[discr_r];	/* Index form */
-		if (discr_r == nn) {
+		if ( discr_r == nn ) {
 		    /* 2 lines below: B(x) <-- x*B(x) */
 		    // Rotate the last element of b[nroots+1] to b[0]; was:
 		    // memmove (&b[1], b, nroots * sizeof (b[0]));
@@ -298,7 +303,7 @@ namespace ezpwd {
 		    b[0]		= nn;
 		} else {
 		    /* 7 lines below: T(x) <-- lambda(x)-discr_r*x*b(x) */
-		    t[0] = lambda[0];
+		    t[0]		= lambda[0];
 		    for ( int i = 0; i < nroots; i++ ) {
 			if (b[i] != nn) {
 			    t[i + 1]	= lambda[i + 1]
@@ -306,11 +311,10 @@ namespace ezpwd {
 			} else
 			    t[i + 1]	 = lambda[i + 1];
 		    }
-		    if (2 * el <= r + no_eras - 1) {
-			el = r + no_eras - el;
+		    if ( 2 * el <= r + no_eras - 1 ) {
+			el		= r + no_eras - el;
 			/*
-			 * 2 lines below: B(x) <-- inv(discr_r) *
-			 * lambda(x)
+			 * 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
 			 */
 			for ( int i = 0; i <= nroots; i++ ) {
 			    b[i]	= ((lambda[i] == 0)
@@ -330,7 +334,7 @@ namespace ezpwd {
 	    /* Convert lambda to index form and compute deg(lambda(x)) */
 	    for ( int i = 0; i < nroots + 1; i++ ) {
 		lambda[i]		= index_of[lambda[i]];
-		if (lambda[i] != nn)
+		if ( lambda[i] != nn )
 		    deg_lambda		= i;
 	    }
 	    /* Find roots of error+erasure locator polynomial by Chien search */
@@ -342,33 +346,28 @@ namespace ezpwd {
 	    for ( int i = 1, k = iprim - 1; i <= nn; i++, k = modnn( k + iprim )) {
 		data_t		q	= 1; /* lambda[0] is always 0 */
 		for ( int j = deg_lambda; j > 0; j-- ) {
-		    if (reg[j] != nn) {
+		    if ( reg[j] != nn ) {
 			reg[j]		= modnn(reg[j] + j);
 			q	       ^= alpha_to[reg[j]];
 		    }
 		}
-		if (q != 0)
+		if ( q != 0 )
 		    continue;	/* Not a root */
 		/* store root (index-form) and error location number */
 		root[count]		= i;
 		loc[count]		= k;
-		/* If we've already found max possible roots,
-		 * abort the search to save time
-		 */
-		if (++count == deg_lambda)
+		/* If we've already found max possible roots, abort the search to save time */
+		if ( ++count == deg_lambda )
 		    break;
 	    }
-	    if (deg_lambda != count) {
-		/*
-		 * deg(lambda) unequal to number of roots => uncorrectable
-		 * error detected
-		 */
+	    if ( deg_lambda != count ) {
+		/* deg(lambda) unequal to number of roots => uncorrectable error detected */
 		count			= -1;
 		goto finish;
 	    }
 	    /*
-	     * Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo
-	     * x**nroots). in index form. Also find deg(omega).
+	     * Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo x**nroots). in
+	     * index form. Also find deg(omega).
 	     */
 	    deg_omega 			= deg_lambda - 1;
 	    for ( int i = 0; i <= deg_omega; i++ ) {
@@ -381,46 +380,47 @@ namespace ezpwd {
 	    }
 
 	    /*
-	     * Compute error values in poly-form. num1 = omega(inv(X(l))), num2 =
-	     * inv(X(l))**(fcr-1) and den = lambda_pr(inv(X(l))) all in poly-form
+	     * Compute error values in poly-form. num1 = omega(inv(X(l))), num2 = inv(X(l))**(fcr-1)
+	     * and den = lambda_pr(inv(X(l))) all in poly-form
 	     */
 	    for ( int j = count - 1; j >= 0; j-- ) {
 		data_t		num1	= 0;
 		for ( int i = deg_omega; i >= 0; i-- ) {
-		    if (omega[i] != nn)
+		    if ( omega[i] != nn )
 			num1	       ^= alpha_to[modnn(omega[i] + i * root[j])];
 		}
 		data_t		num2	= alpha_to[modnn(root[j] * (fcr - 1) + nn)];
 		data_t		den	= 0;
 
-		/* lambda[i+1] for i even is the formal derivative
-		 * lambda_pr of lambda[i] */
+		/* lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i] */
 		for ( int i = std::min(deg_lambda, nroots - 1) & ~1; i >= 0; i -= 2 ) {
 		    if (lambda[i + 1] != nn) {
 			den	       ^= alpha_to[modnn(lambda[i + 1] + i * root[j])];
 		    }
 		}
 		/* Apply error to data */
-		if (num1 != 0 && loc[j] >= pad) {
+		if ( num1 != 0 && loc[j] >= pad ) {
 		    data_t	cor	= alpha_to[modnn(index_of[num1]
 							 + index_of[num2]
 							 + nn - index_of[den])];
-		    /* Store the error correction pattern, if a
-		     * correction buffer is available */
-		    if (corr) {
+		    /* Store the error correction pattern, if a correction buffer is available */
+		    if ( corr )
 			corr[j] 	= cor;
-		    } else {
-			/* If a data buffer is given and the
-			 * error is inside the message,
-			 * correct it */
-			if (data && (loc[j] < (nn - nroots)))
+		    /* If a data/parity buffer is given and the error is inside the message or
+		     * parity data, correct it */
+		    if ( loc[j] < ( nn - nroots )) {
+			if ( data ) {
 			    data[loc[j] - pad] ^= cor;
+			}
+		    } else if ( loc[j] < nn ) {
+		        if ( par )
+		            par[loc[j] - ( nn - nroots )] ^= cor;
 		    }
 		}
 	    }
 
 	finish:
-	    if (eras_pos != NULL) {
+	    if ( eras_pos != NULL ) {
 		for ( int i = 0; i < count; i++)
 		    eras_pos[i]		= loc[i] - pad;
 	    }
@@ -433,7 +433,7 @@ namespace ezpwd {
     // 
     //     The reed_solomon<...>::iprim == 0 is used to indicate to the first instance that the
     // static tables require initialization.  If reed_solomon<...>::mutex is something like a
-    // std::mutex, and reed_solomon<...>::lock_guard, then the mutex is acquired around the test and
+    // std::mutex, and guard_t is a std::lock_guard, then the mutex is acquired for the test and
     // initialization.
     // 
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
@@ -450,24 +450,10 @@ namespace ezpwd {
         std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nroots + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
 
-    // ezpwd::log_<N,base> -- compute the log of N
-    template <size_t N, size_t base=2>
-    struct log_
-    {
-	enum { value = 1 + log_<N/base, base>::value };
-    };
-
-    template <size_t base>
-    struct log_<1, base>
-    {
-	enum { value = 0 };
-    };
-
-    template <size_t base>
-    struct log_<0, base>
-    {
-	enum { value = 0 };
-    };
+    // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
+    template <size_t N, size_t B=2> struct log_{       enum { value = 1 + log_<N/B, B>::value }; };
+    template <size_t B>		    struct log_<1, B>{ enum { value = 0 }; };
+    template <size_t B>		    struct log_<0, B>{ enum { value = 0 }; };
 
 // RS( ... ) -- Define a reed-solomon codec 
 // 

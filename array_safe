@@ -1,0 +1,33 @@
+#ifndef _ARRAY_SAFE
+#define _ARRAY_SAFE
+
+#include <array>
+
+namespace ezpwd {
+    //
+    // array_safe  -- a std::array with bounds checking by default
+    //
+    template < typename T, std::size_t S >
+    struct array_safe
+	: std::array<T, S> {
+	
+	using typename std::array<T,S>::reference;
+	using typename std::array<T,S>::const_reference;
+	using typename std::array<T,S>::size_type;
+	using std::array<T,S>::at;
+	reference
+				operator[]( size_type i )
+	{
+	    return at( i );
+	}
+	constexpr
+	const_reference
+				operator[]( size_type i )
+	    const
+	{
+	    return at( i );
+	}
+    };
+} // namespace ezpwd
+
+#endif // _ARRAY_SAFE
