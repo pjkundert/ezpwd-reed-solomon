@@ -112,7 +112,7 @@ int main()
     int				len	= strlen( (char *)data );
     int 			parity	= rs.nroots;
     int				eras_pos[rs.nroots] = {0};
-    int				no_eras	= 0;
+  //int				no_eras	= 0;
     uint8_t			corr[rs.nroots] = {0};
 
     rs.encode( data, len, data + len );

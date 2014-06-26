@@ -18,30 +18,38 @@
 #define _EZPWDRS
 
 #include <algorithm>
-#include <array_safe>
 #include <cstdint>
+
+// ARRAY_SAFE -- define to force usage of bounds-checked arrays for most tabular data
+// ARRAY_TEST -- define to force erroneous sizing of some arrays
+#if defined( ARRAY_SAFE )
+#  include <array_safe>
+#else
+#  include <array>
+#  define array_safe std::array
+#endif
 
 namespace ezpwd {
 
     /**
      * reed_solomon::gfpoly - default field polynomial generator functor.
      */
-    template < int mm, int poly >
+    template < int SYM, int PLY >
     struct gfpoly {
 	int 			operator() ( int sr )
+	    const
 	{
 	    if ( sr == 0 )
 		sr			= 1;
 	    else {
 		sr	      	      <<= 1;
-		if ( sr & ( 1 << mm ))
-		    sr	       	       ^= poly;
-		sr		       &= ( 1 << mm ) - 1;
+		if ( sr & ( 1 << SYM ))
+		    sr	       	       ^= PLY;
+		sr		       &= ( 1 << SYM ) - 1;
 	    }
 	    return sr;
 	}
     };
-
 
     /**
      * struct reed_solomon - Reed-Solomon codec
@@ -63,29 +71,32 @@ namespace ezpwd {
      * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
      * initializes the tables (optionally protected by a std::mutex/std::lock_guard).
      */
-    template < typename data_t_,
-	       int symbols_, int nroots_, int fcr_, int prim_,
-	       class poly,
-	       typename mutex_t=int, typename guard_t=int >
-
+    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
+	       typename MTX=int, typename GRD=int >
     class reed_solomon {
     public:
-	typedef data_t_		data_t;
+	typedef TYP		data_t;
 
-	static const int	mm	= symbols_;
-	static const int	nn	= ( 1 << symbols_ ) - 1;
-	static const int	nroots	= nroots_;
-	static const int	fcr	= fcr_;
-	static const int	prim	= prim_;
+	static const int	mm	= SYM;
+	static const int	nn	= ( 1 << SYM ) - 1;
+	static const int	nroots	= RTS;
+	static const int	fcr	= FCR;
+	static const int	prim	= PRM;
 
     protected:
-	static mutex_t		mutex;
+	static MTX		mutex;
 	static int 		iprim;
-	static std::array<data_t,nn+1>
+
+#if defined( ARRAY_TEST )
+#  warning "ARRAY_TEST: Erroneously declaring alpha_to size!"
+	static array_safe<data_t,nn    >
+#else
+	static array_safe<data_t,nn + 1>
+#endif
 				alpha_to;
-	static std::array<data_t,nn+1>
+	static array_safe<data_t,nn + 1>
 				index_of;
-	static std::array<data_t,nroots+1>
+	static array_safe<data_t,nroots + 1>
 				genpoly;
 
     public:
@@ -118,19 +129,19 @@ namespace ezpwd {
 				reed_solomon()
 	{
 	    // lock, if guard/mutex provided, and do init if not already done
-	    guard_t		guard( mutex ); (void)guard;
+	    GRD			guard( mutex ); (void)guard;
 	    if ( iprim )
 		return;
 
 	    /* Generate Galois field lookup tables */
 	    index_of[0]			= nn;	/* log(zero) = -inf */
 	    alpha_to[nn]		= 0;	/* alpha**-inf = 0 */
-	    poly		polyfunc;
-	    int			sr	= polyfunc( 0 );
+	    PLY			poly;
+	    int			sr	= poly( 0 );
 	    for ( int i = 0; i < nn; i++ ) {
 		index_of[sr]		= i;
 		alpha_to[i]		= sr;
-		sr			= polyfunc( sr );
+		sr			= poly( sr );
 	    }
 	    /* If it's not primitive, exit */
 	    if ( sr != alpha_to[0] )
@@ -203,14 +214,14 @@ namespace ezpwd {
 					    data_t		invmsk	= 0 )
 	    const
 	{
-	    std::array<data_t,nroots+1>	lambda	= { 0 };
-	    std::array<data_t,nroots>	syn;
-	    std::array<data_t,nroots+1>	b;
-	    std::array<data_t,nroots+1>	t;
-	    std::array<data_t,nroots+1>	omega;
-	    std::array<data_t,nroots>	root;
-	    std::array<data_t,nroots+1>	reg;
-	    std::array<data_t,nroots>	loc;
+	    array_safe<data_t,nroots+1>	lambda { { 0 } };
+	    array_safe<data_t,nroots>	syn;
+	    array_safe<data_t,nroots+1>	b;
+	    array_safe<data_t,nroots+1>	t;
+	    array_safe<data_t,nroots+1>	omega;
+	    array_safe<data_t,nroots>	root;
+	    array_safe<data_t,nroots+1>	reg;
+	    array_safe<data_t,nroots>	loc;
 	    int			count	= 0;
 	    data_t		msk	= (data_t)nn;
 
@@ -441,13 +452,18 @@ namespace ezpwd {
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
         int				reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::iprim = 0;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
+#if defined( ARRAY_TEST )
+#  warning "ARRAY_TEST: Erroneously defining alpha_to size!"
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn     >
+#else
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
+#endif
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::alpha_to;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::index_of;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nroots + 1 >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nroots + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
 
     // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
