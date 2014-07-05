@@ -1,4 +1,4 @@
-#define DEBUG 2
+//#define DEBUG 2
 
 #include <rs>
 #include <iostream>
@@ -14,32 +14,29 @@ int main()
 {
     typedef RS_255( 253 )	rs_255_253;
     rs_255_253			rs;
-    uint8_t			data[255] = "Hello, world!";
-    int				len	= strlen( (char *)data );
-    int 			parity	= rs.nroots;
-    int				eras_pos[rs.nroots] = {0};
-    int				no_eras	= 0;
-    uint8_t			corr[rs.nroots] = {0};
+    std::string			orig	= "Hello, world!";
+    std::vector<int>		erasure;
 
-    rs.encode( data, len, data + len );
-    std::cout << "Encoded: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+    rs.encode( orig );
+    std::cout << "Encoded: " << std::vector<uint8_t>( orig.begin(), orig.end() ) << std::endl;
 
-    for ( int i = 0; i < len + parity; ++i ) {
-	no_eras = 0;
-	if ( i&1 ) {
-	    eras_pos[no_eras++] = i; // erasure
-	    data[i] = ' ';
-	    std::cout << "Erasure: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+    for ( size_t i = 0; i < orig.size(); ++i ) {
+	std::string		data( orig );
+	erasure.clear();
+	if ( i & 1 ) {
+	    erasure.push_back( i );
+	    data[i]			= ' ';		// erasure
+	    std::cout << "Erasure: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl;
 	} else {
-	    data[i] ^= 1 << i % 8; // error
-	    std::cout << "Corrupt: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+	    data[i]		       ^= 1 << i % 8;	// error
+	    std::cout << "Corrupt: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl;
 	}
-	int 			count	= rs.decode( data, len, data + len, eras_pos, 0, corr );
-	std::vector<uint8_t>	fixes( len+parity, '\0' );
-	for ( int i = 0; i < count; ++i )
-	    fixes[eras_pos[i]] = corr[i];
-	std::cout << "Correct: " << fixes << " (" << count << ")" << std::endl;
-	std::cout << "Decoded: " << std::vector<uint8_t>( data, data+len+parity ) << std::endl;
+	int 			count	= rs.decode( data, 0, &erasure );
+	std::string		fixes( data.size() * 2, ' ' );
+	for ( int i : erasure )
+	    fixes[i*2+0] = fixes[i*2+1]	= '^';
+	std::cout << "Fixed:   " << fixes << "(count: " << count << ")" << std::endl;
+	std::cout << "Decoded: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl << std::endl;
     }
     exercise( rs );
 

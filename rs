@@ -14,8 +14,8 @@
  * years in a heavy industrial use, and it is rock-solid.
  * 
  */
-#ifndef _EZPWDRS
-#define _EZPWDRS
+#ifndef _EZPWD_RS
+#define _EZPWD_RS
 
 #include <algorithm>
 #include <vector>
@@ -35,7 +35,57 @@
 namespace ezpwd {
 
     /**
-     * reed_solomon::gfpoly - default field polynomial generator functor.
+     * reed_solomon_base - Reed-Solomon codec generic base class
+     */
+    class reed_solomon_base {
+    public:
+	virtual int		datum()		const = 0;	// a data element's bits
+	virtual int		symbol()	const = 0;	// a symbol's bits
+	virtual int		size()		const = 0;	// R-S block size
+	virtual int		nroots()	const = 0;	// R-S roots
+	virtual	int		load()		const = 0;	// R-S net payload
+
+	virtual		       ~reed_solomon_base()
+	{
+	    ;
+	}
+				reed_solomon_base()
+	{
+	    ;
+	}
+
+	virtual void		encode(
+				    std::string	       &data,
+				    std::string	       *parity	= 0 )
+	    const
+	= 0;
+
+	// 
+	// {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded std::string
+	// 
+	///     The parity symbols may be included in 'data', or may (optionally) supplied
+	/// separately in (at least nroots-sized) 'parity'.  Optionally specify some known erasure
+	/// positions.  If 'erasures' is specified, it wil be extended to be capable of storing up
+	/// to 'nroots()' ints; the actual deduced error locations will be returned.
+	///  
+	/// RETURN VALUE
+	/// 
+	///     The number of symbols corrected.  Both errors and erasures are included, so long as
+	/// they are actually different than the deduced value.  In other words, if a symbol is
+	/// marked as an erasure but it actually turns out to be correct, it's index will NOT be
+	/// included in the returned count, or the modified *era array!
+	/// 
+	virtual
+	int			decode(
+				    std::string	       &data,
+				    std::string	       *parity	= 0,
+				    std::vector<int>   *erasure	= 0 )
+	    const
+	= 0;
+    };
+
+    /**
+     * gfpoly - default field polynomial generator functor.
      */
     template < int SYM, int PLY >
     struct gfpoly {
@@ -57,8 +107,8 @@ namespace ezpwd {
     /**
      * struct reed_solomon - Reed-Solomon codec
      *
-     * @mm:		Bits per symbol
-     * @nn:		Symbols per block (= (1<<mm)-1)
+     * @MM:		Bits per symbol
+     * @NN:		Symbols per block (= (1<<mm)-1)
      * @alpha_to:	log lookup table
      * @index_of:	Antilog lookup table
      * @genpoly:	Generator polynomial
@@ -73,79 +123,155 @@ namespace ezpwd {
      *     All reed_solomon<T, ...> instances with the same template type parameters share a common
      * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
      * initializes the tables (optionally protected by a std::mutex/std::lock_guard).
+     * 
+     *     Each specialized type of reed_solomon implements a specific encode/decode method
+     * appropriate to its data 'TYP' 'data_t'.  When accessed via a generic reed_solomon_base
+     * pointer, 
      */
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
 	       typename MTX=int, typename GRD=int >
-    class reed_solomon {
+    class reed_solomon
+	: public reed_solomon_base {
     public:
 	typedef TYP		data_t;
+	typedef MTX		mutex_t;
+	typedef GRD		guard_t;
 
-	static const int	symbol	= SYM;
-	static const int	capacity= ( 1 << SYM ) - 1;
-	static const int	nroots	= RTS;
-	static const int	payload	= capacity - nroots;
-	static const int	mm	= symbol;
-	static const int	nn	= capacity;
-	static const int	a0	= nn;
-	static const int	fcr	= FCR;
-	static const int	prim	= PRM;
+	static const int	DATA	= 8 * sizeof data_t();	// bits / data_t
+	static const int	SYMBOL	= SYM;			// bits / symbol
+	static const int	NROOTS	= RTS;
+	static const int	SIZE	= ( 1 << SYMBOL ) - 1;
+	static const int	LOAD	= SIZE - NROOTS;
+	static const int	MM	= SYMBOL;
+	static const int	NN	= SIZE;
+	static const int	A0	= NN;
 
+	virtual int		datum() const
+	{
+	    return DATA;
+	}
+
+	virtual int		symbol() const
+	{
+	    return SYMBOL;
+	}
+
+	virtual int		size() const
+	{
+	    return SIZE;
+	}
+
+	virtual int		nroots() const
+	{
+	    return NROOTS;
+	}
+
+	virtual int		load() const
+	{
+	    return LOAD;
+	}
+
+	using reed_solomon_base::encode;
+	virtual void		encode(
+				    std::string	       &data,
+				    std::string	       *parity	= 0 )
+	    const
+	{
+	    if ( parity ) {
+		parity->resize( NROOTS );
+		encode( (data_t *)&data.front(), data.size(),
+			(data_t *)&parity->front() );
+	    } else {
+		data.resize( data.size() + NROOTS );
+		encode( (data_t *)&data.front(), data.size() - NROOTS,
+			(data_t *)&data.front() + data.size() - NROOTS );
+	    }
+	}
+	
+	using reed_solomon_base::decode;
+	virtual	int		decode(
+				    std::string	       &data,
+				    std::string	       *parity	= 0,
+				    std::vector<int>   *erasure	= 0 )	// positions
+	    const
+	{
+	    uint8_t		       *dataptr	= (uint8_t *)&data.front();
+	    int				datalen	= data.size();
+	    uint8_t		       *pariptr;
+	    if ( parity ) {
+		if ( parity->size() < NROOTS )
+		    throw std::runtime_error( "reed-solomon: parity std::string::size incompatible with number of roots" );
+		pariptr				= (uint8_t *)&parity->front();
+	    } else {
+		datalen			       -= NROOTS;
+		pariptr				= dataptr + datalen;
+	    }
+	    if ( ! erasure )
+		return decode( dataptr, datalen, pariptr );
+	    int			erasures	= erasure->size();
+	    erasure->resize( NROOTS );
+	    int			corrects	= decode( dataptr, datalen, pariptr,
+							  &erasure->front(), erasures );
+	    erasure->resize( std::max( 0, corrects ));
+	    return corrects;
+	}
+	
     protected:
-	static MTX		mutex;
+	static mutex_t		mutex;
 	static int 		iprim;
 
 #if defined( ARRAY_TEST )
 #  warning "ARRAY_TEST: Erroneously declaring alpha_to size!"
-	static array_safe<data_t,nn    >
+	static array_safe<data_t,NN    >
 #else
-	static array_safe<data_t,nn + 1>
+	static array_safe<data_t,NN + 1>
 #endif
 				alpha_to;
-	static array_safe<data_t,nn + 1>
+	static array_safe<data_t,NN + 1>
 				index_of;
-	static array_safe<data_t,nroots + 1>
+	static array_safe<data_t,NROOTS + 1>
 				genpoly;
 
-    public:
 	/** modulo replacement for galois field arithmetics
 	 *
 	 *  @x:		the value to reduce
 	 *
 	 *  where
-	 *  mm = number of bits per symbol
-	 *  nn = (2^rs->mm) - 1
+	 *  MM = number of bits per symbol
+	 *  NN = (2^MM) - 1
 	 *
-	 *  Simple arithmetic modulo would return a wrong result for values
-	 *  >= 3 * this->nn
+	 *  Simple arithmetic modulo would return a wrong result for values >= 3 * NN
 	 */
-	int	 			modnn(
-					    int 		x )
+	int	 		modnn(
+				    int 		x )
 	    const
 	{
-	    while ( x >= nn ) {
-		x		       -= nn;
-		x			= ( x >> mm ) + ( x & nn );
+	    while ( x >= NN ) {
+		x		       -= NN;
+		x			= ( x >> MM ) + ( x & NN );
 	    }
 	    return x;
 	}
 
-	    		       ~reed_solomon()
+    public:
+	virtual		       ~reed_solomon()
 	{
 	    ;
 	}
 				reed_solomon()
+				    : reed_solomon_base()
 	{
 	    // lock, if guard/mutex provided, and do init if not already done
-	    GRD			guard( mutex ); (void)guard;
+	    guard_t		guard( mutex ); (void)guard;
 	    if ( iprim )
 		return;
 
 	    /* Generate Galois field lookup tables */
-	    index_of[0]			= a0;	/* log(zero) = -inf */
-	    alpha_to[a0]		= 0;	/* alpha**-inf = 0 */
+	    index_of[0]			= A0;	/* log(zero) = -inf */
+	    alpha_to[A0]		= 0;	/* alpha**-inf = 0 */
 	    PLY			poly;
 	    int			sr	= poly( 0 );
-	    for ( int i = 0; i < nn; i++ ) {
+	    for ( int i = 0; i < NN; i++ ) {
 		index_of[sr]		= i;
 		alpha_to[i]		= sr;
 		sr			= poly( sr );
@@ -155,14 +281,14 @@ namespace ezpwd {
 		throw std::runtime_error( "reed-solomon: Galois field polynomial not primitive" );
 
 	    /* Find prim-th root of 1, used in decoding */
-	    for ( iprim = 1; (iprim % prim) != 0; iprim += nn )
+	    for ( iprim = 1; (iprim % PRM) != 0; iprim += NN )
 		;
 	    /* prim-th root of 1, index form */
-	    iprim 		       /= prim;
+	    iprim 		       /= PRM;
 
 	    /* Form RS code generator polynomial from its roots */
 	    genpoly[0]			= 1;
-	    for ( int i = 0, root = fcr * prim; i < nroots; i++, root += prim ) {
+	    for ( int i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
 		genpoly[i + 1]		= 1;
 		/* Multiply genpoly[] by  @**(root + x) */
 		for ( int j = i; j > 0; j-- ) {
@@ -176,94 +302,105 @@ namespace ezpwd {
 		genpoly[0]		= alpha_to[modnn(index_of[genpoly[0]] + root)];
 	    }
 	    /* convert genpoly[] to index form for quicker encoding */
-	    for ( int i = 0; i <= nroots; i++ )
+	    for ( int i = 0; i <= NROOTS; i++ )
 		genpoly[i]		= index_of[genpoly[i]];
 	}
 
-	void				encode(
-					    const data_t       *data,
-					    int			len,
-					    data_t	       *parity, // at least nroots
-					    data_t		invmsk	= 0 )
+	void			encode(
+				    const data_t       *data,
+				    int			len,
+				    data_t	       *parity, // at least nroots
+				    data_t		invmsk	= 0 )
 	    const
 	{
 	    /* Check length parameter for validity */
-	    int			pad	= nn - nroots - len;
-	    if ( pad < 0 || pad >= nn )
+	    int			pad	= NN - NROOTS - len;
+	    if ( pad < 0 || pad >= NN )
 		throw std::runtime_error( "reed-solomon: data length incompatible with block size and error correction symbols" );
-	    for ( int i = 0; i < nroots; i++ )
+	    for ( int i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
 	    for ( int i = 0; i < len; i++ ) {
 		data_t		feedback= index_of[data[i] ^ invmsk ^ parity[0]];
-		if ( feedback != a0 ) /* feedback term is non-zero */
-		    for ( int j = 1; j < nroots; j++ )
-			parity[j]       ^= alpha_to[modnn(feedback + genpoly[nroots - j])];
+		if ( feedback != A0 ) /* feedback term is non-zero */
+		    for ( int j = 1; j < NROOTS; j++ )
+			parity[j]       ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
 
 		/* Shift */
-		// was: memmove( &par[0], &par[1], ( sizeof par[0] ) * ( nroots - 1 ));
-		std::rotate( parity, parity + 1, parity + nroots );
-		if ( feedback != a0 ) {
-		    parity[nroots - 1]	= alpha_to[modnn(feedback + genpoly[0])];
+		// was: memmove( &par[0], &par[1], ( sizeof par[0] ) * ( NROOTS - 1 ));
+		std::rotate( parity, parity + 1, parity + NROOTS );
+		if ( feedback != A0 ) {
+		    parity[NROOTS - 1]	= alpha_to[modnn(feedback + genpoly[0])];
 		} else {
-		    parity[nroots - 1]	= 0;
+		    parity[NROOTS - 1]	= 0;
 		}
 	    }
 	}
 
-	int				decode(
-					    data_t	       *data,
-					    int			len,
-					    data_t	       *par, // at least nroots
-					    int		       *eras_pos= 0,
-					    int			no_eras	= 0,
-					    data_t	       *corr	= 0,
-					    data_t		invmsk	= 0 )
+	int			decode(
+				    data_t	       *data,
+				    int			len,
+				    data_t	       *parity,
+				    int		       *eras_pos= 0,
+				    int			no_eras	= 0,
+				    data_t	       *corr	= 0,
+				    data_t		invmsk	= 0 )
 	    const
 	{
-	    array_safe<data_t,nroots+1>	lambda { { { 0 } } };
-	    array_safe<data_t,nroots>	syn;
-	    array_safe<data_t,nroots+1>	b;
-	    array_safe<data_t,nroots+1>	t;
-	    array_safe<data_t,nroots+1>	omega;
-	    array_safe<int,nroots>	root;
-	    array_safe<data_t,nroots+1>	reg;
-	    array_safe<int,nroots>	loc;
+	    typedef array_safe< data_t, NROOTS >
+				data_nroots;
+	    typedef array_safe< data_t, NROOTS+1 >
+				data_nroots_1;
+	    typedef array_safe< int, NROOTS >
+				ints_nroots;
+
+	    data_nroots_1	lambda { { { 0 } } };
+	    data_nroots		syn;
+	    data_nroots_1	b;
+	    data_nroots_1	t;
+	    data_nroots_1	omega;
+	    ints_nroots		root;
+	    data_nroots_1	reg;
+	    ints_nroots		loc;
 	    int			count	= 0;
 
 	    /* Check length parameter for validity */
-	    int			pad	= nn - nroots - len;
-	    if (pad < 0 || pad >= nn)
+	    int			pad	= NN - NROOTS - len;
+	    if ( pad < 0 || pad >= NN )
 		throw std::runtime_error( "reed-solomon: data length incompatible with block size and error correction symbols" );
+	    if ( no_eras )
+		for ( int i = 0; i < no_eras; ++i )
+		    if ( eras_pos[i] < 0 || eras_pos[i] >= len + NROOTS )
+			throw std::runtime_error( "reed-solomon: erasure positions outside data+parity" );
 
-	    /* form the syndromes; i.e., evaluate data(x) at roots of g(x) */
-	    for ( int i = 0; i < nroots; i++ )
+	    // form the syndromes; i.e., evaluate data(x) at roots of g(x)
+	    for ( int i = 0; i < NROOTS; i++ )
 		syn[i]			= data[0] ^ invmsk;
 
 	    for ( int j = 1; j < len; j++ ) {
-		for ( int i = 0; i < nroots; i++ ) {
+		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
 			syn[i]		= data[j] ^ invmsk;
 		    } else {
 			syn[i]		= data[j] ^ invmsk
-			    ^ alpha_to[modnn(index_of[syn[i]] + ( fcr + i ) * prim)];
+			    ^ alpha_to[modnn(index_of[syn[i]] + ( FCR + i ) * PRM)];
 		    }
 		}
 	    }
 
-	    for ( int j = 0; j < nroots; j++ ) {
-		for ( int i = 0; i < nroots; i++ ) {
+	    for ( int j = 0; j < NROOTS; j++ ) {
+		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
-			syn[i]		= par[j];
+			syn[i]		= parity[j];
 		    } else {
-			syn[i] 		= par[j]
-			    ^ alpha_to[modnn(index_of[syn[i]] + (fcr + i) * prim)];
+			syn[i] 		= parity[j]
+			    ^ alpha_to[modnn(index_of[syn[i]] + ( FCR + i ) * PRM)];
 		    }
 		}
 	    }
 
-	    /* Convert syndromes to index form, checking for nonzero condition */
+	    // Convert syndromes to index form, checking for nonzero condition
 	    data_t 		syn_error = 0;
-	    for ( int i = 0; i < nroots; i++ ) {
+	    for ( int i = 0; i < NROOTS; i++ ) {
 		syn_error	       |= syn[i];
 		syn[i]			= index_of[syn[i]];
 	    }
@@ -273,53 +410,53 @@ namespace ezpwd {
 	    int			r	= no_eras;
 	    int			el	= no_eras;
 	    if (!syn_error) {
-		/* if syndrome is zero, data[] is a codeword and there are no
-		 * errors to correct. So return data[] unmodified
-		 */
+		// if syndrome is zero, data[] is a codeword and there are no errors to correct.
 		count			= 0;
 		goto finish;
 	    }
 
 	    lambda[0] 			= 1;
-
 	    if ( no_eras > 0 ) {
-		/* Init lambda to be the erasure locator polynomial */
-		lambda[1]		= alpha_to[modnn(prim * (nn - 1 - eras_pos[0]))];
+		// Init lambda to be the erasure locator polynomial.  Convert erasure positions
+		// from index into data, to index into Reed-Solomon block.
+		lambda[1]		= alpha_to[modnn(PRM * (NN - 1 - ( eras_pos[0] + pad )))];
 		for ( int i = 1; i < no_eras; i++ ) {
-		    data_t	u	= modnn(prim * (nn - 1 - eras_pos[i]));
+		    data_t	u	= modnn(PRM * (NN - 1 - ( eras_pos[i] + pad )));
 		    for ( int j = i + 1; j > 0; j-- ) {
 			data_t	tmp	= index_of[lambda[j - 1]];
-			if ( tmp != a0 ) {
+			if ( tmp != A0 ) {
 			    lambda[j]  ^= alpha_to[modnn(u + tmp)];
 			}
 		    }
 		}
 	    }
+
 #if DEBUG >= 1
-	    /* Test code that verifies the erasure locator polynomial just constructed
-	       Needed only for decoder debugging. */
+	    // Test code that verifies the erasure locator polynomial just constructed
+	    // Needed only for decoder debugging.
     
-	    /* find roots of the erasure location polynomial */
+	    // find roots of the erasure location polynomial
 	    for( int i = 1; i<= no_eras; i++ )
 		reg[i]			= index_of[lambda[i]];
 
 	    count			= 0;
-	    for ( int i = 1, k = iprim - 1; i <= nn; i++, k = modnn( k + iprim )) {
+	    for ( int i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
 		data_t		q	= 1;
-		for ( int j = 1; j <= no_eras; j++ )
-		    if ( reg[j] != a0 ) {
+		for ( int j = 1; j <= no_eras; j++ ) {
+		    if ( reg[j] != A0 ) {
 			reg[j]		= modnn( reg[j] + j );
 			q	       ^= alpha_to[reg[j]];
 		    }
+		}
 		if ( q != 0 )
 		    continue;
-		/* store root and error location number indices */
+		// store root and error location number indices
 		root[count]		= i;
 		loc[count]		= k;
 		count++;
 	    }
 	    if ( count != no_eras ) {
-		std::cout << "count = " << count << ", no_eras = " << no_eras 
+		std::cout << "ERROR: count = " << count << ", no_eras = " << no_eras 
 			  << "lambda(x) is WRONG"
 			  << std::endl;
 		count = -1;
@@ -341,32 +478,31 @@ namespace ezpwd {
 #endif
 #endif
 
-	    for ( int i = 0; i < nroots + 1; i++ )
+	    for ( int i = 0; i < NROOTS + 1; i++ )
 		b[i]			= index_of[lambda[i]];
 
-	    /*
-	     * Begin Berlekamp-Massey algorithm to determine error+erasure locator polynomial
-	     */
-	    while ( ++r <= nroots ) { /* r is the step number */
-		/* Compute discrepancy at the r-th step in poly-form */
+	    //
+	    // Begin Berlekamp-Massey algorithm to determine error+erasure locator polynomial
+	    //
+	    while ( ++r <= NROOTS ) { // r is the step number
+		// Compute discrepancy at the r-th step in poly-form
 		data_t		discr_r	= 0;
 		for ( int i = 0; i < r; i++ ) {
-		    if (( lambda[i] != 0 ) && ( syn[r - i - 1] != a0 )) {
+		    if (( lambda[i] != 0 ) && ( syn[r - i - 1] != A0 )) {
 			discr_r	       ^= alpha_to[modnn(index_of[lambda[i]] + syn[r - i - 1])];
 		    }
 		}
 		discr_r			= index_of[discr_r];	/* Index form */
-		if ( discr_r == a0 ) {
-		    /* 2 lines below: B(x) <-- x*B(x) */
-		    // Rotate the last element of b[nroots+1] to b[0]; was:
-		    // memmove (&b[1], b, nroots * sizeof (b[0]));
-		    std::rotate( b.begin(), b.begin()+nroots, b.end() );
-		    b[0]		= a0;
+		if ( discr_r == A0 ) {
+		    // 2 lines below: B(x) <-- x*B(x)
+		    // Rotate the last element of b[NROOTS+1] to b[0]
+		    std::rotate( b.begin(), b.begin()+NROOTS, b.end() );
+		    b[0]		= A0;
 		} else {
-		    /* 7 lines below: T(x) <-- lambda(x)-discr_r*x*b(x) */
+		    // 7 lines below: T(x) <-- lambda(x)-discr_r*x*b(x)
 		    t[0]		= lambda[0];
-		    for ( int i = 0; i < nroots; i++ ) {
-			if ( b[i] != a0 ) {
+		    for ( int i = 0; i < NROOTS; i++ ) {
+			if ( b[i] != A0 ) {
 			    t[i + 1]	= lambda[i + 1]
 				^ alpha_to[modnn(discr_r + b[i])];
 			} else
@@ -374,67 +510,64 @@ namespace ezpwd {
 		    }
 		    if ( 2 * el <= r + no_eras - 1 ) {
 			el		= r + no_eras - el;
-			/*
-			 * 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
-			 */
-			for ( int i = 0; i <= nroots; i++ ) {
+			//2 lines below: B(x) <-- inv(discr_r) * lambda(x)
+			for ( int i = 0; i <= NROOTS; i++ ) {
 			    b[i]	= ((lambda[i] == 0)
-					   ? a0
-					   : modnn(index_of[lambda[i]] - discr_r + nn));
+					   ? A0
+					   : modnn(index_of[lambda[i]] - discr_r + NN));
 			}
 		    } else {
-			/* 2 lines below: B(x) <-- x*B(x) */
-			// was: memmove(&b[1], b, nroots * sizeof(b[0]));
-			std::rotate( b.begin(), b.begin()+nroots, b.end() );
-			b[0]		= a0;
+			// 2 lines below: B(x) <-- x*B(x)
+			std::rotate( b.begin(), b.begin()+NROOTS, b.end() );
+			b[0]		= A0;
 		    }
-		    lambda		= t; // was: memcpy(lambda, t, (nroots + 1) * sizeof(t[0]));
+		    lambda		= t;
 		}
 	    }
 
-	    /* Convert lambda to index form and compute deg(lambda(x)) */
-	    for ( int i = 0; i < nroots + 1; i++ ) {
+	    // Convert lambda to index form and compute deg(lambda(x))
+	    for ( int i = 0; i < NROOTS + 1; i++ ) {
 		lambda[i]		= index_of[lambda[i]];
-		if ( lambda[i] != a0 )
+		if ( lambda[i] != NN )
 		    deg_lambda		= i;
 	    }
-	    /* Find roots of error+erasure locator polynomial by Chien search */
-	    
-	    // was: memcpy(&reg[1], &lambda[1], nroots * sizeof(reg[0]));
-	    // We're copying the (unused) element 0...
+	    // Find roots of error+erasure locator polynomial by Chien search
 	    reg				= lambda;
-	    count			= 0; /* Number of roots of lambda(x) */
-	    for ( int i = 1, k = iprim - 1; i <= nn; i++, k = modnn( k + iprim )) {
-		data_t		q	= 1; /* lambda[0] is always 0 */
+	    count			= 0; // Number of roots of lambda(x)
+	    for ( int i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
+		data_t		q	= 1; // lambda[0] is always 0
 		for ( int j = deg_lambda; j > 0; j-- ) {
-		    if ( reg[j] != a0 ) {
-			reg[j]		= modnn(reg[j] + j);
+		    if ( reg[j] != A0 ) {
+			reg[j]		= modnn( reg[j] + j );
 			q	       ^= alpha_to[reg[j]];
 		    }
 		}
 		if ( q != 0 )
-		    continue;	/* Not a root */
-		/* store root (index-form) and error location number */
+		    continue; // Not a root
+		// store root (index-form) and error location number
+#if DEBUG>=2
+		std::cout << "count " << count << " root " << i << " loc " << k << std::endl;
+#endif
 		root[count]		= i;
 		loc[count]		= k;
-		/* If we've already found max possible roots, abort the search to save time */
+		// If we've already found max possible roots, abort the search to save time
 		if ( ++count == deg_lambda )
 		    break;
 	    }
 	    if ( deg_lambda != count ) {
-		/* deg(lambda) unequal to number of roots => uncorrectable error detected */
+		// deg(lambda) unequal to number of roots => uncorrectable error detected
 		count			= -1;
 		goto finish;
 	    }
 	    /*
-	     * Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo x**nroots). in
+	     * Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo x**NROOTS). in
 	     * index form. Also find deg(omega).
 	     */
 	    deg_omega 			= deg_lambda - 1;
 	    for ( int i = 0; i <= deg_omega; i++ ) {
 		data_t		tmp	= 0;
 		for ( int j = i; j >= 0; j-- ) {
-		    if (( syn[i - j] != a0 ) && ( lambda[j] != a0 ))
+		    if (( syn[i - j] != A0 ) && ( lambda[j] != A0 ))
 			tmp	       ^= alpha_to[modnn(syn[i - j] + lambda[j])];
 		}
 		omega[i]		= index_of[tmp];
@@ -447,35 +580,42 @@ namespace ezpwd {
 	    for ( int j = count - 1; j >= 0; j-- ) {
 		data_t		num1	= 0;
 		for ( int i = deg_omega; i >= 0; i-- ) {
-		    if ( omega[i] != a0 )
+		    if ( omega[i] != A0 )
 			num1	       ^= alpha_to[modnn(omega[i] + i * root[j])];
 		}
-		data_t		num2	= alpha_to[modnn(root[j] * (fcr - 1) + nn)];
+		data_t		num2	= alpha_to[modnn(root[j] * ( FCR - 1 ) + NN)];
 		data_t		den	= 0;
 
-		/* lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i] */
-		for ( int i = std::min(deg_lambda, nroots - 1) & ~1; i >= 0; i -= 2 ) {
-		    if ( lambda[i + 1] != a0 ) {
+		// lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i]
+		for ( int i = std::min(deg_lambda, NROOTS - 1) & ~1; i >= 0; i -= 2 ) {
+		    if ( lambda[i + 1] != A0 ) {
 			den	       ^= alpha_to[modnn(lambda[i + 1] + i * root[j])];
 		    }
 		}
-		/* Apply error to data */
+#if DEBUG >= 1
+		if (den == 0) {
+		    std::cout << "ERROR: denominator = 0" << std::endl;
+		    count = -1;
+		    goto finish;
+		}
+#endif
+		// Apply error to data
 		if ( num1 != 0 && loc[j] >= pad ) {
 		    data_t	cor	= alpha_to[modnn(index_of[num1]
 							 + index_of[num2]
-							 + nn - index_of[den])];
-		    /* Store the error correction pattern, if a correction buffer is available */
+							 + NN - index_of[den])];
+		    // Store the error correction pattern, if a correction buffer is available
 		    if ( corr )
 			corr[j] 	= cor;
-		    /* If a data/parity buffer is given and the error is inside the message or
-		     * parity data, correct it */
-		    if ( loc[j] < ( nn - nroots )) {
+		    // If a data/parity buffer is given and the error is inside the message or
+		    // parity data, correct it
+		    if ( loc[j] < ( NN - NROOTS )) {
 			if ( data ) {
 			    data[loc[j] - pad] ^= cor;
 			}
-		    } else if ( loc[j] < nn ) {
-		        if ( par )
-		            par[loc[j] - ( nn - nroots )] ^= cor;
+		    } else if ( loc[j] < NN ) {
+		        if ( parity )
+		            parity[loc[j] - ( NN - NROOTS )] ^= cor;
 		    }
 		}
 	    }
@@ -504,16 +644,16 @@ namespace ezpwd {
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
 #if defined( ARRAY_TEST )
 #  warning "ARRAY_TEST: Erroneously defining alpha_to size!"
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn     >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN     >
 #else
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
 #endif
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::alpha_to;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nn + 1 >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::index_of;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::nroots + 1 >
+        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
 
     // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
@@ -571,14 +711,13 @@ namespace ezpwd {
 // 
 // std::ostream << ezpwd::reed_solomon<...>
 //
-template< typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
 inline
 std::ostream		       &operator<<(
 				    std::ostream       &lhs,
-				    const ezpwd::reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >
+				    const ezpwd::reed_solomon_base
 						       &rhs )
 {
-    return lhs << "RS(" << rhs.capacity << "," << rhs.payload << ")";
+    return lhs << "RS(" << rhs.size() << "," << rhs.load() << ")";
 }
 
 struct hexify {
@@ -672,6 +811,4 @@ std::ostream		       &operator<<(
     return hexout( lhs, rhs.begin(), rhs.end() );
 }
     
-#endif // _EZPWDRS
-
-//  LocalWords:  nn
+#endif // _EZPWD_RS
