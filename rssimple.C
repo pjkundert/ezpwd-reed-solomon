@@ -31,17 +31,17 @@ int main()
 	    data[i]		       ^= 1 << i % 8;	// error
 	    std::cout << "Corrupt: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl;
 	}
-	int 			count	= rs.decode( data, 0, &erasure );
+	int 			count	= rs.decode( data, &erasure );
 	std::string		fixes( data.size() * 2, ' ' );
 	for ( int i : erasure )
 	    fixes[i*2+0] = fixes[i*2+1]	= '^';
 	std::cout << "Fixed:   " << fixes << "(count: " << count << ")" << std::endl;
 	std::cout << "Decoded: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl << std::endl;
     }
-    exercise( rs );
+    exercise( rs, 100 );
 
-    exercise( RS_255_CCSDS( 255-2 )() );
-    exercise( RS_255_CCSDS( 255-4 )() );
-    exercise( RS_255_CCSDS( 255-8 )() );
-    exercise( RS_255_CCSDS( 255-16 )() );
+    exercise( RS_255_CCSDS( 255-2 )(), 100 );
+    exercise( RS_255_CCSDS( 255-4 )(), 100 );
+    exercise( RS_255_CCSDS( 255-8 )(), 100 );
+    exercise( RS_255_CCSDS( 255-16 )(), 100 );
 }
