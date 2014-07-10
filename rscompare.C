@@ -1,11 +1,12 @@
 
-#define DEBUG 2
+#include <array>
+#include <vector>
+#include <cctype>
+
 #include <rs>
 extern "C" {
 #include <rs.h>
 }
-
-#include <cctype>
 
 int
 main()
