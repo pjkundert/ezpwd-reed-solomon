@@ -19,21 +19,80 @@
 
 #include <algorithm>
 #include <vector>
+#include <array>
 #include <type_traits>
 #include <cstdint>
 #include <iostream>
 #include <iomanip>
 
-// ARRAY_SAFE -- define to force usage of bounds-checked arrays for most tabular data
-// ARRAY_TEST -- define to force erroneous sizing of some arrays
-#if defined( ARRAY_SAFE )
-#  include <array_safe>
-#else
-#  include <array>
-typedef std::array		array_safe;
-#endif
-
 namespace ezpwd {
+
+#if defined( EZPWD_ARRAY_SAFE )
+    // 
+    // ezpwd::array -- a std::array with bounds checking enabled by default
+    // 
+    //     Only enabled when EZPWD_ARRAY_SAFE is defined in the preprocessor
+    // 
+    // EZPWD_ARRAY_SAFE -- define to force usage of bounds-checked arrays for most tabular data
+    // EZPWD_ARRAY_TEST -- define to force erroneous sizing of some arrays for non-production testing
+    // 
+    template < typename T, std::size_t S >
+    struct array
+	: public std::array<T, S> {
+	using typename std::array<T,S>::value_type;
+	using typename std::array<T,S>::pointer;
+	using typename std::array<T,S>::const_pointer;
+	using typename std::array<T,S>::reference;
+	using typename std::array<T,S>::const_reference;
+	using typename std::array<T,S>::iterator;
+	using typename std::array<T,S>::const_iterator;
+	using typename std::array<T,S>::size_type;
+	using typename std::array<T,S>::difference_type;
+	using typename std::array<T,S>::reverse_iterator;
+	using typename std::array<T,S>::const_reverse_iterator;
+
+				array()
+				    : std::array<T,S>() {;}
+
+				array( const std::array<T,S> &rhs )
+				    : std::array<T,S>( rhs ) {;}
+
+				array( const std::array<T,S> &&rhs )
+				    : std::array<T,S>( rhs ) {;}
+
+	using std::array<T,S>::fill;
+	using std::array<T,S>::swap;
+	using std::array<T,S>::begin;
+	using std::array<T,S>::end;
+	using std::array<T,S>::rbegin;
+	using std::array<T,S>::rend;
+	using std::array<T,S>::cbegin;
+	using std::array<T,S>::cend;
+	using std::array<T,S>::crbegin;
+	using std::array<T,S>::crend;
+	using std::array<T,S>::size;
+	using std::array<T,S>::max_size;
+	using std::array<T,S>::empty;
+	using std::array<T,S>::at;
+	using std::array<T,S>::front;
+	using std::array<T,S>::back;
+	using std::array<T,S>::data;
+
+	reference		operator[]( size_type i )
+	{
+	    return at( i );
+	}
+
+	constexpr
+	const_reference		operator[]( size_type i )
+	    const
+	{
+	    return at( i );
+	}
+    }; // struct ezpwd::array
+#else
+    using std::array;
+#endif
 
     /**
      * reed_solomon_base - Reed-Solomon codec generic base class
@@ -70,14 +129,111 @@ namespace ezpwd {
 	/// marked as an erasure but it actually turns out to be correct, it's index will NOT be
 	/// included in the returned count, nor the modified erasure vector!
 	///
-	virtual void		encode(
+
+	// 
+	// encode( <string> ) -- extend string to contain parity, or place in supplied parity string
+	// encode( <vector> ) -- extend vector to contain parity, or place in supplied parity vector
+	// encode( <array> )  -- ignore 'pad' elements of array, puts nroots() parity symbols at end
+	// 
+	void			encode(
+				    std::string	       &data )
+	    const
+	{
+	    typedef uint8_t	uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    data.resize( data.size() + nroots() );
+	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ));
+	}
+
+	void			encode(
 				    std::string	       &data,
-				    std::string	       *parity	= 0 )
+				    std::string	       &parity )
+	    const
+	{
+	    typedef uint8_t	uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    parity.resize( nroots() );
+	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+		    uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
+	}
+
+	template < typename T >
+	void			encode(
+				    std::vector<T>     &data )
+	    const
+	{
+	    typedef typename std::make_unsigned<T>::type
+				uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    data.resize( data.size() + nroots() );
+	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ));
+	}
+	template < typename T >
+	void			encode(
+				    std::vector<T>     &data,
+				    std::vector<T>     &parity )
+	    const
+	{
+	    typedef typename std::make_unsigned<T>::type
+				uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    parity.resize( nroots() );
+	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+		    uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
+	}
+
+	template < typename T, size_t N >
+	void			encode(
+				    std::array<T,N>    &data,
+				    int			pad	= 0, // ignore 'pad' symbols at start of array
+				    std::vector<int>   *erasure	= 0 )
+	    const
+	{
+	    typedef typename std::make_unsigned<T>::type
+				uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    encode( uTpair( (uT *)&data.front() + pad, (uT *)&data.front() + data.size() ));
+	}
+
+	virtual void		encode(
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data )
 	    const
 	= 0;
 	virtual void		encode(
-				   std::vector<uint8_t>&data,
-				   std::vector<uint8_t>*parity	= 0 )
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data,
+				    const std::pair<uint8_t *, uint8_t *>
+						       &parity )
+	    const
+	= 0;
+	virtual void		encode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data )
+	    const
+	= 0;
+	virtual void		encode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data,
+				    const std::pair<uint16_t *, uint16_t *>
+						       &parity )
+	    const
+	= 0;
+	virtual void		encode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data )
+	    const
+	= 0;
+	virtual void		encode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data,
+				    const std::pair<uint32_t *, uint32_t *>
+						       &parity )
 	    const
 	= 0;
 
@@ -86,7 +242,7 @@ namespace ezpwd {
 				    std::vector<int>   *erasure	= 0 )
 	    const
 	{
-	    typedef unsigned char uT;
+	    typedef uint8_t	uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
@@ -99,7 +255,7 @@ namespace ezpwd {
 				    std::vector<int>   *erasure	= 0 )
 	    const
 	{
-	    typedef unsigned char uT;
+	    typedef uint8_t	uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
@@ -133,11 +289,11 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
-			   uTpair( (uT *)&parity->front(), (uT *)&parity->front() + parity->size() ),
+			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ),
 			   erasure );
 	}
 
-	template < typename T, int N >
+	template < typename T, size_t N >
 	int			decode(
 				    std::array<T,N>    &data,
 				    int			pad	= 0, // ignore 'pad' symbols at start of array
@@ -287,35 +443,111 @@ namespace ezpwd {
 
 	using reed_solomon_base::encode;
 	virtual void		encode(
-				    std::string	       &data,
-				    std::string	       *parity	= 0 )
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data )
 	    const
 	{
-	    if ( parity ) {
-		parity->resize( NROOTS );
-		encode( (data_t *)&data.front(), data.size(),
-			(data_t *)&parity->front() );
-	    } else {
-		data.resize( data.size() + NROOTS );
-		encode( (data_t *)&data.front(), data.size() - NROOTS,
-			(data_t *)&data.front() + data.size() - NROOTS );
-	    }
-	}
-	virtual void		encode(
-				   std::vector<uint8_t>&data,
-				   std::vector<uint8_t>*parity	= 0 )
-	    const
-	{
-	    if ( parity ) {
-		parity->resize( NROOTS );
-		encode( &data.front(), data.size(), &parity->front() );
-	    } else {
-		data.resize( data.size() + NROOTS );
-		encode( &data.front(), data.size() - NROOTS,
-			&data.front() + data.size() - NROOTS );
-	    }
+	    encode_mask( data.first, data.second - data.first, (uint8_t *)0 );
 	}
 
+	virtual void		encode(
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data,
+				    const std::pair<uint8_t *, uint8_t *>
+						       &parity )
+	    const
+	{
+	    if ( parity.second - parity.first != NROOTS )
+		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
+	    encode_mask( data.first, data.second - data.first, parity.first );
+	}
+
+	virtual void		encode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data )
+	    const
+	{
+	    encode_mask( data.first, data.second - data.first, (uint16_t *)0 );
+	}
+
+	virtual void		encode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data,
+				    const std::pair<uint16_t *, uint16_t *>
+						       &parity )
+	    const
+	{
+	    if ( parity.second - parity.first != NROOTS )
+		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
+	    encode_mask( data.first, data.second - data.first, parity.first );
+	}
+
+	virtual void		encode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data )
+	    const
+	{
+	    encode_mask( data.first, data.second - data.first, (uint32_t *)0 );
+	}
+
+	virtual void		encode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data,
+				    const std::pair<uint32_t *, uint32_t *>
+						       &parity )
+	    const
+	{
+	    if ( parity.second - parity.first != NROOTS )
+		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
+	    encode_mask( data.first, data.second - data.first, parity.first );
+	}
+
+	template < typename INP >
+	void			encode_mask(
+				    INP		       *data,
+				    int			len,
+				    INP		       *parity	= 0 )	// either 0, or pointer to all parity symbols
+
+	    const
+	{
+	    if ( len < ( parity ? 0 : NROOTS ) + 1 )
+		throw std::runtime_error( "reed-solomon: must provide space for all parity and at least one non-parity symbol" );
+	    if ( ! parity ) {
+		len			       -= NROOTS;
+		parity				= data + len;
+	    }
+
+	    data_t	       	       *dataptr;
+	    data_t		       *pariptr;
+	    const size_t		INPUT	= 8 * sizeof ( INP );
+
+	    ezpwd::array<data_t,SIZE>	tmp;
+	    data_t			msk	= static_cast<data_t>( ~0UL << SYMBOL );
+	    static bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
+	    if ( cpy ) {
+		// Our DATUM (data_t) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
+		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
+		// The INP data must fit at least the SYMBOL size!
+		if ( SYMBOL > INPUT )
+		    throw std::runtime_error( "reed-solomon: output data type too small to contain symbols" );
+		for ( int i = 0; i < len; ++i )
+		    tmp[LOAD - len + i]		= data[i] & ~msk;
+		dataptr				= &tmp[LOAD - len];
+		pariptr				= &tmp[LOAD];
+	    } else {
+		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches
+		dataptr				= reinterpret_cast<data_t *>( data );
+		pariptr				= reinterpret_cast<data_t *>( parity );
+	    }
+
+	    encode( dataptr, len, pariptr );
+
+	    // If we copied and masked off data, copy the parity symbols back
+	    if ( cpy )
+		for ( int i = 0; i < NROOTS; ++i )
+		    parity[i]			= tmp[LOAD + i];
+	}
+	    
 	using reed_solomon_base::decode;
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
@@ -410,9 +642,10 @@ namespace ezpwd {
 	    data_t		       *pariptr;
 	    const size_t		INPUT	= 8 * sizeof ( INP );
 
-	    array_safe<data_t,SIZE>	tmp;
+	    ezpwd::array<data_t,SIZE>	tmp;
 	    data_t			msk	= static_cast<data_t>( ~0UL << SYMBOL );
-	    if ( DATUM != SYMBOL || DATUM != INPUT ) {
+	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
+	    if ( cpy ) {
 		// Our DATUM (data_t) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
 		// The INP data must fit at least the SYMBOL size!
@@ -438,6 +671,7 @@ namespace ezpwd {
 	    if ( ! erasure ) {
 		corrects			= decode( dataptr, len, pariptr );
 	    } else {
+		// Prepare 'erasure' for the maximum number of corrections, and then reduce
 		int		erasures	= erasure->size();
 		erasure->resize( NROOTS );
 		corrects			= decode( dataptr, len, pariptr,
@@ -445,7 +679,7 @@ namespace ezpwd {
 		erasure->resize( std::max( 0, corrects ));
 	    }
 
-	    if ( DATUM != SYMBOL && corrects > 0 ) {
+	    if ( cpy && corrects > 0 ) {
 		for ( int i = 0; i < len; ++i ) {
 		    data[i]		       &= msk;
 		    data[i]		       |= tmp[LOAD - len + i];
@@ -461,16 +695,16 @@ namespace ezpwd {
 	static mutex_t		mutex;
 	static int 		iprim;
 
-#if defined( ARRAY_TEST )
-#  warning "ARRAY_TEST: Erroneously declaring alpha_to size!"
-	static array_safe<data_t,NN    >
+#if defined( EZPWD_ARRAY_TEST )
+#  warning "EZPWD_ARRAY_TEST: Erroneously declaring alpha_to size!"
+	static ezpwd::array<data_t,NN    >
 #else
-	static array_safe<data_t,NN + 1>
+	static ezpwd::array<data_t,NN + 1>
 #endif
 				alpha_to;
-	static array_safe<data_t,NN + 1>
+	static ezpwd::array<data_t,NN + 1>
 				index_of;
-	static array_safe<data_t,NROOTS + 1>
+	static ezpwd::array<data_t,NROOTS + 1>
 				genpoly;
 
 	/** modulo replacement for galois field arithmetics
@@ -586,14 +820,14 @@ namespace ezpwd {
 				    data_t		invmsk	= 0 )
 	    const
 	{
-	    typedef array_safe< data_t, NROOTS >
+	    typedef ezpwd::array< data_t, NROOTS >
 				data_nroots;
-	    typedef array_safe< data_t, NROOTS+1 >
+	    typedef ezpwd::array< data_t, NROOTS+1 >
 				data_nroots_1;
-	    typedef array_safe< int, NROOTS >
+	    typedef ezpwd::array< int, NROOTS >
 				ints_nroots;
 
-	    data_nroots_1	lambda { { { 0 } } };
+	    data_nroots_1	lambda  { { 0 } };
 	    data_nroots		syn;
 	    data_nroots_1	b;
 	    data_nroots_1	t;
@@ -885,18 +1119,18 @@ namespace ezpwd {
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
         int				reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::iprim = 0;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-#if defined( ARRAY_TEST )
-#  warning "ARRAY_TEST: Erroneously defining alpha_to size!"
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN     >
+#if defined( EZPWD_ARRAY_TEST )
+#  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
+        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN     >
 #else
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
+        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
 #endif
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::alpha_to;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
+        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::index_of;
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        array_safe< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
+        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
 
     // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
@@ -1023,7 +1257,11 @@ std::ostream		       &operator<<(
     return lhs;
 }
 
-
+// 
+// hexout	-- hexify each element in the range (beg,end]
+// 
+//     Optionally, limit each line length by setting the output ostream's width.
+// 
 template < typename iter_t >
 inline
 std::ostream		       &hexout(
@@ -1031,25 +1269,24 @@ std::ostream		       &hexout(
 				    const iter_t       &beg,
 				    const iter_t       &end )
 {
+    std::streamsize		wid	= lhs.width( 0 );
     int				col	= 0;
-    for ( auto i = beg; i < end; ++i ) {
-	if ( col == 40 ) {
+    for ( auto i = beg; i != end; ++i ) {
+	if ( wid && col == wid ) {
 	    lhs << std::endl;
 	    col				= 0;
 	}
 	lhs << hexify( *i );
 	++col;
-	if ( *i == '\n' )
-	    col				= 40;
     }
     return lhs;
 }
 				    
-template <unsigned char, int N>
+template < size_t S >
 inline
 std::ostream		       &operator<<(
 				    std::ostream       &lhs,
-				    const std::array<unsigned char,N>
+				    const std::array<unsigned char,S>
 						       &rhs )
 {
     return hexout( lhs, rhs.begin(), rhs.end() );

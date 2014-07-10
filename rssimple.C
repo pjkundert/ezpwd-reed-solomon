@@ -1,12 +1,12 @@
-//#define DEBUG 2
 
-#include <rs>
 #include <iostream>
 #include <iomanip>
 #include <cctype>
 #include <cstring>
 #include <array>
 #include <vector>
+
+#include <rs>
 
 #include <exercise.H>
 
