@@ -92,12 +92,12 @@ namespace ezpwd {
 	}
     }; // struct ezpwd::array
 #else
-    using std::array;
+    using std::array; // ! EZPWD_ARRAY_SAFE: ezpwd::arrray is std::array
 #endif
 
-    /**
-     * reed_solomon_base - Reed-Solomon codec generic base class
-     */
+    //
+    // reed_solomon_base - Reed-Solomon codec generic base class
+    //
     class reed_solomon_base {
     public:
 	virtual size_t		datum()		const = 0;	// a data element's bits
@@ -393,32 +393,32 @@ namespace ezpwd {
 	}
     };
 
-    /**
-     * struct reed_solomon - Reed-Solomon codec
-     *
-     * @TYP, data_t:	A symbol datum; {en,de}code operates on arrays of these
-     * @DATUM:		Bits per datum
-     * @SYM{BOL}, MM:	Bits per symbol
-     * @NN:		Symbols per block (== (1<<MM)-1)
-     * @alpha_to:	log lookup table
-     * @index_of:	Antilog lookup table
-     * @genpoly:	Generator polynomial
-     * @NROOTS:		Number of generator roots = number of parity symbols
-     * @FCR:		First consecutive root, index form
-     * @PRM:		Primitive element, index form
-     * @iprim:		prim-th root of 1, index form
-     * @PLY:		The primitive generator polynominal functor
-     * @MTX, mutex_t:	A std::mutex like object, or a dummy
-     * @GRD, guard_t:	A std::lock_guard, or anything that can take a mutex_t
-     *
-     *     All reed_solomon<T, ...> instances with the same template type parameters share a common
-     * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
-     * initializes the tables (optionally protected by a std::mutex/std::lock_guard).
-     * 
-     *     Each specialized type of reed_solomon implements a specific encode/decode method
-     * appropriate to its datum 'TYP' 'data_t'.  When accessed via a generic reed_solomon_base
-     * pointer, only access via "safe" (size specifying) containers or iterators is available.
-     */
+    //
+    // struct reed_solomon - Reed-Solomon codec
+    //
+    // @TYP, data_t:	A symbol datum; {en,de}code operates on arrays of these
+    // @DATUM:		Bits per datum
+    // @SYM{BOL}, MM:	Bits per symbol
+    // @NN:		Symbols per block (== (1<<MM)-1)
+    // @alpha_to:	log lookup table
+    // @index_of:	Antilog lookup table
+    // @genpoly:	Generator polynomial
+    // @NROOTS:		Number of generator roots = number of parity symbols
+    // @FCR:		First consecutive root, index form
+    // @PRM:		Primitive element, index form
+    // @iprim:		prim-th root of 1, index form
+    // @PLY:		The primitive generator polynominal functor
+    // @MTX, mutex_t:	A std::mutex like object, or a dummy
+    // @GRD, guard_t:	A std::lock_guard, or anything that can take a mutex_t
+    //
+    //     All reed_solomon<T, ...> instances with the same template type parameters share a common
+    // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
+    // initializes the tables (optionally protected by a std::mutex/std::lock_guard).
+    // 
+    //     Each specialized type of reed_solomon implements a specific encode/decode method
+    // appropriate to its datum 'TYP' 'data_t'.  When accessed via a generic reed_solomon_base
+    // pointer, only access via "safe" (size specifying) containers or iterators is available.
+    //
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
 	       typename MTX=int, typename GRD=int >
     class reed_solomon
@@ -559,7 +559,7 @@ namespace ezpwd {
 
 	    encode( dataptr, len, pariptr );
 
-	    // If we copied and masked off data, copy the parity symbols back
+	    // If we copied/masked data, copy the parity symbols back (may be different sizes)
 	    if ( cpy )
 		for ( int i = 0; i < NROOTS; ++i )
 		    parity[i]			= pariptr[i];
@@ -1213,51 +1213,71 @@ namespace ezpwd {
     // 
     namespace base64 {
 
+	template < typename iter>
+        void			encode(
+				    iter	begin,
+				    iter	end )
+	{
+	    for ( iter i = begin; i != end; ++i ) {
+		if ( *i >= char( 0 ) && *i < char( 26 ))
+		    *i	       += 'A';
+		else if ( *i >= char( 26 ) && *i < char( 52 ))
+		    *i	       += 'a' - 26;
+		else if ( *i >= char( 52 ) && *i < char( 62 ))
+		    *i	       += '0' - 26 - 26;
+		else if ( *i == char( 62 ))
+		    *i		= '+';
+		else if ( *i == char( 63 ))
+		    *i		= '/';
+		else
+		    throw std::runtime_error( "ezpwd::base64::encode: invalid symbol presented" );
+	    }
+	}
+
 	inline
 	std::string		encode(
 				    std::string		symbols )
 	{
-	    for ( char &c : symbols ) {
-		if ( c >= char( 0 ) && c < char( 26 ))
-		    c	       += 'A';
-		else if ( c >= char( 26 ) && c < char( 52 ))
-		    c	       += 'a' - 26;
-		else if ( c >= char( 52 ) && c < char( 62 ))
-		    c	       += '0' - 26 - 26;
-		else if ( c == char( 62 ))
-		    c		= '+';
-		else if ( c == char( 63 ))
-		    c		= '/';
-		else
-		    throw std::runtime_error( "ezpwd::base64::encode: invalid symbol presented" );
-	    }
+	    encode( symbols.begin(), symbols.end() );
 	    return symbols;
+	}
+
+	template < typename iter >
+	void			decode(
+				    iter		begin,
+				    iter		end )
+	{
+	    for ( iter i = begin; i != end; ++i ) {
+		if ( *i >= 'A' && *i <= 'Z' )
+		    *i	       -= 'A';
+		else if ( *i >= 'a' and *i <= 'z' )
+		    *i	       -= 'a' - 26;
+		else if ( *i >= '0' and *i <= '9' )
+		    *i	       -= char( '0' ) - char( 26 ) - char( 26 );
+		else if ( *i == '+' )
+		    *i		= char( 62 );
+		else if ( *i == '/' )
+		    *i		= char( 63 );
+		else
+		    throw std::runtime_error( "ezpwd::base64::decode: invalid symbol presented" );
+	    }
 	}
 
 	inline
 	std::string		decode(
 				    std::string		symbols )
 	{
-	    for ( auto &c : symbols ) {
-		if ( c >= 'A' && c <= 'Z' )
-		    c	       -= 'A';
-		else if ( c >= 'a' and c <= 'z' )
-		    c	       -= 'a' - 26;
-		else if ( c >= '0' and c <= '9' )
-		    c	       -= char( '0' ) - char( 26 ) - char( 26 );
-		else if ( c == '+' )
-		    c		= char( 62 );
-		else if ( c == '/' )
-		    c		= char( 63 );
-		else
-		    throw std::runtime_error( "ezpwd::base64::decode: invalid symbol presented" );
-	    }
+	    decode( symbols.begin(), symbols.end() );
 	    return symbols;
 	}
+
     } // namespace ezpwd::base64
 
     // 
     // ezpwd::corrector -- Apply statistical corrections to a string, returning the confidence
+    // 
+    //     All methods are static; no instance is required, as this is primarily used to create
+    // external language APIs.
     // 
     template < size_t N >
     class corrector {
@@ -1265,7 +1285,7 @@ namespace ezpwd {
 	// 
 	// parity(<string>) -- Returns 'N' base-64 symbols of R-S parity to the supplied password
 	// 
-	std::string		parity(
+	static std::string	parity(
 				    const std::string  &password )
 	{
 	    std::string		parity;
@@ -1274,19 +1294,50 @@ namespace ezpwd {
 	}
 
 	// 
+	// ezpwd::rspwd::encode -- append N base-64 parity symbols to password
+	// 
+	//     The supplied password buffer size must be sufficient to contain N additional symbols, plus
+	// the terminating NUL.  Returns the resultant encoded password size (excluding the NUL).
+	// 
+	static size_t		encode(
+				    std::string        &password )
+	{
+	    password		       += parity( password );
+	    return password.size();
+	}
+
+	static size_t		encode(
+				    char       	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    size_t		len	= ::strlen( password );	// length w/o terminating NUL
+	    if ( len + N + 1 > size )
+		throw std::runtime_error( "ezpwd::rspwd::encode password buffer has insufficient capacity" );
+	    std::string		par	= parity( std::string( password, password + len ));
+	    if ( par.size() != N )
+		throw std::runtime_error( "ezpwd::rspwd::encode computed parity with incorrect size" );
+	    std::copy( par.begin(), par.end(), password + len );
+	    len			       += N;
+	    password[len]		= 0;
+	    return len;
+	}
+
+	// 
 	// decode(<string>) -- Applies R-S error correction on the encoded string, removing parity
 	// 
 	//     Up to 'N' Reed-Solomon parity symbols are examined, to determine if the supplied
 	// string is a valid R-S codeword and hence very likely to be correct.
 	// 
-	//     Returns a confidence strength rating, which is the ratio
+	//     Returns a confidence strength rating, which is the ratio:
 	// 
-	//         1.0 - ( errors * 2 + erasures ) / parity
+	//         100 - ( errors * 2 + erasures ) * 100 / parity
 	// 
 	// if an R-S codeword was solved, and 0.0 otherwise.  If a codeword is solved, but the
 	// number of errors and erasures corrected indicates that all parity was consumed, we do not
-	// use the corrected password, because there is a chance that our R-S polynomial was
-	// overwhelmed with errors and actually returned an incorrect codeword.
+	// use the corrected string, because there is a chance that our R-S polynomial was
+	// overwhelmed with errors and actually returned an incorrect codeword.  Therefore,
+	// a solving a codeword using all parity results in 100 - N * 100 / N == 0, which matches
+	// the strength of the final 
 	// 
 	//     Supports the following forms of error/erasure:
 	// 
@@ -1294,56 +1345,122 @@ namespace ezpwd {
 	// 
 	// 1) Partial parity.  All data and some parity supplied; remainder are deemed erasures.
 	// 
-	//     If N > 2, then up to N/2-1 parity terms are marked as erasures.  If the R-S codeword
-	// is solved and a safe number of errors are found, then we can have reasonable confidence
-	// that the password is correct.
+	//     If N > 2, then up to N/2-1 trailing parity terms are marked as erasures.  If the R-S
+	// codeword is solved and a safe number of errors are found, then we can have reasonable
+	// confidence that the string is correct.
+	// 
+	//   1a) Erase errors.  Permute the combinations of up to N-1 erasures.
 	// 
 	// o) Raw password.  No parity terms supplied; not an R-S codeword
 	// 
 	//     If none of the error/erasure forms succeed, the password is returned unmodified.
 	// 
 	//
-	double			strength( int errors, int erased=0 )
-	    const
+	static
+	int			strength( int errors, int erased=0 )
 	{
 	    if ( errors < 0 ) // -'ve indicates R-S failure.
-		return 0.0;
-	    return 1.0 - double( errors * 2 + erased ) / N;
+		return 0;
+	    return 100 - double( errors * 2 + erased ) * 100 / N;
 	}
-	double			decode(
+
+	static
+	int			decode(
 				    std::string	       &password )
 	{
-	    double		confidence;
+	    int			confidence;
+	    int			best	= -1;
+	    std::string		beststr;
 
-	    // 0) Full parity?  Check if trivially an R-S codeword.
-	    std::string		fixed	= password;
-	    int			corrects= rscodec.decode( fixed );
-	    confidence 			= strength( corrects );
-	    if ( confidence > 0.0 ) {
-		password.swap( fixed );
-		return confidence;
-	    }
-
-	    // 1) Partial parity?  Apply if we have some erasure/correction capability while
-	    // maintaining at least one excess parity symbol for verification.
-	    std::vector<int>	erasure;
-	    while ( erasure.size() < N/2 ) {
-		// Eg. If N=3 then N/2 == 1.    
-		fixed			= password;
-		fixed.resize( password.size() + erasure.size() + 1 );
-		erasure.push_back( fixed.size() - 1 );
-		corrects		= rscodec.decode( fixed, &erasure );
-		confidence		= strength( corrects - erasure.size(), erasure.size() );
-		if ( confidence > 0.0 ) {
-		    password.swap( fixed );
-		    return confidence;
+	    // 0) Full parity?  Check if trivially an R-S codeword; requires N base-64 parity
+	    // symbols.
+	    std::string		fixed;
+	    if ( password.size() > N ) {
+		try {
+		    fixed		= password;
+		    base64::decode( fixed.end() - N, fixed.end() );
+		    int		corrects= rscodec.decode( fixed );
+		    confidence 		= strength( corrects );
+		    if ( confidence > best ) {
+			best		= confidence;
+			beststr.swap( fixed );
+			base64::encode( beststr.end() - N, beststr.end() );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << " confidence "	<< std::setw( 3 ) << best
+			    << "%: \"" 		<< password
+			    << "\" ==> \""	<< beststr << "\"" << std::endl;
+#endif
+		    }
+		} catch ( std::exception &exc ) {
+#if defined( DEBUG ) && DEBUG >= 1  // should see only when base64::decode fails
+		    std::cout << "invalid full parity password: " << exc.what() << std::endl;
+#endif
 		}
 	    }
 
-	    // o) Raw password.  No error/erasure attempts succeeded.  No confidence.
-	    return 0.0;
+	    // 1) Partial parity?  Apply if we have some erasure/correction capability while
+	    // maintaining at least one excess parity symbol for verification.  This can potentially
+	    // result in longer password being returned, if the R-S decoder accidentally solves
+	    // a codeword.
+	    for ( int era = 1; era <= N/2; ++era ) {
+		// For example, if N=3 then N/2 == 1, and we would only try 1 parity erasure.  This
+		// would leave 1 parity symbol to replace the 1 erasure, and 1 remaining to validate
+		// the integrity of the password.
+		fixed			= password;
+		fixed.resize( password.size() + era );
+		std::vector<int>	erasure;
+		for ( int i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
+		    erasure.push_back( i );
+		try {
+		    base64::decode( fixed.end() - N, fixed.end() - era );
+		    int corrects	= rscodec.decode( fixed, &erasure );
+		    confidence		= strength( corrects - erasure.size(), erasure.size() );
+		    if ( confidence > best ) {
+			best		= confidence;
+			beststr.swap( fixed );
+			base64::encode( beststr.end() - N, beststr.end() );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << " confidence "	<< std::setw( 3 ) << best
+			    << "%: \"" 		<< password
+			    << "\" ==> \""	<< beststr << "\"" << std::endl;
+#endif
+		    }
+		} catch ( std::exception &exc ) {
+#if defined( DEBUG ) && DEBUG >= 1 // should see only when base64::decode fails
+		    std::cout << "invalid part parity password: " << exc.what() << std::endl;
+#endif
+		}
+	    }
+
+	    // o) Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidicen > 0.
+	    confidence			= 0;
+	    if ( best > 0 ) {
+		password.swap( beststr );
+		confidence		=  best;
+	    }
+	    return confidence;
 	}
 
+	static int		decode(
+				    char       	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    std::string		corrected( password );
+	    int			confidence;
+	    try {
+		confidence			= decode( corrected );
+		if ( corrected.size() + 1 > size )
+		    throw std::runtime_error( "password buffer has insufficient capacity" );
+		std::copy( corrected.begin(), corrected.end(), password );
+		password[corrected.size()]	= 0;
+	    } catch ( std::exception &exc ) {
+		std::cout << "ezpwd::rspwd::decode failed: " << exc.what() << std::endl;
+		confidence 			= 0;
+	    }
+	    return confidence;
+	}
 	// 
 	// rscodec -- A 6-bit RS(63,63-N) Reed-Solomon codec
 	// 
