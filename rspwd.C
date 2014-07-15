@@ -18,11 +18,15 @@ extern "C" {
 #include <iostream>
 #include <sstream>
 
-template < size_t N >
-inline int			rspwd_test( std::ostream &failmsgs )
+template < size_t P, size_t N >
+inline int			rspwd_test( std::ostream &failmsgs, const char *password )
 {
-    char		        pwd[] = "Mag.1ckπ";
-    char			enc[N + sizeof pwd];
+    char		        pwd[P];
+    strncpy( pwd, password, sizeof pwd );
+    if ( strlen( password ) >= P )
+	throw std::runtime_error( "password buffer has insufficient capacity" );
+    
+    char			enc[sizeof pwd + N];
     int				failures= 0;
     
     strncpy( enc, pwd, sizeof enc );
@@ -34,11 +38,13 @@ inline int			rspwd_test( std::ostream &failmsgs )
 	<< "\""
 	<< std::endl;
     if ( len != sizeof enc - 1 ) {
-	failmsgs << "Expected N == " << N << " parity symbols" << std::endl;
+	failmsgs << "FAILED: Expected N == " << N << " parity symbols" << std::endl;
 	++failures;
     }
 
-    // 0) Full parity.  Should be able to handle up to N/2-1 errors in the low 6 bits.
+    // 0) Full parity.  Should be able to handle up to (N-1)/2 errors in the low 6 bits.  In other
+    // words, until you have 3 parity symbols, you cannot withstand a random error and have any
+    // reserve parity to gain any certainty that the result is actually correct.
     for ( int e = 0; e <= N/2; ++e ) {
 	char			err[sizeof enc + N]; // be prepared for up to N extra symbols
 	std::copy( enc, enc + sizeof enc, err );
@@ -48,15 +54,69 @@ inline int			rspwd_test( std::ostream &failmsgs )
 	std::copy( err, err + sizeof err, fix );
 	
 	int			confidence = ezpwd::corrector<N>::decode( fix, sizeof fix );
+	bool			matched	= !strcmp( fix, pwd );
+	bool			guessed	= confidence > 0 && matched;
+	bool			failed	= guessed != ( e <= (N-1)/2 );
 	failmsgs
-	    << " w/"		<< e
-	    << " errors; \""	<< err
-	    << "\" ==> \""	<< fix
+	    << ( guessed
+		 ? "GUESSED"
+		 : "default" )
+	    << ( matched
+		 ? " matching"
+		 : " MISMATCH" )
+	    << ( failed
+		 ? " FAILURE "
+		 : " success " )
+	    << "Full parity "	<< N
+	    << " w/ "		<< e
+	    << " errors;      "	<< std::setw( 16 ) << err
+	    << " ==> "		<< std::setw( 16 ) << fix
 	    << " w/ " 		<< std::setw( 3 ) << confidence
 	    << "% confidence"
 	    << std::endl;
-	++failures;
+#if ! ( defined( DEBUG ) && DEBUG >= 1 )
+	if ( failed )
+#endif
+	    ++failures;
     }
+
+    // 1) Part parity (no errors).  Should be able to confirm password with no errors, and (N+1)/2+1
+    // to N parity symbols via R-S decoding, and from 1 to (N+1)/2 symbols by simple matching.  Clip
+    // off up to all N parity symbols and try decoding.
+    for ( int e = 1; e <= N; ++e ) {
+	char			err[sizeof enc + N]; // be prepared for up to N extra symbols
+	std::copy( enc, enc + sizeof enc, err );
+	err[strlen( enc ) - e]	= 0;		// clip off last 'e' symbols
+
+        char			fix[sizeof err];
+	std::copy( err, err + sizeof err, fix );
+	int			confidence = ezpwd::corrector<N>::decode( fix, sizeof fix );
+	bool			matched	= !strcmp( fix, pwd );
+	bool			guessed	= confidence > 0 && matched;
+	bool			failed	= guessed != ( e < N ); // with any parity symbols, we'll get some confidence
+	failmsgs
+	    << ( guessed
+		 ? "GUESSED"
+		 : "default" )
+	    << ( matched
+		 ? " matching"
+		 : " MISMATCH" )
+	    << ( failed
+		 ? " FAILURE "
+		 : " success " )
+	    << "Part parity "	<< N
+	    << " w/ "		<< e
+	    << " parity skip  "	<< std::setw( 16 ) << err
+	    << " ==> "		<< std::setw( 16 ) << fix
+	    << " w/ " 		<< std::setw( 3 ) << confidence
+	    << "% confidence"
+	    << std::endl;
+#if ! ( defined( DEBUG ) && DEBUG >= 1 )
+	if ( failed )
+#endif
+	    ++failures;
+    }
+
     return failures;
 }
 
@@ -69,17 +129,23 @@ std::ostream		       &operator<<(
 
 int				main()
 {
+
 #if defined( DEBUG ) && DEBUG > 0
     std::ostream	       &failmsgs = std::cout;
 #else
     std::ostringstream		failmsgs;
 #endif
     int				failures= 0;
-    failures			       += rspwd_test<1>( failmsgs );
-    failures			       += rspwd_test<2>( failmsgs );
-    failures			       += rspwd_test<3>( failmsgs );
-    failures			       += rspwd_test<4>( failmsgs );
-    failures			       += rspwd_test<5>( failmsgs );
+    failures			       += rspwd_test<10,1>( failmsgs, "Mag.1ckπ" );
+    failures			       += rspwd_test<10,2>( failmsgs, "Mag.1ckπ" );
+    failures			       += rspwd_test<10,3>( failmsgs, "Mag.1ckπ" );
+    failures			       += rspwd_test<10,4>( failmsgs, "Mag.1ckπ" );
+    failures			       += rspwd_test<10,5>( failmsgs, "Mag.1ckπ" );
+    failures			       += rspwd_test< 7,1>( failmsgs, "sock1t" );
+    failures			       += rspwd_test< 7,2>( failmsgs, "sock1t" );
+    failures			       += rspwd_test< 7,3>( failmsgs, "sock1t" );
+    failures			       += rspwd_test< 7,4>( failmsgs, "sock1t" );
+    failures			       += rspwd_test< 7,5>( failmsgs, "sock1t" );
 #if ! defined( DEBUG ) || DEBUG == 0
     if ( failures )
 	std::cout

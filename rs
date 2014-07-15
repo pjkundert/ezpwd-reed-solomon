@@ -20,6 +20,7 @@
 #include <algorithm>
 #include <vector>
 #include <array>
+#include <map>
 #include <type_traits>
 #include <cstdint>
 #include <iostream>
@@ -1294,7 +1295,7 @@ namespace ezpwd {
 	}
 
 	// 
-	// ezpwd::rspwd::encode -- append N base-64 parity symbols to password
+	// encode(<string>) -- append N base-64 parity symbols to password
 	// 
 	//     The supplied password buffer size must be sufficient to contain N additional symbols, plus
 	// the terminating NUL.  Returns the resultant encoded password size (excluding the NUL).
@@ -1357,94 +1358,213 @@ namespace ezpwd {
 	// 
 	//
 	static
-	int			strength( int errors, int erased=0 )
+	int			strength(
+				    int			corrects,
+				    const std::vector<int>&erasure,	// original erasures positions
+				    const std::vector<int>&position )	// reported correction positions
 	{
-	    if ( errors < 0 ) // -'ve indicates R-S failure.
+	    // -'ve indicates R-S failure.	    
+	    if ( corrects < 0 )
 		return 0;
+	    if ( corrects != position.size() )
+		throw std::runtime_error( "inconsistent R-S decode results" );
+	    // Any erasures that don't turn out to contain errors are not returned as fixed
+	    // positions.  However, they have consumed parity resources.
+	    int			erased	= erasure.size();
+	    for ( auto e : erasure ) {
+		if ( std::find( position.begin(), position.end(), e ) == position.end() ) {
+		    ++corrects;
+		    ++erased;
+		}
+	    }
+	    int			errors	= corrects - erased;
 	    return 100 - double( errors * 2 + erased ) * 100 / N;
 	}
 
+	typedef std::map<std::string, std::pair<int, int>>
+	    			best_avg_base_t;
+	class best_avg
+	    : public best_avg_base_t
+	{
+	public:
+	    using best_avg_base_t::begin;
+	    using best_avg_base_t::end;
+	    using best_avg_base_t::insert;
+	    using best_avg_base_t::find;
+	    using best_avg_base_t::iterator;
+	    using best_avg_base_t::const_iterator;
+	    using best_avg_base_t::value_type;
+	    using best_avg_base_t::mapped_type;
+	    // 
+	    // add -- add the given pct to the current average for <string> str
+	    // 
+	    iterator		add(
+				    const std::string  &str,
+				    int			pct )
+	    {
+		iterator	i	= find( str );
+		if ( i == end() )
+		    i 			= insert( i, value_type( str, mapped_type() ));
+		i->second.second       *= i->second.first++;
+		i->second.second       += pct;
+		i->second.second       /= i->second.first;
+		return i;
+	    }
+
+	    // 
+	    // best -- return the unambiguously best value (>, or == but longer), or end()
+	    // 
+	    const_iterator	best()
+		const
+	    {
+		const_iterator	top	= end();
+		bool		uni	= false;
+		for ( const_iterator i = begin(); i != end(); ++i ) {
+		    if ( top == end()
+			 or i->second > top->second
+			 or ( i->second == top->second
+			      and i->first.size() > top->first.size())) {
+			top		= i;
+			uni		= true;
+		    } else if ( i->second == top->second
+				and i->first.size() == top->first.size()) {
+			uni		= false;
+		    }
+		}
+		return uni ? top : end();
+	    }
+
+	    // 
+	    // sort -- return a multimap indexed by avg --> <string>
+	    // flip -- invert a (<string>,(<samples>,<average>)) to (<average>,<string>)
+	    // output -- output the <string>: <avg>, sorted by average
+	    // 
+	    static std::pair<const int,const std::string &>
+				flip( const value_type &val )
+	    {
+		return std::pair<const int,const std::string &>( val.second.second, val.first );
+	    }
+	    typedef std::multimap<const int,const std::string &>
+	    			sorted_t;
+	    sorted_t		sort()
+		const
+	    {
+		sorted_t	dst;
+		std::transform( begin(), end(), std::inserter( dst, dst.begin() ), flip );
+		return dst;
+	    }
+	    std::ostream       &output(
+				    std::ostream       &lhs )
+		const
+	    {
+		for ( auto i : sort() )
+		    lhs	<< std::setw( 16 ) << i.second
+			<< ": " << std::setw( 3 ) << i.first
+			<< std::endl;
+		return lhs;
+	    }
+	};
+	   
 	static
 	int			decode(
 				    std::string	       &password )
 	{
 	    int			confidence;
-	    int			best	= -1;
-	    std::string		beststr;
+	    best_avg		best;
 
-	    // 0) Full parity?  Check if trivially an R-S codeword; requires N base-64 parity
-	    // symbols.
-	    std::string		fixed;
-	    if ( password.size() > N ) {
-		try {
-		    fixed		= password;
-		    base64::decode( fixed.end() - N, fixed.end() );
-		    int		corrects= rscodec.decode( fixed );
-		    confidence 		= strength( corrects );
-		    if ( confidence > best ) {
-			best		= confidence;
-			beststr.swap( fixed );
-			base64::encode( beststr.end() - N, beststr.end() );
-#if defined( DEBUG ) && DEBUG >= 1
-			std::cout
-			    << " confidence "	<< std::setw( 3 ) << best
-			    << "%: \"" 		<< password
-			    << "\" ==> \""	<< beststr << "\"" << std::endl;
-#endif
-		    }
-		} catch ( std::exception &exc ) {
-#if defined( DEBUG ) && DEBUG >= 1  // should see only when base64::decode fails
-		    std::cout << "invalid full parity password: " << exc.what() << std::endl;
-#endif
-		}
-	    }
-
-	    // 1) Partial parity?  Apply if we have some erasure/correction capability while
-	    // maintaining at least one excess parity symbol for verification.  This can potentially
-	    // result in longer password being returned, if the R-S decoder accidentally solves
-	    // a codeword.
-	    for ( int era = 1; era <= N/2; ++era ) {
-		// For example, if N=3 then N/2 == 1, and we would only try 1 parity erasure.  This
-		// would leave 1 parity symbol to replace the 1 erasure, and 1 remaining to validate
-		// the integrity of the password.
-		fixed			= password;
+	    // Full/Partial parity.  Apply some parity erasure if we have some erasure/correction
+	    // capability while maintaining at least one excess parity symbol for verification.
+	    // This can potentially result in longer password being returned, if the R-S decoder
+	    // accidentally solves a codeword.
+	    for ( int era = 0; era < (N+1)/2; ++era ) { // how many parity symbols to deem erased
+		// For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only try 1 parity
+		// erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
+		// remaining to validate the integrity of the password.
+		std::string	fixed	= password;
 		fixed.resize( password.size() + era );
 		std::vector<int>	erasure;
 		for ( int i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
 		    erasure.push_back( i );
 		try {
 		    base64::decode( fixed.end() - N, fixed.end() - era );
-		    int corrects	= rscodec.decode( fixed, &erasure );
-		    confidence		= strength( corrects - erasure.size(), erasure.size() );
-		    if ( confidence > best ) {
-			best		= confidence;
-			beststr.swap( fixed );
-			base64::encode( beststr.end() - N, beststr.end() );
+		    std::vector<int>	position= erasure;
+		    int corrects	= rscodec.decode( fixed, &position );
+		    confidence		= strength( corrects, erasure, position );
+		    if ( confidence > 0 ) {
+			std::string candidate( fixed, 0, fixed.size() - N );
+			best.add( candidate, confidence );
 #if defined( DEBUG ) && DEBUG >= 1
 			std::cout
-			    << " confidence "	<< std::setw( 3 ) << best
-			    << "%: \"" 		<< password
-			    << "\" ==> \""	<< beststr << "\"" << std::endl;
+			    << " w/ "	 		<< era << " of " << N
+			    << " parity erasures "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< candidate
+			    << "\": "
+			    << std::endl;
+			best.output( std::cout );
 #endif
 		    }
 		} catch ( std::exception &exc ) {
-#if defined( DEBUG ) && DEBUG >= 1 // should see only when base64::decode fails
+#if defined( DEBUG ) && DEBUG >= 2 // should see only when base64::decode fails
 		    std::cout << "invalid part parity password: " << exc.what() << std::endl;
 #endif
 		}
 	    }
 
-	    // o) Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidicen > 0.
+	    // Partial parity, but below threshold for usable error detection.  For the first 1 to
+	    // (N+1)/2 parity symbols (eg. for N == 3, (N+1)/2 == 1 ), we cannot perform meaningful
+	    // error or erasure detection.  However, if we see that the terminal symbols match the
+	    // R-S symbols we expect from a correct password, we'll ascribe a partial confidence
+	    //
+	    // password:    sock1t
+	    // w/ 3 parity: sock1tkeB
+	    // password ----^^^^^^
+	    //                    ^^^--- parity
+	    for ( int era = (N+1)/2; era < N; ++era ) { // how many parity symbols are not present
+		std::string	fixed	= password;
+		int		len	= password.size() - ( N - era );
+		fixed.resize( len );
+		encode( fixed );
+		auto		differs	= std::mismatch( fixed.begin(), fixed.end(), password.begin() );
+	        int		par_equ	= differs.second - password.begin();
+		if ( par_equ < len || par_equ > len + N )
+		    throw std::runtime_error( "miscomputed R-S parity matching length" );
+		par_equ		       -= len;
+		if ( par_equ > 0 ) {
+		    std::string	basic( fixed.begin(), fixed.begin() + len );
+		    confidence		=  par_equ * 100 / N; // each worth a normal parity symbol
+		    best.add( basic, confidence );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << " w/ "	 		<< era << " of " << N
+			    << " parity missing  "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< basic
+			    << " (from computed: \""	<< fixed << "\")"
+			    << "\": "
+			    << std::endl;
+			best.output( std::cout );
+#endif
+		}
+		
+	    }
+
+	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidicen > 0.
 	    confidence			= 0;
-	    if ( best > 0 ) {
-		password.swap( beststr );
-		confidence		=  best;
+	    typename best_avg::const_iterator
+				bi	= best.best();
+	    if ( bi != best.end() ) {
+		password		= bi->first;
+		confidence		= bi->second.second;
 	    }
 	    return confidence;
 	}
 
+	// 
+	// decode(<char*>,<size_t>) -- C interface to decode(<string>)
+	// 
 	static int		decode(
-				    char       	       *password,
+				    char	       *password,
 				    size_t		size )	// maximum available size
 	{
 	    std::string		corrected( password );
