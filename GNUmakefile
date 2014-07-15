@@ -1,6 +1,6 @@
 
 SHELL	= /bin/bash
-CXXFLAGS += -I. -Wall -Wno-missing-braces -O3 -std=c++11 -DDEBUG=0 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
+CXXFLAGS += -I. -Wall -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX = clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
 test:	rssimple rscompare rsvalidate rspwd-test
 	./rssimple; ./rscompare; ./rsvalidate; ./rspwd-test

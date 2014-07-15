@@ -23,6 +23,7 @@
 #include <map>
 #include <type_traits>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
 
 #include "hex" // ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
