@@ -1,9 +1,18 @@
 
 SHELL	= /bin/bash
-CXXFLAGS += -I. -Wall -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
+CXXFLAGS += -I. -Wall -Wno-missing-braces -O1 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX = clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
-test:	rssimple rscompare rsvalidate rspwd-test
+
+EMCC_DOCKER = docker run -v `pwd`:/mnt/test cmfatih/emscripten /srv/var/emscripten/emcc -I/mnt/test $(CXXFLAGS)
+EMCC_EXPORT = "['_rspwd_encode_1', '_rspwd_encode_2', '_rspwd_encode_3']"
+
+test:   rssimple rscompare rsvalidate rspwd-test
 	./rssimple; ./rscompare; ./rsvalidate; ./rspwd-test
+
+rspwd-test.js:	rspwd-test.C rspwd.C
+	$(EMCC_DOCKER) -s EXPORTED_FUNCTIONS=$(EMCC_EXPORT) /mnt/test/$< -o /mnt/test/$@ 
+rspwd.js:	rspwd.C
+	$(EMCC_DOCKER) -s EXPORTED_FUNCTIONS=$(EMCC_EXPORT) /mnt/test/$< -o /mnt/test/$@ 
 
 clean:
 	rm -f rssimple		rssimple.o	\

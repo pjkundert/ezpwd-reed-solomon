@@ -129,6 +129,9 @@ std::ostream		       &operator<<(
 
 int				main()
 {
+    std::cout
+	<< "rspwd tests..."
+	<< std::endl;
 
 #if defined( DEBUG ) && DEBUG > 0
     std::ostream	       &failmsgs = std::cout;
