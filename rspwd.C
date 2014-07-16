@@ -130,7 +130,7 @@ std::ostream		       &operator<<(
 int				main()
 {
     std::cout
-	<< "rspwd tests..."
+	<< "rspwd tests ..."
 	<< std::endl;
 
 #if defined( DEBUG ) && DEBUG > 0
@@ -156,6 +156,10 @@ int				main()
 	    << std::endl
 	    << failmsgs
 	    << std::endl
+	    << std::endl;
+    else
+	std::cout
+	    << "  ...all tests passed."
 	    << std::endl;
 #endif
     return failures ? 1 : 0;

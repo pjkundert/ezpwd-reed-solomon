@@ -8,6 +8,7 @@
 
 #include <iostream>
 #include <iomanip>
+#include <random>
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -47,6 +48,14 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
     struct timeval start;
     struct timeval end;
 #endif
+
+    std::default_random_engine	rnd_gen( (unsigned int)time( 0 ));
+    #std::minstd_rand		rnd_gen( (unsigned int)time( 0 ));
+#define random_between( first, last ) std::uniform_int_distribution<int>(( first ), ( last ))
+    auto			random_bool	= random_between( 0, 1 );
+    auto			random_NROOTS_1	= random_between( 0, NROOTS - 1 );
+    auto			random_NN	= random_between( 0, NN - 1 );
+    auto			random_25	= random_between( 0, 25 );
 
     /*
      * Collect stats on 3 types of decodes; no errors, < 1/2 correction capacity, > 1/2 correction
@@ -110,10 +119,10 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		    tee		= 0;
 		    break;
 		case 1:			/* <= 1/2 correction capacity */	
-		    tee		= ( random() % NROOTS ) / 2 + 1;
+		    tee		= random_NROOTS_1( rnd_gen ) / 2 + 1;
 		    break;
 		case 2:			/* > 1/2 correction capacity */	
-		    tee		= ( random() % NROOTS ) / 2 + NROOTS - ( NROOTS / 2 );
+		    tee		= random_NROOTS_1( rnd_gen ) / 2 + NROOTS - ( NROOTS / 2 );
 		    break;
 		}
 
@@ -122,13 +131,14 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		 * number of non-parity symbols in the codeword is 255 - 32 == 223.  We can allow up to 222
 		 * symbols of padding.  padknd specifies the allowable percentage range for this test...
 		 */
-		padpct	= padknd * 25 + random() % 26;		/* 0 - 100% */
+		padpct	= padknd * 25 + random_25( rnd_gen );/* 0 - 100% */
 		pad	= padpct * ( NN - NROOTS - 1) / 100;	/* as little as 1 data symbol */
+		auto		random_NN_pad_1	= random_between( 0, NN - pad - 1 );
 
 		/* Load block with random data and encode */
 		memset( block, 0, sizeof block );
 		for(i=pad;i<NN-NROOTS;i++)
-		    block[i] = random() & NN;
+		    block[i] = random_NN( rnd_gen );
 
 		// Encode the block; pad+data+parity
 		rs.encode( block+pad, NN-NROOTS-pad, block+NN-NROOTS);
@@ -156,17 +166,17 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		std::vector<uint8_t>	errident( NN-pad, ' ' );
 		for( i = 0; ( 2 * errors + erasures + 1 ) <= tee; i++ ) {
 		    do {
-			errval = random() & NN;
+			errval = random_NN( rnd_gen );
 		    } while(errval == 0); /* Error value must contain at least one non-zero bit */
 
 		    do {
-			errloc = ( random() % ( NN - pad )); /* errloc must be beyond end of pad */
+			errloc = random_NN_pad_1( rnd_gen ); /* errloc must be beyond end of pad */
 		    } while(errlocs[errloc] != 0); /* Must not choose the same location twice */
 
 		    errlocs[errloc] = 1;
 
 #if FLAG_ERASURE
-		    if ( ( random() & 1)	/* 50-50 chance, or only room for 1 more erasure */
+		    if ( random_bool( rnd_gen ) /* 50-50 chance, or only room for 1 more erasure */
 			 || (( 2 * errors + erasures + 1 ) >= tee )) {
 			derrlocs[erasures++] = errloc;
 			errident[errloc] = '_';
@@ -260,7 +270,8 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 	for ( errknd = 0; errknd < 3; ++errknd ) {
 	    if ( decblcks[padknd][errknd] )
 		std::cout 
-		    << "Enc/Decoding (" << errstr[errknd] << ", " << padstr[padknd]
+		    << rs
+		    << " Enc/Decoding (" << errstr[errknd] << ", " << padstr[padknd]
 		    << "). Bytes: " << std::setw( 4 ) << NN
 		    << ", Blocks: " << std::setw( 5 ) << decblcks[padknd][errknd]
 		    << " (avg. " << std::setprecision( 2 ) << std::setw( 6 )
