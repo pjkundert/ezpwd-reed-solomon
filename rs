@@ -518,7 +518,7 @@ namespace ezpwd {
 	static const int	LOAD	= SIZE - NROOTS;	// maximum non-parity symbol payload
 
     protected:
-	static ezpwd::array<data_t,NROOTS + 1>
+	static ezpwd::array<TYP, NROOTS + 1>
 				genpoly;
 
 	// 
@@ -1417,7 +1417,7 @@ namespace ezpwd {
 	    // -'ve indicates R-S failure.	    
 	    if ( corrects < 0 )
 		return 0;
-	    if ( corrects != position.size() )
+	    if ( corrects != int( position.size() ))
 		throw std::runtime_error( "inconsistent R-S decode results" );
 	    // Any erasures that don't turn out to contain errors are not returned as fixed
 	    // positions.  However, they have consumed parity resources.
@@ -1527,14 +1527,14 @@ namespace ezpwd {
 	    // capability while maintaining at least one excess parity symbol for verification.
 	    // This can potentially result in longer password being returned, if the R-S decoder
 	    // accidentally solves a codeword.
-	    for ( int era = 0; era < (N+1)/2; ++era ) { // how many parity symbols to deem erased
+	    for ( size_t era = 0; era < (N+1)/2; ++era ) { // how many parity symbols to deem erased
 		// For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only try 1 parity
 		// erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
 		// remaining to validate the integrity of the password.
 		std::string	fixed	= password;
 		fixed.resize( password.size() + era );
 		std::vector<int>	erasure;
-		for ( int i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
+		for ( size_t i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
 		    erasure.push_back( i );
 		try {
 		    base64::decode( fixed.end() - N, fixed.end() - era );
@@ -1571,13 +1571,13 @@ namespace ezpwd {
 	    // w/ 3 parity: sock1tkeB
 	    // password ----^^^^^^
 	    //                    ^^^--- parity
-	    for ( int era = (N+1)/2; era < N; ++era ) { // how many parity symbols are not present
+	    for ( size_t era = (N+1)/2; era < N; ++era ) { // how many parity symbols are not present
 		std::string	fixed	= password;
-		int		len	= password.size() - ( N - era );
+		size_t		len	= password.size() - ( N - era );
 		fixed.resize( len );
 		encode( fixed );
 		auto		differs	= std::mismatch( fixed.begin(), fixed.end(), password.begin() );
-	        int		par_equ	= differs.second - password.begin();
+	        size_t		par_equ	= differs.second - password.begin();
 		if ( par_equ < len || par_equ > len + N )
 		    throw std::runtime_error( "miscomputed R-S parity matching length" );
 		par_equ		       -= len;
