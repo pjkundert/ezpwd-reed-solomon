@@ -13,7 +13,7 @@ main()
 {
     std::array<uint8_t,255>	orig;
 
-    for ( int i = 0; i < orig.size(); ++i )
+    for ( size_t i = 0; i < orig.size(); ++i )
 	orig[i]				= i;
 
     // ensure that each RS encoder produces the same parity symbols

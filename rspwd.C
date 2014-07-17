@@ -45,10 +45,10 @@ inline int			rspwd_test( std::ostream &failmsgs, const char *password )
     // 0) Full parity.  Should be able to handle up to (N-1)/2 errors in the low 6 bits.  In other
     // words, until you have 3 parity symbols, you cannot withstand a random error and have any
     // reserve parity to gain any certainty that the result is actually correct.
-    for ( int e = 0; e <= N/2; ++e ) {
+    for ( size_t e = 0; e <= N/2; ++e ) {
 	char			err[sizeof enc + N]; // be prepared for up to N extra symbols
 	std::copy( enc, enc + sizeof enc, err );
-	for ( int i = 0; i < e; ++i )
+	for ( size_t i = 0; i < e; ++i )
 	    err[i]	       	       ^= 1<<(i%4); // flip one of the 3 low bits, eg. entry error
 	char			fix[sizeof err];
 	std::copy( err, err + sizeof err, fix );
@@ -83,7 +83,7 @@ inline int			rspwd_test( std::ostream &failmsgs, const char *password )
     // 1) Part parity (no errors).  Should be able to confirm password with no errors, and (N+1)/2+1
     // to N parity symbols via R-S decoding, and from 1 to (N+1)/2 symbols by simple matching.  Clip
     // off up to all N parity symbols and try decoding.
-    for ( int e = 1; e <= N; ++e ) {
+    for ( size_t e = 1; e <= N; ++e ) {
 	char			err[sizeof enc + N]; // be prepared for up to N extra symbols
 	std::copy( enc, enc + sizeof enc, err );
 	err[strlen( enc ) - e]	= 0;		// clip off last 'e' symbols
