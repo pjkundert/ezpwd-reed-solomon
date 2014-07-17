@@ -6,18 +6,21 @@ CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
 
-EMSDK_EMPP 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=$${PATH}:`pwd`/emscripten && em++
-DOCKER_EMPP	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
+EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=$${PATH}:`pwd`/emscripten && em++
+DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
 
-EMPP		= $(EMSDK_EMPP)
-EMPP_ACTIVATE	= $(EMSDK_ACTIVATE)
+EMXX		= $(EMSDK_EMXX)
+EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
 
-EMPP_EXPORTS	= "['_rspwd_encode_1', '_rspwd_encode_2', '_rspwd_encode_3']"
-EMPP_MAIN	= "['_main']"
+EMXX_EXPORTS	= "['_rspwd_encode_1', '_rspwd_encode_2', '_rspwd_encode_3']"
+EMXX_MAIN	= "['_main']"
 
 EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
-test:   rssimple rsexercise rscompare rsvalidate rspwd-test
+
+all:	testjs rspwd.js
+
+test:	rssimple rsexercise rscompare rsvalidate rspwd-test
 	./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test
 
 testjs:	rssimple.js rsexercise.js rspwd-test.js
@@ -25,11 +28,11 @@ testjs:	rssimple.js rsexercise.js rspwd-test.js
 
 rspwd-test.js:	rspwd-test.C rspwd.C			\
 		emscripten
-	$(EMPP) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMPP_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
-rspwd.js:	rspwd.C 				\
+rspwd.js:	rspwd.C rs				\
 		emscripten
-	$(EMPP) $(CSSFLAGS) -s EXPORTED_FUNCTIONS=$(EMPP_EXPORTS) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS) $< -o $@ 
 
 clean:
 	rm -f rssimple		rssimple.o		\
@@ -42,13 +45,13 @@ rssimple.o:	rssimple.C rs
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rssimple.js:	rssimple.C rs
-	$(EMPP) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMPP_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
 rsexercise.o:	rsexercise.C rs exercise.H
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rsexercise.js:	rsexercise.C rs exercise.H
-	$(EMPP) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMPP_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
 rscompare.o:	rscompare.C rs phil-karn/fec/rs-common.h
 rscompare: CXXFLAGS += -I./phil-karn
@@ -76,7 +79,7 @@ phil-karn/librs.a:
 emscripten:	emscripten/python2 			\
 		emscripten/emsdk_portable/emscripten	\
 		FORCE
-	$(EMPP_ACTIVATE)
+	$(EMXX_ACTIVATE)
 
 emscripten/python2:
 	mkdir -p emscripten

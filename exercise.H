@@ -15,14 +15,7 @@
 #include <memory.h>
 
 #include <rs>
-
-#define      CLOCK
-#if defined( CLOCK )
-#  include <time.h>
-#else
-#  include <sys/time.h>
-#endif
-
+#include <timeofday>
 
 /* Exercise the RS codec passed as an argument */
 template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY >
@@ -41,16 +34,11 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
     int tee;
     int decoder_errors = 0;
 
-#if defined( CLOCK )
-    clock_t	 start;
-    clock_t	 end;
-#else
     struct timeval start;
     struct timeval end;
-#endif
 
-    std::default_random_engine	rnd_gen( (unsigned int)time( 0 ));
-    #std::minstd_rand		rnd_gen( (unsigned int)time( 0 ));
+    //std::default_random_engine	rnd_gen( (unsigned int)time( 0 ));
+    std::minstd_rand		rnd_gen( (unsigned int)time( 0 ));
 #define random_between( first, last ) std::uniform_int_distribution<int>(( first ), ( last ))
     auto			random_bool	= random_between( 0, 1 );
     auto			random_NROOTS_1	= random_between( 0, NROOTS - 1 );
@@ -101,11 +89,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
     for ( padknd = 0; padknd < 4; ++padknd ) for ( errknd = 0; errknd < 3; ++errknd ) {
 
-#if defined( CLOCK )
-	    start	= clock();
-#else
-	    (void)gettimeofday( &start, NULL );
-#endif
+	    start		= timeofday();
 
 #if defined( DEBUG ) && DEBUG >= 1
 	    trials	= 10;
@@ -255,15 +239,9 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		}
 	    }
 
-#if defined( CLOCK )
-	    end		= clock();
-	    decusecs[padknd][errknd] += end - start;
-#else
-	    (void)gettimeofday( &end, NULL );
-	    decusecs[padknd][errknd] += ( end.tv_sec - start.tv_sec ) * 1000000;
-	    decusecs[padknd][errknd] += ( end.tv_usec - start.tv_usec );
-#endif
-
+	    end				= timeofday();
+	    timeval		duration= end - start;
+	    decusecs[padknd][errknd] += duration.tv_sec * 1000000 + duration.tv_usec;
 	}
 
     for ( padknd = 0; padknd < 4; ++padknd ) {

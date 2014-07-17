@@ -8,71 +8,7 @@
 #include <vector>
 
 #include <rs>
-
-// 
-// timeofday -- Return current time.
-// epoch     -- The UNIX epoch.
-// <timeval> < <timeval> -- less-than comparison on timevals
-// <timeval> - <timeval> -- difference on timevals
-// 
-inline
-timeval				timeofday()
-{
-    timeval			tv;
-    ::gettimeofday( &tv, NULL );
-    return tv;
-}
-
-timeval				epoch()
-{
-    timeval			tv;
-    tv.tv_sec				= 0;
-    tv.tv_usec				= 0;
-    return tv;
-}
-
-inline
-bool				operator<(
-				    const timeval      &lhs,
-				    const timeval      &rhs )
-{
-    return ( lhs.tv_sec 		<  rhs.tv_sec
-	     || (( lhs.tv_sec		== rhs.tv_sec )
-		 && ( lhs.tv_usec 	<  rhs.tv_usec )));
-}
-
-inline
-timeval				operator-(
-				    const timeval      &lhs,
-				    timeval             rhs ) // copy; adjusted...
-{
-    timeval			result;
-    if ( lhs < rhs ) {
-	result				= epoch();
-    } else {
-	// See http://www.gnu.org/software/libc/manual/html_node/Elapsed-Time.html
-	if ( lhs.tv_usec < rhs.tv_usec ) {
-	    int 		sec	= ( rhs.tv_usec - lhs.tv_usec ) / 1000000 + 1;
-	    rhs.tv_usec		       -= sec * 1000000;
-	    rhs.tv_sec		       += sec;
-	}
-	if ( lhs.tv_usec - rhs.tv_usec > 1000000 ) {
-	    int 		sec	= ( lhs.tv_usec - rhs.tv_usec ) / 1000000;
-	    rhs.tv_usec 	       += sec * 1000000;
-	    rhs.tv_sec		       -= sec;
-	}
-	result.tv_sec			= lhs.tv_sec  - rhs.tv_sec;
-	result.tv_usec			= lhs.tv_usec - rhs.tv_usec;
-    }
-    return result;
-}
-
-inline
-double				microseconds( const timeval &rhs )
-{
-    return rhs.tv_usec / 1000000.0 + rhs.tv_sec;
-}
-
+#include <timeofday>
 
 int main() 
 {
@@ -116,7 +52,7 @@ int main()
 	    rs.decode( data );
 	}
     }
-    double		elapsed	= microseconds( now - beg );
+    double		elapsed	= seconds( now - beg );
     std::cout 
 	<< rs << " rate: "
 	<< count / elapsed / 1000 << " kTPS."
