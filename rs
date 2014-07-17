@@ -20,10 +20,13 @@
 #include <algorithm>
 #include <vector>
 #include <array>
+#include <map>
 #include <type_traits>
 #include <cstdint>
+#include <cstring>
 #include <iostream>
-#include <iomanip>
+
+#include "hex" // ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
 
 namespace ezpwd {
 
@@ -91,12 +94,12 @@ namespace ezpwd {
 	}
     }; // struct ezpwd::array
 #else
-    using std::array;
+    using std::array; // ! EZPWD_ARRAY_SAFE: ezpwd::arrray is std::array
 #endif
 
-    /**
-     * reed_solomon_base - Reed-Solomon codec generic base class
-     */
+    //
+    // reed_solomon_base - Reed-Solomon codec generic base class
+    //
     class reed_solomon_base {
     public:
 	virtual size_t		datum()		const = 0;	// a data element's bits
@@ -131,9 +134,9 @@ namespace ezpwd {
 	///
 
 	// 
-	// encode( <string> ) -- extend string to contain parity, or place in supplied parity string
-	// encode( <vector> ) -- extend vector to contain parity, or place in supplied parity vector
-	// encode( <array> )  -- ignore 'pad' elements of array, puts nroots() parity symbols at end
+	// encode(<string>) -- extend string to contain parity, or place in supplied parity string
+	// encode(<vector>) -- extend vector to contain parity, or place in supplied parity vector
+	// encode(<array>)  -- ignore 'pad' elements of array, puts nroots() parity symbols at end
 	// 
 	void			encode(
 				    std::string	       &data )
@@ -147,15 +150,17 @@ namespace ezpwd {
 	}
 
 	void			encode(
-				    std::string	       &data,
+				    const std::string  &data,
 				    std::string	       &parity )
 	    const
 	{
 	    typedef uint8_t	uT;
+	    typedef std::pair<const uT *, const uT *>
+				cuTpair;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    parity.resize( nroots() );
-	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+	    encode( cuTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
 		    uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
 	}
 
@@ -173,16 +178,18 @@ namespace ezpwd {
 	}
 	template < typename T >
 	void			encode(
-				    std::vector<T>     &data,
+				    const std::vector<T>&data,
 				    std::vector<T>     &parity )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
 				uT;
+	    typedef std::pair<const uT *, const uT *>
+				cuTpair;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    parity.resize( nroots() );
-	    encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+	    encode( cuTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
 		    uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
 	}
 
@@ -206,7 +213,7 @@ namespace ezpwd {
 	    const
 	= 0;
 	virtual void		encode(
-				    const std::pair<uint8_t *, uint8_t *>
+				    const std::pair<const uint8_t *, const uint8_t *>
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity )
@@ -218,7 +225,7 @@ namespace ezpwd {
 	    const
 	= 0;
 	virtual void		encode(
-				    const std::pair<uint16_t *, uint16_t *>
+				    const std::pair<const uint16_t *, const uint16_t *>
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity )
@@ -230,7 +237,7 @@ namespace ezpwd {
 	    const
 	= 0;
 	virtual void		encode(
-				    const std::pair<uint32_t *, uint32_t *>
+				    const std::pair<const uint32_t *, const uint32_t *>
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity )
@@ -351,7 +358,23 @@ namespace ezpwd {
 	    const
 	= 0;
     };
+} // namespace ezpwd
 
+// 
+// std::ostream << ezpwd::reed_solomon<...>
+// 
+//     Output a R-S codec description in standard form eg. RS(255,253)
+// 
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const ezpwd::reed_solomon_base
+						       &rhs )
+{
+    return lhs << "RS(" << rhs.size() << "," << rhs.load() << ")";
+}
+
+namespace ezpwd {
     /**
      * gfpoly - default field polynomial generator functor.
      */
@@ -372,32 +395,32 @@ namespace ezpwd {
 	}
     };
 
-    /**
-     * struct reed_solomon - Reed-Solomon codec
-     *
-     * @TYP, data_t:	A symbol datum; {en,de}code operates on arrays of these
-     * @DATUM:		Bits per datum
-     * @SYM{BOL}, MM:	Bits per symbol
-     * @NN:		Symbols per block (== (1<<MM)-1)
-     * @alpha_to:	log lookup table
-     * @index_of:	Antilog lookup table
-     * @genpoly:	Generator polynomial
-     * @NROOTS:		Number of generator roots = number of parity symbols
-     * @FCR:		First consecutive root, index form
-     * @PRM:		Primitive element, index form
-     * @iprim:		prim-th root of 1, index form
-     * @PLY:		The primitive generator polynominal functor
-     * @MTX, mutex_t:	A std::mutex like object, or a dummy
-     * @GRD, guard_t:	A std::lock_guard, or anything that can take a mutex_t
-     *
-     *     All reed_solomon<T, ...> instances with the same template type parameters share a common
-     * (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
-     * initializes the tables (optionally protected by a std::mutex/std::lock_guard).
-     * 
-     *     Each specialized type of reed_solomon implements a specific encode/decode method
-     * appropriate to its datum 'TYP' 'data_t'.  When accessed via a generic reed_solomon_base
-     * pointer, only access via "safe" (size specifying) containers or iterators is available.
-     */
+    //
+    // struct reed_solomon - Reed-Solomon codec
+    //
+    // @TYP, data_t:	A symbol datum; {en,de}code operates on arrays of these
+    // @DATUM:		Bits per datum
+    // @SYM{BOL}, MM:	Bits per symbol
+    // @NN:		Symbols per block (== (1<<MM)-1)
+    // @alpha_to:	log lookup table
+    // @index_of:	Antilog lookup table
+    // @genpoly:	Generator polynomial
+    // @NROOTS:		Number of generator roots = number of parity symbols
+    // @FCR:		First consecutive root, index form
+    // @PRM:		Primitive element, index form
+    // @iprim:		prim-th root of 1, index form
+    // @PLY:		The primitive generator polynominal functor
+    // @MTX, mutex_t:	A std::mutex like object, or a dummy
+    // @GRD, guard_t:	A std::lock_guard, or anything that can take a mutex_t
+    //
+    //     All reed_solomon<T, ...> instances with the same template type parameters share a common
+    // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
+    // initializes the tables (optionally protected by a std::mutex/std::lock_guard).
+    // 
+    //     Each specialized type of reed_solomon implements a specific encode/decode method
+    // appropriate to its datum 'TYP' 'data_t'.  When accessed via a generic reed_solomon_base
+    // pointer, only access via "safe" (size specifying) containers or iterators is available.
+    //
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
 	       typename MTX=int, typename GRD=int >
     class reed_solomon
@@ -409,12 +432,12 @@ namespace ezpwd {
 
 	static const size_t	DATUM	= 8 * sizeof data_t();	// bits / data_t
 	static const size_t	SYMBOL	= SYM;			// bits / symbol
+	static const int	MM	= SYM;
 	static const int	NROOTS	= RTS;
-	static const int	SIZE	= ( 1 << SYMBOL ) - 1;
+	static const int	SIZE	= ( 1 << SYM ) - 1;
 	static const int	LOAD	= SIZE - NROOTS;
-	static const int	MM	= SYMBOL;
 	static const int	NN	= SIZE;
-	static const int	A0	= NN;
+	static const int	A0	= SIZE;
 
 	virtual size_t		datum() const
 	{
@@ -447,11 +470,11 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    encode_mask( data.first, data.second - data.first, (uint8_t *)0 );
+	    encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
 	virtual void		encode(
-				    const std::pair<uint8_t *, uint8_t *>
+				    const std::pair<const uint8_t *, const uint8_t *>
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity )
@@ -467,11 +490,11 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    encode_mask( data.first, data.second - data.first, (uint16_t *)0 );
+	    encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
 	virtual void		encode(
-				    const std::pair<uint16_t *, uint16_t *>
+				    const std::pair<const uint16_t *, const uint16_t *>
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity )
@@ -487,11 +510,11 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    encode_mask( data.first, data.second - data.first, (uint32_t *)0 );
+	    encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
 	virtual void		encode(
-				    const std::pair<uint32_t *, uint32_t *>
+				    const std::pair<const uint32_t *, const uint32_t *>
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity )
@@ -504,20 +527,16 @@ namespace ezpwd {
 
 	template < typename INP >
 	void			encode_mask(
-				    INP		       *data,
+				    const INP	       *data,
 				    int			len,
-				    INP		       *parity	= 0 )	// either 0, or pointer to all parity symbols
+				    INP		       *parity )	// pointer to all NROOTS parity symbols
 
 	    const
 	{
-	    if ( len < ( parity ? 0 : NROOTS ) + 1 )
+	    if ( len < 1 )
 		throw std::runtime_error( "reed-solomon: must provide space for all parity and at least one non-parity symbol" );
-	    if ( ! parity ) {
-		len			       -= NROOTS;
-		parity				= data + len;
-	    }
 
-	    data_t	       	       *dataptr;
+	    const data_t       	       *dataptr;
 	    data_t		       *pariptr;
 	    const size_t		INPUT	= 8 * sizeof ( INP );
 
@@ -536,16 +555,16 @@ namespace ezpwd {
 		pariptr				= &tmp[LOAD];
 	    } else {
 		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches
-		dataptr				= reinterpret_cast<data_t *>( data );
+		dataptr				= reinterpret_cast<const data_t *>( data );
 		pariptr				= reinterpret_cast<data_t *>( parity );
 	    }
 
 	    encode( dataptr, len, pariptr );
 
-	    // If we copied and masked off data, copy the parity symbols back
+	    // If we copied/masked data, copy the parity symbols back (may be different sizes)
 	    if ( cpy )
 		for ( int i = 0; i < NROOTS; ++i )
-		    parity[i]			= tmp[LOAD + i];
+		    parity[i]			= pariptr[i];
 	}
 	    
 	using reed_solomon_base::decode;
@@ -796,17 +815,16 @@ namespace ezpwd {
 		parity[i]		= 0;
 	    for ( int i = 0; i < len; i++ ) {
 		data_t		feedback= index_of[data[i] ^ invmsk ^ parity[0]];
-		if ( feedback != A0 ) // feedback term is non-zero
+		if ( feedback != A0 )
 		    for ( int j = 1; j < NROOTS; j++ )
 			parity[j]       ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
 
 		// Shift; was: memmove( &par[0], &par[1], ( sizeof par[0] ) * ( NROOTS - 1 ));
 		std::rotate( parity, parity + 1, parity + NROOTS );
-		if ( feedback != A0 ) {
+		if ( feedback != A0 )
 		    parity[NROOTS - 1]	= alpha_to[modnn(feedback + genpoly[0])];
-		} else {
+		else
 		    parity[NROOTS - 1]	= 0;
-		}
 	    }
 	}
 
@@ -1022,7 +1040,7 @@ namespace ezpwd {
 		if ( q != 0 )
 		    continue; // Not a root
 		// store root (index-form) and error location number
-#if DEBUG>=2
+#if DEBUG >= 2
 		std::cout << "count " << count << " root " << i << " loc " << k << std::endl;
 #endif
 		root[count]		= i;
@@ -1107,7 +1125,7 @@ namespace ezpwd {
     }; // class reed_solomon
 
     // 
-    // Define the static members; allowed in header for template types.
+    // Define the static reed_solomon<...> members; allowed in header for template types.
     // 
     //     The reed_solomon<...>::iprim == 0 is used to indicate to the first instance that the
     // static tables require initialization.  If reed_solomon<...>::mutex is something like a
@@ -1183,122 +1201,400 @@ namespace ezpwd {
 #   define RS_32767( PAYLOAD )		RS( uint16_t, 32767, PAYLOAD,  0x8003,	 1,  1 )
 #   define RS_65535( PAYLOAD )		RS( uint16_t, 65535, PAYLOAD, 0x1100b,	 1,  1 )
 
-} // namespace ezpwd
+    // 
+    // ezpwd::base64 -- transform individual characters between 6-bit binary and base64
+    // 
+    //     The char values [0,64) are mapped by base64::encode onto:
+    // 
+    //         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+    // 
+    // and base64::decode performs the inverse.
+    // 
+    //    Any characters encountered outside [0,64) by encode and outsside the above set
+    // by decode raise an exception.
+    // 
+    namespace base64 {
 
-// 
-// std::ostream << ezpwd::reed_solomon<...>
-// 
-//     Output a R-S codec description in standard form eg. RS(255,253)
-// 
-inline
-std::ostream		       &operator<<(
-				    std::ostream       &lhs,
-				    const ezpwd::reed_solomon_base
-						       &rhs )
-{
-    return lhs << "RS(" << rhs.size() << "," << rhs.load() << ")";
-}
+	template < typename iter>
+        void			encode(
+				    iter	begin,
+				    iter	end )
+	{
+	    for ( iter i = begin; i != end; ++i ) {
+		if ( *i >= char( 0 ) && *i < char( 26 ))
+		    *i	       += 'A';
+		else if ( *i >= char( 26 ) && *i < char( 52 ))
+		    *i	       += 'a' - 26;
+		else if ( *i >= char( 52 ) && *i < char( 62 ))
+		    *i	       += '0' - 26 - 26;
+		else if ( *i == char( 62 ))
+		    *i		= '+';
+		else if ( *i == char( 63 ))
+		    *i		= '/';
+		else
+		    throw std::runtime_error( "ezpwd::base64::encode: invalid symbol presented" );
+	    }
+	}
 
-// 
-// std::ostream << hexify( c )
-// std::ostream << hexout( beg, end )
-// std::ostream << std::vector<unsigend char>
-// std::ostream << std::array<unsigend char, N>
-// 
-//     Output unprintable unsigned char data in hex, escape printable/space data.
-// 
-struct hexify {
-    unsigned char		c;
-    std::streamsize		w;
-				hexify(
-				    unsigned char	_c,
-				    std::streamsize	_w	= 2 )
-				    : c( _c )
-				    , w( _w )
-    { ; }
-				hexify(
-				    char		_c,
-				    std::streamsize	_w	= 2 )
-				    : c( (unsigned char)_c )
-				    , w( _w )
-    { ; }
-};
+	inline
+	std::string		encode(
+				    std::string		symbols )
+	{
+	    encode( symbols.begin(), symbols.end() );
+	    return symbols;
+	}
 
-inline
-std::ostream		       &operator<<(
-				    std::ostream       &lhs,
-				    const hexify       &rhs )
-{
-    std::ios_base::fmtflags	flg	= lhs.flags();			// left, right, hex?
+	template < typename iter >
+	void			decode(
+				    iter		begin,
+				    iter		end )
+	{
+	    for ( iter i = begin; i != end; ++i ) {
+		if ( *i >= 'A' && *i <= 'Z' )
+		    *i	       -= 'A';
+		else if ( *i >= 'a' and *i <= 'z' )
+		    *i	       -= 'a' - 26;
+		else if ( *i >= '0' and *i <= '9' )
+		    *i	       -= char( '0' ) - char( 26 ) - char( 26 );
+		else if ( *i == '+' )
+		    *i		= char( 62 );
+		else if ( *i == '/' )
+		    *i		= char( 63 );
+		else
+		    throw std::runtime_error( "ezpwd::base64::decode: invalid symbol presented" );
+	    }
+	}
+
+	inline
+	std::string		decode(
+				    std::string		symbols )
+	{
+	    decode( symbols.begin(), symbols.end() );
+	    return symbols;
+	}
+
+    } // namespace ezpwd::base64
+
+    // 
+    // ezpwd::corrector -- Apply statistical corrections to a string, returning the confidence
+    // 
+    //     All methods are static; no instance is required, as this is primarily used to create
+    // external language APIs.
+    // 
+    template < size_t N >
+    class corrector {
+    public:
+	// 
+	// parity(<string>) -- Returns 'N' base-64 symbols of R-S parity to the supplied password
+	// 
+	static std::string	parity(
+				    const std::string  &password )
+	{
+	    std::string		parity;
+	    rscodec.encode( password, parity );
+	    return base64::encode( parity );
+	}
+
+	// 
+	// encode(<string>) -- append N base-64 parity symbols to password
+	// 
+	//     The supplied password buffer size must be sufficient to contain N additional symbols, plus
+	// the terminating NUL.  Returns the resultant encoded password size (excluding the NUL).
+	// 
+	static size_t		encode(
+				    std::string        &password )
+	{
+	    password		       += parity( password );
+	    return password.size();
+	}
+
+	static size_t		encode(
+				    char       	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    size_t		len	= ::strlen( password );	// length w/o terminating NUL
+	    if ( len + N + 1 > size )
+		throw std::runtime_error( "ezpwd::rspwd::encode password buffer has insufficient capacity" );
+	    std::string		par	= parity( std::string( password, password + len ));
+	    if ( par.size() != N )
+		throw std::runtime_error( "ezpwd::rspwd::encode computed parity with incorrect size" );
+	    std::copy( par.begin(), par.end(), password + len );
+	    len			       += N;
+	    password[len]		= 0;
+	    return len;
+	}
+
+	// 
+	// decode(<string>) -- Applies R-S error correction on the encoded string, removing parity
+	// 
+	//     Up to 'N' Reed-Solomon parity symbols are examined, to determine if the supplied
+	// string is a valid R-S codeword and hence very likely to be correct.
+	// 
+	//     Returns a confidence strength rating, which is the ratio:
+	// 
+	//         100 - ( errors * 2 + erasures ) * 100 / parity
+	// 
+	// if an R-S codeword was solved, and 0.0 otherwise.  If a codeword is solved, but the
+	// number of errors and erasures corrected indicates that all parity was consumed, we do not
+	// use the corrected string, because there is a chance that our R-S polynomial was
+	// overwhelmed with errors and actually returned an incorrect codeword.  Therefore,
+	// a solving a codeword using all parity results in 100 - N * 100 / N == 0, which matches
+	// the strength of the final 
+	// 
+	//     Supports the following forms of error/erasure:
+	// 
+	// 0) Full parity.  All data and parity supplied, and an R-S codeword is solved.
+	// 
+	// 1) Partial parity.  All data and some parity supplied; remainder are deemed erasures.
+	// 
+	//     If N > 2, then up to N/2-1 trailing parity terms are marked as erasures.  If the R-S
+	// codeword is solved and a safe number of errors are found, then we can have reasonable
+	// confidence that the string is correct.
+	// 
+	//   1a) Erase errors.  Permute the combinations of up to N-1 erasures.
+	// 
+	// o) Raw password.  No parity terms supplied; not an R-S codeword
+	// 
+	//     If none of the error/erasure forms succeed, the password is returned unmodified.
+	// 
+	//
+	static
+	int			strength(
+				    int			corrects,
+				    const std::vector<int>&erasure,	// original erasures positions
+				    const std::vector<int>&position )	// reported correction positions
+	{
+	    // -'ve indicates R-S failure.	    
+	    if ( corrects < 0 )
+		return 0;
+	    if ( corrects != position.size() )
+		throw std::runtime_error( "inconsistent R-S decode results" );
+	    // Any erasures that don't turn out to contain errors are not returned as fixed
+	    // positions.  However, they have consumed parity resources.
+	    int			erased	= erasure.size();
+	    for ( auto e : erasure ) {
+		if ( std::find( position.begin(), position.end(), e ) == position.end() ) {
+		    ++corrects;
+		    ++erased;
+		}
+	    }
+	    int			errors	= corrects - erased;
+	    return 100 - double( errors * 2 + erased ) * 100 / N;
+	}
+
+	typedef std::map<std::string, std::pair<int, int>>
+	    			best_avg_base_t;
+	class best_avg
+	    : public best_avg_base_t
+	{
+	public:
+	    using best_avg_base_t::begin;
+	    using best_avg_base_t::end;
+	    using best_avg_base_t::insert;
+	    using best_avg_base_t::find;
+	    using best_avg_base_t::iterator;
+	    using best_avg_base_t::const_iterator;
+	    using best_avg_base_t::value_type;
+	    using best_avg_base_t::mapped_type;
+	    // 
+	    // add -- add the given pct to the current average for <string> str
+	    // 
+	    iterator		add(
+				    const std::string  &str,
+				    int			pct )
+	    {
+		iterator	i	= find( str );
+		if ( i == end() )
+		    i 			= insert( i, value_type( str, mapped_type() ));
+		i->second.second       *= i->second.first++;
+		i->second.second       += pct;
+		i->second.second       /= i->second.first;
+		return i;
+	    }
+
+	    // 
+	    // best -- return the unambiguously best value (>, or == but longer), or end()
+	    // 
+	    const_iterator	best()
+		const
+	    {
+		const_iterator	top	= end();
+		bool		uni	= false;
+		for ( const_iterator i = begin(); i != end(); ++i ) {
+		    if ( top == end()
+			 or i->second > top->second
+			 or ( i->second == top->second
+			      and i->first.size() > top->first.size())) {
+			top		= i;
+			uni		= true;
+		    } else if ( i->second == top->second
+				and i->first.size() == top->first.size()) {
+			uni		= false;
+		    }
+		}
+		return uni ? top : end();
+	    }
+
+	    // 
+	    // sort -- return a multimap indexed by avg --> <string>
+	    // flip -- invert a (<string>,(<samples>,<average>)) to (<average>,<string>)
+	    // output -- output the <string>: <avg>, sorted by average
+	    // 
+	    static std::pair<const int,const std::string &>
+				flip( const value_type &val )
+	    {
+		return std::pair<const int,const std::string &>( val.second.second, val.first );
+	    }
+	    typedef std::multimap<const int,const std::string &>
+	    			sorted_t;
+	    sorted_t		sort()
+		const
+	    {
+		sorted_t	dst;
+		std::transform( begin(), end(), std::inserter( dst, dst.begin() ), flip );
+		return dst;
+	    }
+	    std::ostream       &output(
+				    std::ostream       &lhs )
+		const
+	    {
+		for ( auto i : sort() )
+		    lhs	<< std::setw( 16 ) << i.second
+			<< ": " << std::setw( 3 ) << i.first
+			<< std::endl;
+		return lhs;
+	    }
+	};
+	   
+	static
+	int			decode(
+				    std::string	       &password )
+	{
+	    int			confidence;
+	    best_avg		best;
+
+	    // Full/Partial parity.  Apply some parity erasure if we have some erasure/correction
+	    // capability while maintaining at least one excess parity symbol for verification.
+	    // This can potentially result in longer password being returned, if the R-S decoder
+	    // accidentally solves a codeword.
+	    for ( int era = 0; era < (N+1)/2; ++era ) { // how many parity symbols to deem erased
+		// For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only try 1 parity
+		// erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
+		// remaining to validate the integrity of the password.
+		std::string	fixed	= password;
+		fixed.resize( password.size() + era );
+		std::vector<int>	erasure;
+		for ( int i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
+		    erasure.push_back( i );
+		try {
+		    base64::decode( fixed.end() - N, fixed.end() - era );
+		    std::vector<int>	position= erasure;
+		    int corrects	= rscodec.decode( fixed, &position );
+		    confidence		= strength( corrects, erasure, position );
+		    if ( confidence > 0 ) {
+			std::string candidate( fixed, 0, fixed.size() - N );
+			best.add( candidate, confidence );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << " w/ "	 		<< era << " of " << N
+			    << " parity erasures "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< candidate
+			    << "\": "
+			    << std::endl;
+			best.output( std::cout );
+#endif
+		    }
+		} catch ( std::exception &exc ) {
+#if defined( DEBUG ) && DEBUG >= 2 // should see only when base64::decode fails
+		    std::cout << "invalid part parity password: " << exc.what() << std::endl;
+#endif
+		}
+	    }
+
+	    // Partial parity, but below threshold for usable error detection.  For the first 1 to
+	    // (N+1)/2 parity symbols (eg. for N == 3, (N+1)/2 == 1 ), we cannot perform meaningful
+	    // error or erasure detection.  However, if we see that the terminal symbols match the
+	    // R-S symbols we expect from a correct password, we'll ascribe a partial confidence
+	    //
+	    // password:    sock1t
+	    // w/ 3 parity: sock1tkeB
+	    // password ----^^^^^^
+	    //                    ^^^--- parity
+	    for ( int era = (N+1)/2; era < N; ++era ) { // how many parity symbols are not present
+		std::string	fixed	= password;
+		int		len	= password.size() - ( N - era );
+		fixed.resize( len );
+		encode( fixed );
+		auto		differs	= std::mismatch( fixed.begin(), fixed.end(), password.begin() );
+	        int		par_equ	= differs.second - password.begin();
+		if ( par_equ < len || par_equ > len + N )
+		    throw std::runtime_error( "miscomputed R-S parity matching length" );
+		par_equ		       -= len;
+		if ( par_equ > 0 ) {
+		    std::string	basic( fixed.begin(), fixed.begin() + len );
+		    confidence		=  par_equ * 100 / N; // each worth a normal parity symbol
+		    best.add( basic, confidence );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << " w/ "	 		<< era << " of " << N
+			    << " parity missing  "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< basic
+			    << " (from computed: \""	<< fixed << "\")"
+			    << "\": "
+			    << std::endl;
+			best.output( std::cout );
+#endif
+		}
+		
+	    }
+
+	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidicen > 0.
+	    confidence			= 0;
+	    typename best_avg::const_iterator
+				bi	= best.best();
+	    if ( bi != best.end() ) {
+		password		= bi->first;
+		confidence		= bi->second.second;
+	    }
+	    return confidence;
+	}
+
+	// 
+	// decode(<char*>,<size_t>) -- C interface to decode(<string>)
+	// 
+	static int		decode(
+				    char	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    std::string		corrected( password );
+	    int			confidence;
+	    try {
+		confidence			= decode( corrected );
+		if ( corrected.size() + 1 > size )
+		    throw std::runtime_error( "password buffer has insufficient capacity" );
+		std::copy( corrected.begin(), corrected.end(), password );
+		password[corrected.size()]	= 0;
+	    } catch ( std::exception &exc ) {
+		std::cout << "ezpwd::rspwd::decode failed: " << exc.what() << std::endl;
+		confidence 			= 0;
+	    }
+	    return confidence;
+	}
+	// 
+	// rscodec -- A 6-bit RS(63,63-N) Reed-Solomon codec
+	// 
+	//     Encodes and decodes R-S symbols over the lower 6 bits of the supplied data.  Requires
+	// that the last N (parity) symbols of the data are in the range [0,63].  The excess bits on
+	// the data symbols are masked and restored during decoding.
+	// 
+	static RS_63(63-N)	rscodec;
+    };
+
+    template < size_t N >
+    RS_63(63-N)			corrector<N>::rscodec;
     
-    lhs << std::setw( rhs.w );
-    if ( isprint( rhs.c ) || isspace( rhs.c )) {
-	switch ( char( rhs.c )) {
-	case 0x00: lhs << "\\0";  break;		// NUL
-	case 0x07: lhs << "\\a";  break;		// BEL
-	case 0x08: lhs << "\\b";  break;		// BS
-	case 0x1B: lhs << "\\e";  break;		// ESC
-	case 0x09: lhs << "\\t";  break;		// HT
-	case 0x0A: lhs << "\\n";  break;		// LF
-	case 0x0B: lhs << "\\v";  break;		// VT
-	case 0x0C: lhs << "\\f";  break;		// FF
-	case 0x0D: lhs << "\\r";  break;		// CR
-	case ' ':  lhs << "  ";   break;		// space
-	case '\\': lhs << "\\\\"; break;		// '\'
-	default:   lhs << char( rhs.c );		// any other printable character
-	}
-    } else {
-	char			fill	= lhs.fill();
-	lhs << std::setfill( '0' ) << std::hex << std::uppercase 
-	    << (unsigned int)rhs.c
-	    << std::setfill( fill ) << std::dec << std::nouppercase;
-    }
-    lhs.flags( flg );
-    return lhs;
-}
-
-// 
-// hexout	-- hexify each element in the range (beg,end]
-// 
-//     Optionally, limit each line length by setting the output ostream's width.
-// 
-template < typename iter_t >
-inline
-std::ostream		       &hexout(
-				    std::ostream       &lhs,
-				    const iter_t       &beg,
-				    const iter_t       &end )
-{
-    std::streamsize		wid	= lhs.width( 0 );
-    int				col	= 0;
-    for ( auto i = beg; i != end; ++i ) {
-	if ( wid && col == wid ) {
-	    lhs << std::endl;
-	    col				= 0;
-	}
-	lhs << hexify( *i );
-	++col;
-    }
-    return lhs;
-}
-				    
-template < size_t S >
-inline
-std::ostream		       &operator<<(
-				    std::ostream       &lhs,
-				    const std::array<unsigned char,S>
-						       &rhs )
-{
-    return hexout( lhs, rhs.begin(), rhs.end() );
-}
-
-inline
-std::ostream		       &operator<<(
-				    std::ostream       &lhs,
-				    const std::vector<unsigned char>
-						       &rhs )
-{
-    return hexout( lhs, rhs.begin(), rhs.end() );
-}
+} // namespace ezpwd
     
 #endif // _EZPWD_RS

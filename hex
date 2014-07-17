@@ -1,0 +1,109 @@
+#ifndef _EZPWD_HEX
+#define _EZPWD_HEX
+
+#include <iostream>
+#include <iomanip>
+
+// 
+// std::ostream << hexify( c )
+// std::ostream << hexout( beg, end )
+// std::ostream << std::vector<unsigend char>
+// std::ostream << std::array<unsigend char, N>
+// 
+//     Output unprintable unsigned char data in hex, escape printable/space data.
+// 
+struct hexify {
+    unsigned char		c;
+    std::streamsize		w;
+				hexify(
+				    unsigned char	_c,
+				    std::streamsize	_w	= 2 )
+				    : c( _c )
+				    , w( _w )
+    { ; }
+				hexify(
+				    char		_c,
+				    std::streamsize	_w	= 2 )
+				    : c( (unsigned char)_c )
+				    , w( _w )
+    { ; }
+};
+
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const hexify       &rhs )
+{
+    std::ios_base::fmtflags	flg	= lhs.flags();			// left, right, hex?
+    
+    lhs << std::setw( rhs.w );
+    if ( isprint( rhs.c ) || isspace( rhs.c )) {
+	switch ( char( rhs.c )) {
+	case 0x00: lhs << "\\0";  break;		// NUL
+	case 0x07: lhs << "\\a";  break;		// BEL
+	case 0x08: lhs << "\\b";  break;		// BS
+	case 0x1B: lhs << "\\e";  break;		// ESC
+	case 0x09: lhs << "\\t";  break;		// HT
+	case 0x0A: lhs << "\\n";  break;		// LF
+	case 0x0B: lhs << "\\v";  break;		// VT
+	case 0x0C: lhs << "\\f";  break;		// FF
+	case 0x0D: lhs << "\\r";  break;		// CR
+	case ' ':  lhs << "  ";   break;		// space
+	case '\\': lhs << "\\\\"; break;		// '\'
+	default:   lhs << char( rhs.c );		// any other printable character
+	}
+    } else {
+	char			fill	= lhs.fill();
+	lhs << std::setfill( '0' ) << std::hex << std::uppercase 
+	    << (unsigned int)rhs.c
+	    << std::setfill( fill ) << std::dec << std::nouppercase;
+    }
+    lhs.flags( flg );
+    return lhs;
+}
+
+// 
+// hexout	-- hexify each element in the range (beg,end]
+// 
+//     Optionally, limit each line length by setting the output ostream's width.
+// 
+template < typename iter_t >
+inline
+std::ostream		       &hexout(
+				    std::ostream       &lhs,
+				    const iter_t       &beg,
+				    const iter_t       &end )
+{
+    std::streamsize		wid	= lhs.width( 0 );
+    int				col	= 0;
+    for ( auto i = beg; i != end; ++i ) {
+	if ( wid && col == wid ) {
+	    lhs << std::endl;
+	    col				= 0;
+	}
+	lhs << hexify( *i );
+	++col;
+    }
+    return lhs;
+}
+				    
+template < size_t S >
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::array<unsigned char,S>
+						       &rhs )
+{
+    return hexout( lhs, rhs.begin(), rhs.end() );
+}
+
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::vector<unsigned char>
+						       &rhs )
+{
+    return hexout( lhs, rhs.begin(), rhs.end() );
+}
+
+#endif // _EZPWD_HEX

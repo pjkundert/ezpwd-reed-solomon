@@ -2,3 +2,17 @@
 rscompare
 rssimple
 rsvalidate
+rspwd-test
+emscripten/*
+phil-karn/ccsds_tab.c
+phil-karn/ccsds_tal.c
+phil-karn/fec
+phil-karn/fec-3.0.1/
+phil-karn/gen_ccsds
+phil-karn/gen_ccsds_tal
+phil-karn/librs.a
+rssimple.js
+rspwd-test.js
+rsexercise
+rsexercise.js
+rspwd.js

@@ -1,6 +1,6 @@
 
 # 
-# Build ezpwd/reed-solomon
+# Build ezpwd/phil-karn
 # 
 #     Uses Phil Karn's LGPL Reed-Solomon implementation unchanged (except for
 # the build procedure).  See README.
@@ -35,9 +35,9 @@ install:		all
 # 
 
 # 
-# ezpwd/reed-solomon/fec must by a symbolic link pointing to Phil Karn's
+# ezpwd/phil-karn/fec must by a symbolic link pointing to Phil Karn's
 # unpacked FEC implementation; this is required so that the header
-# file ezpwd/reed-solomon/rs.h can locate Phil's underlying <fec/fec.h>
+# file ezpwd/phil-karn/rs.h can locate Phil's underlying <fec/fec.h>
 # headers.  We have had to re-package Phil's ...tar.bz2 package as ...tar.gz,
 # due to deficiencies in some of the build architectures (no bunzip2 or 
 # "tar ..z.." on HP-UX)
