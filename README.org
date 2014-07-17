@@ -5,8 +5,11 @@
 
   Error and erasure detection and correction for Javascript programs.
 
-** RSCodec
+** c++/ezpwd/rs
 
-   Initializes a Reed-Solomon codec with the following parameters:
+   C++ implementation of Reed-Solomon codec.  Fully implemented as inline code, in C++ header files.
 
-*** encode   
+** js/ezpwd/rspwd.js
+
+   Javascript implementation of Reed-Solomon codec based password error
+   detection and correction.  Produced from the C++ implementation using =emscripten=.

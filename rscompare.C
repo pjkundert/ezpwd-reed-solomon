@@ -3,9 +3,9 @@
 #include <vector>
 #include <cctype>
 
-#include <rs>
+#include <ezpwd/rs>
 extern "C" {
-#include <rs.h>
+#include <rs.h> // Phil Karn's implementation
 }
 
 int
@@ -33,12 +33,12 @@ main()
 	    << std::endl;
 	
 	odata[0]		       ^= 1;
-	int				oeras[2];
-	int ocorrs			= decode_rs_char( ors, odata.data(), oeras, 0 );
+	int			oeras[2];
+	int			ocorrs	= decode_rs_char( ors, odata.data(), oeras, 0 );
 
 	ndata[0]		       ^= 1;
-	int				neras[nrs.NROOTS];
-	int ncorrs			= nrs.decode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD,
+	int			neras[nrs.NROOTS];
+	int			ncorrs	= nrs.decode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD,
 						      neras, 0 );
 	std::cout 
 	    << "Phil Karn corrections: " << ocorrs

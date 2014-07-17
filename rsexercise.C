@@ -6,8 +6,8 @@
 #include <array>
 #include <vector>
 
-#include <rs>
-#include <exercise.H>
+#include <ezpwd/rs>
+#include "exercise.H"
 
 int main() 
 {

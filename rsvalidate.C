@@ -1,5 +1,4 @@
 
-#include <rs>
 #include <map>
 #include <set>
 #include <random>
@@ -9,9 +8,10 @@
 #include <iostream>
 #include <sstream>
 
+#include <ezpwd/rs>
 extern "C" {
-#include <rs.h>
-};
+#include <rs.h> // Phil Karn's implementation
+}
 
 #define ISEQUAL( ... ) isequal( __FILE__, __LINE__, __VA_ARGS__ )
 #define ISTRUE( ... )  istrue(  __FILE__, __LINE__, __VA_ARGS__ )

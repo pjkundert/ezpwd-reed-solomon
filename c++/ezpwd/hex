@@ -5,34 +5,41 @@
 #include <iomanip>
 
 // 
-// std::ostream << hexify( c )
-// std::ostream << hexout( beg, end )
+// ezpwd::hexify	-- hexify something that can be converted to an unsigned char
+// ezpwd::hexout	-- hexify each element in the range (beg,end] 
+// 
+//     Optionally, limit each line length by setting the output ostream's width.
+// 
+// std::ostream << ezpwd::hexify( c )
+// std::ostream << ezpwd::hexout( beg, end )
 // std::ostream << std::vector<unsigend char>
 // std::ostream << std::array<unsigend char, N>
 // 
 //     Output unprintable unsigned char data in hex, escape printable/space data.
-// 
-struct hexify {
-    unsigned char		c;
-    std::streamsize		w;
+//
+namespace ezpwd {
+    struct hexify {
+	unsigned char		c;
+	std::streamsize		w;
 				hexify(
 				    unsigned char	_c,
 				    std::streamsize	_w	= 2 )
 				    : c( _c )
 				    , w( _w )
-    { ; }
+	{ ; }
 				hexify(
 				    char		_c,
 				    std::streamsize	_w	= 2 )
 				    : c( (unsigned char)_c )
 				    , w( _w )
-    { ; }
-};
+	{ ; }
+    };
+} // namespace ezpwd
 
 inline
 std::ostream		       &operator<<(
 				    std::ostream       &lhs,
-				    const hexify       &rhs )
+				    const ezpwd::hexify&rhs )
 {
     std::ios_base::fmtflags	flg	= lhs.flags();			// left, right, hex?
     
@@ -62,31 +69,28 @@ std::ostream		       &operator<<(
     return lhs;
 }
 
-// 
-// hexout	-- hexify each element in the range (beg,end]
-// 
-//     Optionally, limit each line length by setting the output ostream's width.
-// 
-template < typename iter_t >
-inline
-std::ostream		       &hexout(
+namespace ezpwd {
+    template < typename iter_t >
+    inline
+    std::ostream	       &hexout(
 				    std::ostream       &lhs,
 				    const iter_t       &beg,
 				    const iter_t       &end )
-{
-    std::streamsize		wid	= lhs.width( 0 );
-    int				col	= 0;
-    for ( auto i = beg; i != end; ++i ) {
-	if ( wid && col == wid ) {
-	    lhs << std::endl;
-	    col				= 0;
+    {
+	std::streamsize		wid	= lhs.width( 0 );
+	int			col	= 0;
+	for ( auto i = beg; i != end; ++i ) {
+	    if ( wid && col == wid ) {
+		lhs << std::endl;
+		col			= 0;
+	    }
+	    lhs << hexify( *i );
+	    ++col;
 	}
-	lhs << hexify( *i );
-	++col;
+	return lhs;
     }
-    return lhs;
-}
-				    
+} // namespace ezpwd
+
 template < size_t S >
 inline
 std::ostream		       &operator<<(
@@ -94,7 +98,7 @@ std::ostream		       &operator<<(
 				    const std::array<unsigned char,S>
 						       &rhs )
 {
-    return hexout( lhs, rhs.begin(), rhs.end() );
+    return ezpwd::hexout( lhs, rhs.begin(), rhs.end() );
 }
 
 inline
@@ -103,7 +107,7 @@ std::ostream		       &operator<<(
 				    const std::vector<unsigned char>
 						       &rhs )
 {
-    return hexout( lhs, rhs.begin(), rhs.end() );
+    return ezpwd::hexout( lhs, rhs.begin(), rhs.end() );
 }
 
 #endif // _EZPWD_HEX

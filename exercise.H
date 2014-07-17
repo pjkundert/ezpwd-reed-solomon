@@ -14,8 +14,8 @@
 #include <stdlib.h>
 #include <memory.h>
 
-#include <rs>
-#include <timeofday>
+#include <ezpwd/rs>
+#include <ezpwd/timeofday>
 
 /* Exercise the RS codec passed as an argument */
 template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY >
@@ -89,7 +89,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
     for ( padknd = 0; padknd < 4; ++padknd ) for ( errknd = 0; errknd < 3; ++errknd ) {
 
-	    start		= timeofday();
+	    start		= ezpwd::timeofday();
 
 #if defined( DEBUG ) && DEBUG >= 1
 	    trials	= 10;
@@ -239,7 +239,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		}
 	    }
 
-	    end				= timeofday();
+	    end				= ezpwd::timeofday();
 	    timeval		duration= end - start;
 	    decusecs[padknd][errknd] += duration.tv_sec * 1000000 + duration.tv_usec;
 	}

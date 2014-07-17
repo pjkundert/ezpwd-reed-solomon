@@ -7,8 +7,8 @@
 #include <array>
 #include <vector>
 
-#include <rs>
-#include <timeofday>
+#include <ezpwd/rs>
+#include <ezpwd/timeofday>
 
 int main() 
 {
@@ -40,19 +40,19 @@ int main()
     }
 
     // Get a basic TPS rate for a simple R-S decode with an error
-    timeval		beg	= timeofday();
+    timeval		beg	= ezpwd::timeofday();
     timeval		end	= beg;
     end.tv_sec		       += 1;
     int			count	= 0;
     timeval		now;
-    while (( now = timeofday() ) < end ) {
+    while (( now = ezpwd::timeofday() ) < end ) {
 	for ( int final = count + 1000; count < final; ++count ) {
 	    std::string		data( orig );
 	    data[0] ^= 1;
 	    rs.decode( data );
 	}
     }
-    double		elapsed	= seconds( now - beg );
+    double		elapsed	= ezpwd::seconds( now - beg );
     std::cout 
 	<< rs << " rate: "
 	<< count / elapsed / 1000 << " kTPS."

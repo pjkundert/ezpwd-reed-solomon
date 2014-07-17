@@ -1,6 +1,6 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I. -Wall -Wextra -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
+CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
 #CXX		= g++
 
@@ -13,13 +13,13 @@ DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/va
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
 
-EMXX_EXPORTS	= "['_rspwd_encode_1', '_rspwd_encode_2', '_rspwd_encode_3']"
+EMXX_EXPORTS	= "['_rspwd_encode_1', '_rspwd_encode_2', '_rspwd_encode_3', '_rspwd_encode_4', '_rspwd_encode_5']"
 EMXX_MAIN	= "['_main']"
 
 EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
 
-all:	testjs rspwd.js
+all:	testjs js/ezpwd/rspwd.js
 
 test:	rssimple rsexercise rscompare rsvalidate rspwd-test
 	./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test
@@ -27,48 +27,49 @@ test:	rssimple rsexercise rscompare rsvalidate rspwd-test
 testjs:	rssimple.js rsexercise.js rspwd-test.js
 	node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js
 
-rspwd-test.js:	rspwd-test.C rspwd.C			\
+rspwd-test.js:	rspwd-test.C rspwd.C				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
-rspwd.js:	rspwd.C rs				\
+js/ezpwd/rspwd.js: rspwd.C c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS) $< -o $@ 
 
 clean:
-	rm -f rssimple		rssimple.o		\
-	      rscompare		rscompare.o		\
-	      rsvalidate	rsvalidate.o		\
-	      rspwd-test	rspwd-test.o
+	rm -f rssimple		rssimple.o	rssimple.js	\
+	      rsexercise	rsexercise.o	rsexercise.js	\
+	      rspwd-test	rspwd-test.o	rspwd-test.js	\
+	      rscompare		rscompare.o			\
+	      rsvalidate	rsvalidate.o			\
 	make -C phil-karn clean
 
-rssimple.o:	rssimple.C rs
+rssimple.o:	rssimple.C c++/ezpwd/rs
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rssimple.js:	rssimple.C rs
+rssimple.js:	rssimple.C c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
-rsexercise.o:	rsexercise.C rs exercise.H
+rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexercise.js:	rsexercise.C rs exercise.H
+rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
-rscompare.o:	rscompare.C rs phil-karn/fec/rs-common.h
+rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h
 rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o  phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsvalidate.o:	rsvalidate.C rs phil-karn/fec/rs-common.h
+rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
 rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rspwd-test.o:	rspwd-test.C rspwd.C rs
+rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs
 rspwd-test:	rspwd-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-phil-karn/fec/rs-common.h				\
+phil-karn/fec/rs-common.h					\
 phil-karn/librs.a:
 	make -C phil-karn all
 

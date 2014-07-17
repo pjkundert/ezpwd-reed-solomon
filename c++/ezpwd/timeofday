@@ -4,27 +4,35 @@
 #include <sys/time.h>
 
 // 
-// timeofday 			-- Return current time.
-// epoch     			-- The UNIX epoch.
-// <timeval> < <timeval>	-- less-than comparison on timevals
-// <timeval> - <timeval>	-- difference on timevals
-// seconds			-- convert timeval to a real-valued seconds
-// 
-inline
-timeval				timeofday()
-{
-    timeval			tv;
-    ::gettimeofday( &tv, NULL );
-    return tv;
-}
+// ezpwd::timeofday 	-- Return current time.
+// ezpwd::epoch    	-- The UNIX epoch.
+// ezpwd::seconds	-- convert timeval to a real-valued seconds
+// <timeval> < <timeval>-- less-than comparison on timevals
+// <timeval> - <timeval>-- difference on timevals
+//
+namespace ezpwd {
+    inline
+    timeval			timeofday()
+    {
+	timeval			tv;
+	::gettimeofday( &tv, NULL );
+	return tv;
+    }
 
-timeval				epoch()
-{
-    timeval			tv;
-    tv.tv_sec				= 0;
-    tv.tv_usec				= 0;
-    return tv;
-}
+    timeval				epoch()
+    {
+	timeval			tv;
+	tv.tv_sec			= 0;
+	tv.tv_usec			= 0;
+	return tv;
+    }
+
+    inline
+    double				seconds( const timeval &rhs )
+    {
+	return rhs.tv_usec / 1000000.0 + rhs.tv_sec;
+    }
+} // namespace ezpwd
 
 inline
 bool				operator<(
@@ -43,7 +51,7 @@ timeval				operator-(
 {
     timeval			result;
     if ( lhs < rhs ) {
-	result				= epoch();
+	result				= ezpwd::epoch();
     } else {
 	// See http://www.gnu.org/software/libc/manual/html_node/Elapsed-Time.html
 	if ( lhs.tv_usec < rhs.tv_usec ) {
@@ -60,12 +68,6 @@ timeval				operator-(
 	result.tv_usec			= lhs.tv_usec - rhs.tv_usec;
     }
     return result;
-}
-
-inline
-double				seconds( const timeval &rhs )
-{
-    return rhs.tv_usec / 1000000.0 + rhs.tv_sec;
 }
 
 #endif // _EZPWD_TIMEOFDAY
