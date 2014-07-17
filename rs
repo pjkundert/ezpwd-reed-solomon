@@ -375,9 +375,9 @@ std::ostream		       &operator<<(
 }
 
 namespace ezpwd {
-    /**
-     * gfpoly - default field polynomial generator functor.
-     */
+    //
+    // gfpoly - default field polynomial generator functor.
+    //
     template < int SYM, int PLY >
     struct gfpoly {
 	int 			operator() ( int sr )
@@ -394,9 +394,77 @@ namespace ezpwd {
 	    return sr;
 	}
     };
+    
+    // 
+    // class reed_solomon_tabs -- R-S tables common to all RS(NN,*) with same SYM, PRM, PLY, MTX and GRD
+    // 
+    template < typename TYP, int SYM, int PRM, class PLY,
+	       typename MTX=int, typename GRD=int >
+    class reed_solomon_tabs
+	: public reed_solomon_base {
+
+    public:
+	typedef TYP		data_t;
+	typedef MTX		mutex_t;
+	typedef GRD		guard_t;
+
+	static const size_t	DATUM	= 8 * sizeof data_t();	// bits / data_t
+	static const size_t	SYMBOL	= SYM;			// bits / symbol
+	static const int	MM	= SYM;
+	static const int	SIZE	= ( 1 << SYM ) - 1;	// maximum symbols in field
+	static const int	NN	= SIZE;
+	static const int	A0	= SIZE;
+
+	static mutex_t		mutex;
+	static int 		iprim;
+
+    protected:
+	static ezpwd::array<data_t,
+#if not defined( EZPWD_ARRAY_TEST )
+                                   NN + 1>
+#else
+#  warning "EZPWD_ARRAY_TEST: Erroneously declaring alpha_to size!"
+	                           NN    >
+#endif
+				alpha_to;
+	static ezpwd::array<data_t,NN + 1>
+				index_of;
+
+	virtual		       ~reed_solomon_tabs()
+	{
+	    ;
+	}
+				reed_solomon_tabs()
+				    : reed_solomon_base()
+	{
+	    // lock, if guard/mutex provided, and do init if not already done
+	    guard_t		guard( mutex ); (void)guard;
+	    if ( iprim )
+		return;
+
+	    // Generate Galois field lookup tables
+	    index_of[0]			= A0;	// log(zero) = -inf
+	    alpha_to[A0]		= 0;	// alpha**-inf = 0
+	    PLY			poly;
+	    int			sr	= poly( 0 );
+	    for ( int i = 0; i < NN; i++ ) {
+		index_of[sr]		= i;
+		alpha_to[i]		= sr;
+		sr			= poly( sr );
+	    }
+	    // If it's not primitive, exit
+	    if ( sr != alpha_to[0] )
+		throw std::runtime_error( "reed-solomon: Galois field polynomial not primitive" );
+	    // Find prim-th root of 1, used in decoding
+	    for ( iprim = 1; (iprim % PRM) != 0; iprim += NN )
+		;
+	    // prim-th root of 1, index form
+	    iprim 		       /= PRM;
+	}
+    };
 
     //
-    // struct reed_solomon - Reed-Solomon codec
+    // class reed_solomon - Reed-Solomon codec
     //
     // @TYP, data_t:	A symbol datum; {en,de}code operates on arrays of these
     // @DATUM:		Bits per datum
@@ -424,21 +492,58 @@ namespace ezpwd {
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
 	       typename MTX=int, typename GRD=int >
     class reed_solomon
-	: public reed_solomon_base {
+	: public reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD> {
+
     public:
-	typedef TYP		data_t;
-	typedef MTX		mutex_t;
-	typedef GRD		guard_t;
+	typedef reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD>
+				tabs_t;
+	using typename tabs_t::data_t;
+	using typename tabs_t::mutex_t;
+	using typename tabs_t::guard_t;
 
-	static const size_t	DATUM	= 8 * sizeof data_t();	// bits / data_t
-	static const size_t	SYMBOL	= SYM;			// bits / symbol
-	static const int	MM	= SYM;
+	using tabs_t::DATUM;
+	using tabs_t::SYMBOL;
+	using tabs_t::MM;
+	using tabs_t::SIZE;
+	using tabs_t::NN;
+	using tabs_t::A0;
+
+	using tabs_t::mutex;
+	using tabs_t::iprim;
+
+	using tabs_t::alpha_to;
+	using tabs_t::index_of;
+
 	static const int	NROOTS	= RTS;
-	static const int	SIZE	= ( 1 << SYM ) - 1;
-	static const int	LOAD	= SIZE - NROOTS;
-	static const int	NN	= SIZE;
-	static const int	A0	= SIZE;
+	static const int	LOAD	= SIZE - NROOTS;	// maximum non-parity symbol payload
 
+    protected:
+	static ezpwd::array<data_t,NROOTS + 1>
+				genpoly;
+
+	// 
+	// modnn -- modulo replacement for galois field arithmetics
+	//
+	//  @x:		the value to reduce
+	//
+	//  where
+	//  MM = number of bits per symbol
+	//  NN = (2^MM) - 1
+	//
+	//  Simple arithmetic modulo would return a wrong result for values >= 3 * NN
+	//
+	int	 		modnn(
+				    int 		x )
+	    const
+	{
+	    while ( x >= NN ) {
+		x		       -= NN;
+		x			= ( x >> MM ) + ( x & NN );
+	    }
+	    return x;
+	}
+
+    public:
 	virtual size_t		datum() const
 	{
 	    return DATUM;
@@ -710,75 +815,17 @@ namespace ezpwd {
 	    return corrects;
 	}
 
-    protected:
-	static mutex_t		mutex;
-	static int 		iprim;
-
-#if defined( EZPWD_ARRAY_TEST )
-#  warning "EZPWD_ARRAY_TEST: Erroneously declaring alpha_to size!"
-	static ezpwd::array<data_t,NN    >
-#else
-	static ezpwd::array<data_t,NN + 1>
-#endif
-				alpha_to;
-	static ezpwd::array<data_t,NN + 1>
-				index_of;
-	static ezpwd::array<data_t,NROOTS + 1>
-				genpoly;
-
-	/** modulo replacement for galois field arithmetics
-	 *
-	 *  @x:		the value to reduce
-	 *
-	 *  where
-	 *  MM = number of bits per symbol
-	 *  NN = (2^MM) - 1
-	 *
-	 *  Simple arithmetic modulo would return a wrong result for values >= 3 * NN
-	 */
-	int	 		modnn(
-				    int 		x )
-	    const
-	{
-	    while ( x >= NN ) {
-		x		       -= NN;
-		x			= ( x >> MM ) + ( x & NN );
-	    }
-	    return x;
-	}
-
-    public:
 	virtual		       ~reed_solomon()
 	{
 	    ;
 	}
 				reed_solomon()
-				    : reed_solomon_base()
+				    : reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD>()
 	{
 	    // lock, if guard/mutex provided, and do init if not already done
 	    guard_t		guard( mutex ); (void)guard;
-	    if ( iprim )
+	    if ( genpoly[0] )
 		return;
-
-	    // Generate Galois field lookup tables
-	    index_of[0]			= A0;	// log(zero) = -inf
-	    alpha_to[A0]		= 0;	// alpha**-inf = 0
-	    PLY			poly;
-	    int			sr	= poly( 0 );
-	    for ( int i = 0; i < NN; i++ ) {
-		index_of[sr]		= i;
-		alpha_to[i]		= sr;
-		sr			= poly( sr );
-	    }
-	    // If it's not primitive, exit
-	    if ( sr != alpha_to[0] )
-		throw std::runtime_error( "reed-solomon: Galois field polynomial not primitive" );
-
-	    // Find prim-th root of 1, used in decoding
-	    for ( iprim = 1; (iprim % PRM) != 0; iprim += NN )
-		;
-	    // prim-th root of 1, index form
-	    iprim 		       /= PRM;
 
 	    // Form RS code generator polynomial from its roots
 	    genpoly[0]			= 1;
@@ -1125,28 +1172,33 @@ namespace ezpwd {
     }; // class reed_solomon
 
     // 
-    // Define the static reed_solomon<...> members; allowed in header for template types.
+    // Define the static reed_solomon...<...> members; allowed in header for template types.
     // 
-    //     The reed_solomon<...>::iprim == 0 is used to indicate to the first instance that the
-    // static tables require initialization.  If reed_solomon<...>::mutex is something like a
+    //     The reed_solomon_tags<...>::iprim < 0 is used to indicate to the first instance that the
+    // static tables require initialization.  If reed_solomon_tabs<...>::mutex is something like a
     // std::mutex, and guard_t is a std::lock_guard, then the mutex is acquired for the test and
     // initialization.
     // 
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        MTX				reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::mutex;
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        int				reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::iprim = 0;
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-#if defined( EZPWD_ARRAY_TEST )
-#  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
-        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN     >
+    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
+        MTX				reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::mutex;
+
+    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
+        int				reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::iprim = -1;
+
+    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
+        ezpwd::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >
+#if not defined( EZPWD_ARRAY_TEST )
+                                                                                      ::NN + 1 >
 #else
-        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
+#  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
+		                                                                      ::NN     >
 #endif
-					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::alpha_to;
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NN + 1 >
-					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::index_of;
+					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::alpha_to;
+
+    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
+        ezpwd::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::NN + 1 >
+					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::index_of;
+
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
         ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
@@ -1165,16 +1217,14 @@ namespace ezpwd {
     // @FCR:		The first consecutive root of the Reed-Solomon generator polynomial
     // @PRIM:		The primitive root of the generator polynomial
     // 
-#   define RS( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )\
-	ezpwd::reed_solomon<				\
-	    uint8_t,					\
-	    ezpwd::log_< (SYMBOLS)+1 >::value,		\
-	    (SYMBOLS)-(PAYLOAD),			\
-	    FCR,					\
-	    PRIM,					\
-	    ezpwd::gfpoly<				\
-		ezpwd::log_< (SYMBOLS)+1 >::value,	\
-		    POLY >>
+#   define RS( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )	\
+	ezpwd::reed_solomon<					\
+	    uint8_t,						\
+	    ezpwd::log_< (SYMBOLS) + 1 >::value,		\
+	    (SYMBOLS) - (PAYLOAD), FCR,	PRIM,			\
+	    ezpwd::gfpoly<					\
+		ezpwd::log_< (SYMBOLS) + 1 >::value,		\
+		POLY >>
 
     //
     // RS_<SYMBOLS>( PAYLOAD ) -- Standard Reed-Solomon codec type access
