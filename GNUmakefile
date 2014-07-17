@@ -1,7 +1,8 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I. -Wall -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
+CXXFLAGS       += -I. -Wall -Wextra -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE # -DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
+#CXX		= g++
 
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
