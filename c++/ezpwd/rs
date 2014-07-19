@@ -1266,6 +1266,43 @@ namespace ezpwd {
     } // namespace ezpwd::base64
 
     // 
+    // strength<N>	-- compute strength (given N parity symbols) of R-S correction
+    // 
+    //     Returns a confidence strength rating, which is the ratio:
+    // 
+    //         100 - ( errors * 2 + erasures ) * 100 / parity
+    // 
+    // which is proportional to the number of parity symbols unused by the reported number
+    // of corrected symbols.
+    // 
+    //     Accounts for the fact that a signalled erasure may not be reported in the corrected
+    // position vector, if it happens to contain the computed value.
+    // 
+    template < size_t N >
+    int				strength(
+				    int			corrects,
+				    const std::vector<int>&erasure,	// original erasures positions
+				    const std::vector<int>&position )	// reported correction positions
+    {
+	// -'ve indicates R-S failure.	    
+	if ( corrects < 0 )
+	    return 0;
+	if ( corrects != int( position.size() ))
+	    throw std::runtime_error( "inconsistent R-S decode results" );
+	// Any erasures that don't turn out to contain errors are not returned as fixed
+	// positions.  However, they have consumed parity resources.
+	int			erased	= erasure.size();
+	for ( auto e : erasure ) {
+	    if ( std::find( position.begin(), position.end(), e ) == position.end() ) {
+		++corrects;
+		++erased;
+	    }
+	}
+	int			errors	= corrects - erased;
+	return 100 - ( errors * 2 + erased ) * 100 / N;
+    }
+
+    // 
     // ezpwd::corrector -- Apply statistical corrections to a string, returning the confidence
     // 
     //     All methods are static; no instance is required, as this is primarily used to create
@@ -1348,30 +1385,6 @@ namespace ezpwd {
 	//     If none of the error/erasure forms succeed, the password is returned unmodified.
 	// 
 	//
-	static
-	int			strength(
-				    int			corrects,
-				    const std::vector<int>&erasure,	// original erasures positions
-				    const std::vector<int>&position )	// reported correction positions
-	{
-	    // -'ve indicates R-S failure.	    
-	    if ( corrects < 0 )
-		return 0;
-	    if ( corrects != int( position.size() ))
-		throw std::runtime_error( "inconsistent R-S decode results" );
-	    // Any erasures that don't turn out to contain errors are not returned as fixed
-	    // positions.  However, they have consumed parity resources.
-	    int			erased	= erasure.size();
-	    for ( auto e : erasure ) {
-		if ( std::find( position.begin(), position.end(), e ) == position.end() ) {
-		    ++corrects;
-		    ++erased;
-		}
-	    }
-	    int			errors	= corrects - erased;
-	    return 100 - double( errors * 2 + erased ) * 100 / N;
-	}
-
 	typedef std::map<std::string, std::pair<int, int>>
 	    			best_avg_base_t;
 	class best_avg
@@ -1495,7 +1508,7 @@ namespace ezpwd {
 		    }
 		    std::vector<int>	position= erasure;
 		    int corrects	= rscodec.decode( fixed, &position );
-		    confidence		= strength( corrects, erasure, position );
+		    confidence		= strength<N>( corrects, erasure, position );
 		    if ( confidence > 0 ) {
 			std::string candidate( fixed, 0, fixed.size() - N );
 			best.add( candidate, confidence );

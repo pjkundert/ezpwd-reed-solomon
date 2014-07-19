@@ -161,8 +161,12 @@ namespace ezpwd {
 		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y'
 	    } };
 
+	// 
+	// encode(<string>)	-- encode the supplied sequence of data in the domain (0,32] to base-32 
+	// encode(<iter>,<iter>)-- encode the supplied std::string of (0,32] symbols in-place to base-32
+	// 
 	template < typename iter>
-        void			encode(
+        iter			encode(
 				    iter	begin,
 				    iter	end )
 	{
@@ -172,22 +176,28 @@ namespace ezpwd {
 		else
 		    throw std::runtime_error( "ezpwd::base32::encode: invalid symbol presented" );
 	    }
+	    return end;
 	}
 
 	inline
-	std::string		encode(
-				    std::string		symbols )
+	std::string	       &encode(
+				    std::string	       &symbols )
 	{
 	    encode( symbols.begin(), symbols.end() );
 	    return symbols;
 	}
 
 	// 
-	// decode(<begin>,<end>) -- decode base-32 symbols in-place, collapsing spaces.
+	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
+	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
 	// 
-	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws.
-	// Ignores whitespace.  Will return an iterator to just after the last output symbol used in
-	// the provided range (eg. to shorten the ), leaving any remaining symbols unchanged.
+	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws
+	// exception.  Ignores whitespace.  Will return an iterator to just after the last output
+	// symbol used in the provided range (eg. to shorten the ), leaving any remaining symbols
+	// unchanged.  The <string> version returns the same string reference passed in.
+	// 
+	// NOTE: will quite likely return an iterator before the supplied 'end', indicating
+	// that the output has been truncated (shortened), due to collapsing spaces!
 	// 
 	template < typename iter >
 	iter			decode(
@@ -223,12 +233,9 @@ namespace ezpwd {
 	    return o;
 	}
 
-	// 
-	// decode(<string) -- decode base64 symbols over a copy, collapsing spaces.
-	// 
 	inline
-	std::string		decode(
-				    std::string		symbols,
+	std::string	       &decode(
+				    std::string	       &symbols,
 				    std::vector<int>   *erasure = 0 )
 	{
 	    auto		last	= decode( symbols.begin(), symbols.end(), erasure );
@@ -326,7 +333,7 @@ namespace ezpwd {
 
 	    // Add the 3 R-S parity symbols and base-32 encode
 	    rscodec.encode( res );
-	    ezpwd::base32::encode( res.begin(), res.end() );
+	    ezpwd::base32::encode( res );
 	    res.insert( 3,  1, ' ' );
 	    res.insert( 7,  1, ' ' );
 	    res.insert( 12, 1, ' ' );
@@ -334,8 +341,22 @@ namespace ezpwd {
 	    return res;
 	}
 
-	void			decode( const std::string &s )
+	// 
+	// decode(<string>)	-- attempt to decode a lat/lon, returning the confidence percentage
+	// 
+	//     If data but no parity symbols are supplied, no error checking is performed, and the
+	// confidence returned will be 0%.  No erasures within the supplied data are allowed (as
+	// there is no capacity to correct them), and an exception will be thrown.
+	// 
+	//     If parity is supplied, then erasures are allowed.  So long as the total number of
+	// erasures is <= the supplied parity symbols, then the decode will proceed (using the
+	// parity symbols to fill in the erasures), and the returned confidence will reflect the
+	// amount of unused parity capacity.  Each erasure consumes one parity symbol to repair.
+	//
+	int			decode( const std::string &str )
 	{
+	    int			confidence = 0;
+
 	    long		lat_tot	= 0;
 	    long		lon_tot	= 0;
 
@@ -344,18 +365,50 @@ namespace ezpwd {
 
 	    // Decode base-32 into a copy, skip whitespace, and mark invalid symbols as erasures.
 	    std::vector<int>	erasure;
-	    std::string		dec	= base32::decode( s, &erasure );
+	    std::string		dec	= str;
+	    base32::decode( dec, &erasure );
 	    if ( dec.size() > 9 || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
-		// successfully decode/correct.
+		// successfully decode/correct, or (at least) use one parity symbol as a check
+		// character.  If we identify more erasures than R-S parity, we must fail; we can't
+		// recover the data.  This will of course be the case if we have *any* erasures in
+		// the data, and no parity.
+		size_t		parity	= 0;
+		if ( dec.size() > 9 )
+		    parity		= dec.size() - 9;
 		while ( dec.size() < 12 ) {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
 		}
-		int		correct	= rscodec.decode( dec, &erasure );
-		if ( correct < 0 )
-		    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed" );
+		if ( erasure.size() > parity ) {
+		    // We cannot do R-S decoding; not enough parity.  If exactly one parity symbol
+		    // was provided, and all erasures were due the missing remaining parity symbols,
+		    // we can try a simple re-encode of the supplied non-parity data, and see if the
+		    // first generated parity symbol matches the one supplied parity symbol.  This
+		    // is basically the same as the 10:10 code's check character.
+		    if ( parity == 1 and erasure.size() == 2 ) {
+			std::string chk( dec.begin(), dec.begin() + 9 );
+			rscodec.encode( chk );
+			std::cout << "checking " << ezpwd::hexstr( dec ) << " vs. re-encoded: " << ezpwd::hexstr( chk ) << std::endl;
+			if ( dec[9] != chk[9] )
+			    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; check character mismatch" );
+			confidence	= 100 - 100 * 2 / 3; // Check character matched; 2/3 of confidence gone
+		    } else
+			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; too many erasures" );
+		} else {
+		    // We can try R-S decoding; we have (at least) enough parity to try to recover
+		    // missing symbol(s).
+		    std::vector<int>position( erasure );
+		    int		corrects= rscodec.decode( dec, &position );
+		    if ( corrects < 0 )
+			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; R-S decode failed" );
+		    // Compute confidence, from spare parity capacity.  Since R-S decode will not return
+		    // the position of erasures that turn out (by accident) to be correct, but they have
+		    // consumed parity capacity, we re-add them into the correction position vector.
+		    confidence		= ezpwd::strength<3>( corrects, erasure, position );
+		}
 	    }
+
 	    auto		di	= dec.begin();
 	    for ( auto &b : bits ) {
 		size_t		lat_bits= b.first;
@@ -365,6 +418,7 @@ namespace ezpwd {
 		char		c	= *di++;
 		long		lat_val	= c >> lon_bits;
 		long		lon_val	= c & (( 1 << lon_bits ) - 1 );
+
 		lat_mult	      >>= lat_bits;
 		lat_tot		       += lat_val * lat_mult;
 
@@ -373,6 +427,7 @@ namespace ezpwd {
 	    }
 	    lat				= double( lat_tot ) * 180 / lat_parts - 90;
 	    lon				= double( lon_tot ) * 360 / lon_parts - 180;
+	    return confidence;
 	}
     }; // class rs_5_10
 
@@ -410,9 +465,10 @@ int				main()
 {
     std::string		abc	= "0123abcz";
     std::string		dec	= abc;
-    ezpwd::base32::decode( dec.begin(), dec.end() );
+    ezpwd::base32::decode( dec );
     std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
-    std::string		enc	= ezpwd::base32::encode( dec );
+    std::string		enc	= dec;
+    ezpwd::base32::encode( enc );
     std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
 
     double		lat	= 53.555556;
@@ -424,22 +480,22 @@ int				main()
     // No errors on decode
     std::string		outstr	= edm.encode();
     outstr[3] = '0';
-    out.decode( outstr );
-    std::cout << out << std::endl;
+    int			confidence = out.decode( outstr );
+    std::cout << out << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
 
     // Only 1 parity symbol
     outstr			= edm.encode();
     outstr.resize( outstr.size() - 2 );
-    out.decode( outstr );
-    std::cout << out << std::endl;
+    confidence			= out.decode( outstr );
+    std::cout << out << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
 
     // Only 1 parity symbol; overwhelm with errors
     outstr			= edm.encode();
     outstr.resize( outstr.size() - 2 );
     outstr[3] = '0';
     try {
-	out.decode( outstr );
-	std::cout << out << std::endl;
+	confidence		= out.decode( outstr );
+	std::cout << out << " (" << std::setw( 3 ) << confidence << "%) (INCORRECT -- should have failed)" << std::endl;
     } catch ( std::exception &exc ) {
 	std::cout << "decode failed, as expected, due to error correction failure:" << exc.what() << std::endl;
     }
@@ -448,8 +504,12 @@ int				main()
     // of symbols provided?
     outstr			= edm.encode();
     for ( size_t i = 0; i <= outstr.size(); ++i ) {
-	std::string	loc( outstr.begin(), outstr.begin() + i );
-	loc.resize( outstr.size(), ' ' );
-	std::cout << ezpwd::hexstr( loc ) << " ==> " << ezpwd::rs_5_10( loc ) << std::endl;
+	std::string	str( outstr.begin(), outstr.begin() + i );
+	str.resize( outstr.size(), ' ' );
+	ezpwd::rs_5_10	code;
+	confidence		= code.decode( str );
+	std::cout
+	    << ezpwd::hexstr( str ) << " ==> " << code
+	    << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
     }
 }
