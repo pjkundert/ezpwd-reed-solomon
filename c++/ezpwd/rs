@@ -809,6 +809,10 @@ namespace ezpwd {
 		else
 		    parity[NROOTS - 1]	= 0;
 	    }
+#if defined( DEBUG ) && DEBUG >= 2
+	    std::cout << *this << " encode " << std::vector<TYP>( data, data + len )
+		      << " --> " << std::vector<TYP>( parity, parity + NROOTS ) << std::endl;
+#endif
 	}
 
 	int			decode(
@@ -1582,7 +1586,6 @@ namespace ezpwd {
 		std::copy( corrected.begin(), corrected.end(), password );
 		password[corrected.size()]	= 0;
 	    } catch ( std::exception &exc ) {
-		std::cout << "ezpwd::rspwd::decode failed: " << exc.what() << std::endl;
 		confidence 			= 0;
 	    }
 	    return confidence;

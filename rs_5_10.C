@@ -197,8 +197,8 @@ namespace ezpwd {
 	{
 	    if ( erasure )
 		erasure->clear();
-	    iter		o;
-	    for ( iter i = begin, o = begin; i != end; ++i ) {
+	    iter		i, o;
+	    for ( i = begin, o = begin; i != end; ++i ) {
 		if ( ::isspace( *i ))
 		    continue;
 		if ( ::islower( *i ))
@@ -317,7 +317,6 @@ namespace ezpwd {
 		long		lon_val	= lon_rem / lon_mult;
 		lon_rem		       -= lon_val * lon_mult;
 		char		c	= char( ( lat_val << lon_bits ) | lon_val );
-		std::cout << hexify( c ) << "; lat_val: " << lat_val << ", lon_val: " << lon_val << std::endl;
 		res		       += c;
 	    }
 
@@ -338,10 +337,10 @@ namespace ezpwd {
 	    // Decode base-32 into a copy, skip whitespace, and mark invalid symbols as erasures.
 	    std::vector<int>	erasure;
 	    std::string		dec	= base32::decode( s, &erasure );
-	    if ( dec.size() > 6 || erasure.size() > 0 ) {
+	    if ( dec.size() > 9 || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
 		// successfully decode/correct.
-		while ( dec.size() < 9 ) {
+		while ( dec.size() < 12 ) {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
 		}
@@ -359,7 +358,6 @@ namespace ezpwd {
 		char		c	= *di++;
 		long		lat_val	= c >> lon_bits;
 		long		lon_val	= c & (( 1 << lon_bits ) - 1 );
-		std::cout << hexify( c ) << "; lat_val: " << lat_val << ", lon_val: " << lon_val << std::endl;
 		lat_mult	      >>= lat_bits;
 		lat_tot		       += lat_val * lat_mult;
 
@@ -371,10 +369,16 @@ namespace ezpwd {
 	}
     }; // class rs_5_10
 
+    // 
+    // rs_5_10::bits -- distribution of lat/lon precision in each code symbol
+    // 
+    //     Quickly establishes an extra bit of precision for Longitude, and then evenly distributes
+    // future precision between lat/lon.
+    // 
     const rs_5_10::bits_t	rs_5_10::bits = { {
 	    rs_5_10::bits_t::value_type( 2, 3 ), // lat, lon bits per symbol
-	    rs_5_10::bits_t::value_type( 3, 2 ),
 	    rs_5_10::bits_t::value_type( 2, 3 ),
+	    rs_5_10::bits_t::value_type( 3, 2 ),
 
 	    rs_5_10::bits_t::value_type( 2, 3 ),
 	    rs_5_10::bits_t::value_type( 3, 2 ),
