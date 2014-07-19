@@ -8,7 +8,12 @@
 ** c++/ezpwd/rs
 
    C++ implementation of Reed-Solomon codec.  Fully implemented as inline code, in C++ header files.
-
+   #+BEGIN_EXAMPLE
+   #include <ezpwd/rs>
+   ...
+   RS_255( 253 )	rs;
+   std::string		orig = 
+   #+END_EXAMPLE
 ** js/ezpwd/rspwd.js
 
    Javascript implementation of Reed-Solomon codec based password error

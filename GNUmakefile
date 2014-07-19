@@ -21,11 +21,11 @@ EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-por
 
 all:	testjs js/ezpwd/rspwd.js
 
-test:	rssimple rsexercise rscompare rsvalidate rspwd-test
-	./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test
+test:	rsexample rssimple rsexercise rscompare rsvalidate rspwd-test rs_9_12
+	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./rs_9_12
 
-testjs:	rssimple.js rsexercise.js rspwd-test.js
-	node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js
+testjs:	rsexample.js rssimple.js rsexercise.js rspwd-test.js rs_9_12.js
+	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./rs_9_12.js
 
 rspwd-test.js:	rspwd-test.C rspwd.C				\
 		emscripten
@@ -41,7 +41,14 @@ clean:
 	      rspwd-test	rspwd-test.o	rspwd-test.js	\
 	      rscompare		rscompare.o			\
 	      rsvalidate	rsvalidate.o			\
+	      rs_9_12		rs_9_12.o	rs_9_12.js
 	make -C phil-karn clean
+
+rsexample.o:	rsexample.C c++/ezpwd/rs
+rsexample:	rsexample.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+rsexample.js:	rsexample.C c++/ezpwd/rs
+	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
 rssimple.o:	rssimple.C c++/ezpwd/rs
 rssimple:	rssimple.o
@@ -68,6 +75,12 @@ rsvalidate:	rsvalidate.o phil-karn/librs.a
 rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs
 rspwd-test:	rspwd-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rs_9_12.o:	rs_9_12.C c++/ezpwd/rs
+rs_9_12:	rs_9_12.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+rs_9_12.js:	rs_9_12.C c++/ezpwd/rs
+	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
 phil-karn/fec/rs-common.h					\
 phil-karn/librs.a:

@@ -34,6 +34,13 @@ namespace ezpwd {
 				    , w( _w )
 	{ ; }
     };
+    struct hexstr {
+	const std::string      &s;
+				hexstr(
+				    const std::string  &_s )
+				    : s( _s )
+	{ ; }
+    };
 } // namespace ezpwd
 
 inline
@@ -90,6 +97,14 @@ namespace ezpwd {
 	return lhs;
     }
 } // namespace ezpwd
+
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const ezpwd::hexstr&rhs )
+{
+    return ezpwd::hexout( lhs, rhs.s.begin(), rhs.s.end() );
+}
 
 template < size_t S >
 inline

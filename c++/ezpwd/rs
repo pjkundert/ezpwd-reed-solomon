@@ -1463,17 +1463,32 @@ namespace ezpwd {
 	    // capability while maintaining at least one excess parity symbol for verification.
 	    // This can potentially result in longer password being returned, if the R-S decoder
 	    // accidentally solves a codeword.
-	    for ( size_t era = 0; era < (N+1)/2; ++era ) { // how many parity symbols to deem erased
-		// For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only try 1 parity
-		// erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
-		// remaining to validate the integrity of the password.
+	    // 
+	    // For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only attempt up to 1
+	    // parity erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
+	    // remaining to validate the integrity of the password.
+	    // 
+	    // The password must be long enough to contain at least 1 non-parity symbol, and the
+	    // designated number of non-erased parity symbols!  Also, if any parity symbols won't
+	    // decode (eg. were entered in error), we must deem them to be erasures, too, and if the
+	    // number of erasures exceeds the capacity of the R-S codec, it'll fail (throw an
+	    // exception, or at best solve with 0 confidence).
+	    for ( size_t era = 0 // how many parity symbols to deem erased
+		      ; era < (N+1)/2 && password.size() >= 1 + N - era
+		      ; ++era ) { 
 		std::string	fixed	= password;
 		fixed.resize( password.size() + era );
 		std::vector<int>	erasure;
 		for ( size_t i = fixed.size() - 1; i > fixed.size() - 1 - era; --i )
 		    erasure.push_back( i );
 		try {
-		    base64::decode( fixed.end() - N, fixed.end() - era );
+		    for ( int p = int( fixed.size() - N ); p < int( fixed.size() - era ); ++p ) {
+			try {
+			    base64::decode( fixed.begin() + p, fixed.begin() + p + 1 );
+			} catch ( std::exception & ) {
+			    erasure.push_back( p ); // bad parity symbol; might have been mistyped
+			}
+		    }
 		    std::vector<int>	position= erasure;
 		    int corrects	= rscodec.decode( fixed, &position );
 		    confidence		= strength( corrects, erasure, position );
@@ -1482,7 +1497,7 @@ namespace ezpwd {
 			best.add( candidate, confidence );
 #if defined( DEBUG ) && DEBUG >= 1
 			std::cout
-			    << " w/ "	 		<< era << " of " << N
+			    << " w/ "	 		<< erasure.size() << " of " << N
 			    << " parity erasures "	<< std::setw( 3 ) << confidence
 			    << "% confidence: \"" 	<< password
 			    << "\" ==> \""		<< candidate
@@ -1501,13 +1516,17 @@ namespace ezpwd {
 	    // Partial parity, but below threshold for usable error detection.  For the first 1 to
 	    // (N+1)/2 parity symbols (eg. for N == 3, (N+1)/2 == 1 ), we cannot perform meaningful
 	    // error or erasure detection.  However, if we see that the terminal symbols match the
-	    // R-S symbols we expect from a correct password, we'll ascribe a partial confidence
+	    // R-S symbols we expect from a correct password, we'll ascribe a partial confidence due
+	    // to the matching parity symbols.
 	    //
 	    // password:    sock1t
 	    // w/ 3 parity: sock1tkeB
 	    // password ----^^^^^^
 	    //                    ^^^--- parity
-	    for ( size_t era = (N+1)/2; era < N; ++era ) { // how many parity symbols are not present
+	    // 
+	    for ( size_t era = (N+1)/2 // how many parity symbols are not present
+		      ; era < N && password.size() >= 1 + N - era
+		      ; ++era ) {
 		std::string	fixed	= password;
 		size_t		len	= password.size() - ( N - era );
 		fixed.resize( len );

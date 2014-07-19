@@ -12,8 +12,7 @@
 
 int main() 
 {
-    typedef RS_255( 253 )	rs_255_253;
-    rs_255_253			rs;
+    RS_255( 253 )		rs;
     std::string			orig	= "Hello, world!";
     std::vector<int>		erasure;
 
