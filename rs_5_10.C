@@ -3,7 +3,7 @@
 #include <ezpwd/hex>
 
 // 
-// 10:10+ code w/ Reed-Solomon Error Correction, and improved locality
+// 5:10 code w/ Reed-Solomon Error Correction, and improved locality
 // 
 // - each successive symbol provides greater precision
 //   - codes nearby each-other are identical in leading characters
@@ -14,6 +14,7 @@
 //   - 2 parity symbols provides correction of 1 lost symbol (no errors)
 //   - 3 parity symbols provides correction of any 1 error, with verification,
 //     or recovery of up to any 3 lost symbols (with no other errors)
+// 
 
 // 
 //     To achieve at least 4 decimal digits of precision after the decimal
@@ -39,28 +40,26 @@
 //       9      3    8 4,194,304      2    4 8,388,608
 //                    /1,800,000            /3,600,000
 // 
-// Therefore, within 9 symbols we define lat and long with about double the
-// precision of 4 decimal digits after the decimal point.
+//     Therefore, within 9 symbols we define lat and long with about double the
+// precision of 10:10 code's 4 decimal digits after the decimal point.  This
+// yields an approximate lineal precision of 40,075,000m / 8,388,608 == 5m in
+// both dimensions.
 // 
-// Errors in the first digits matter much more than serious than errors in the
+//     Errors in the first digits matter much more than serious than errors in the
 // last.  Errors in the low bits (keyboard nearby character substitutions) are
 // much more likely than errors in high bits (keyboard row or column errors).
 // However, with only 1-3 symbols to encode parity symbols in, it is difficult
-// to supply multiple parity encodings.
+// to supply multiple parity encodings.  What we would like is:
 // 
 // 1 parity symbol: adequate to act as a check character (like 10:10 codes)
-// 2 parity symbols: provide 1 symbol of erasure correction (w/ no errors)
+// 2 parity symbols: provide 1 symbol of erasure correction (w/ no other errors)
 // 3 parity symbols: correct 1 error anywhere w/validation, or up to 3 erasures
 // 
-// Therefore, we'll provide Reed-Solomon RS(31,28) error correction (5 bit
+//     Therefore, we'll provide Reed-Solomon RS(31,28) error correction (5 bit
 // symbols, indicating 31 symbols in the field, and 3 roots, therefore up to 28
 // data symbols in the field) over the 9 lat/lon data symbols.
 // 
 
-// decimal point.  For lat, we have 10,000 parts remaining.  For lon, since we
-// are missing 1 bit (1 doubling) of precision before the decimal place, we have
-// 20,000 parts remaining.
-// 
 // 
 //     The first 3-tuple encodes roughly the integer lat (-90,90] w/ resolution
 // 1 degree and lon (-180,180] w/ resolution of 2 degrees. This is encoded as 3
@@ -76,11 +75,10 @@
 // with the range (0,180*180] or (0,32400], and encoded as 3 5-bit characters.
 // There is no error coding.
 // 
-// 
 
-//  For Edmonton, we would get 54N, 114W (note:
-// rounded, not truncated), which results in 54+90 == 144 lat, 114/2+90 == 57+90
-// == 147 lon; 144*180+147 == 26067 == 01100 10111 10011 == "???".
+//     For Edmonton, we would get 54N, 114W (note: rounded, not truncated),
+// which results in 54+90 == 144 lat, 114/2+90 == 57+90 == 147 lon; 144*180+147
+// == 26067 == 01100 10111 10011 == "???".
 // 
 //     To achieve at least 4 decimal digits of precision after the decimal
 // point, we must have defined lat and long to within 1 part in 10,000 after the
@@ -184,12 +182,25 @@ namespace ezpwd {
 	    return symbols;
 	}
 
+	// 
+	// decode(<begin>,<end>) -- decode base-32 symbols in-place, collapsing spaces.
+	// 
+	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws.
+	// Ignores whitespace.  Will return an iterator to just after the last output symbol used in
+	// the provided range (eg. to shorten the ), leaving any remaining symbols unchanged.
+	// 
 	template < typename iter >
-	void			decode(
+	iter			decode(
 				    iter		begin,
-				    iter		end )
+				    iter		end,
+				    std::vector<int>   *erasure = 0 )
 	{
-	    for ( iter i = begin; i != end; ++i ) {
+	    if ( erasure )
+		erasure->clear();
+	    iter		o;
+	    for ( iter i = begin, o = begin; i != end; ++i ) {
+		if ( ::isspace( *i ))
+		    continue;
 		if ( ::islower( *i ))
 		    *i	        = ::toupper( *i );
 		switch ( *i ) {
@@ -199,24 +210,37 @@ namespace ezpwd {
 		case 'I': *i = '1'; break;
 		}
 		auto 		chri	= std::search( chrs.begin(), chrs.end(), i, i+1 );
-		if ( chri == chrs.end() )
+		if ( chri == chrs.end() ) {
+		    // Invalid symbol.  Mark as erasure?  Or throw.
+		    if ( erasure ) {
+			erasure->push_back( o - begin ); // index of offending // symbol in dest
+			continue;
+		    }
 		    throw std::runtime_error( "ezpwd::base32::decode: invalid symbol presented" );
-		*i			= chri - chrs.begin();
+		}
+		*o++			= chri - chrs.begin();
 	    }
+	    return o;
 	}
 
+	// 
+	// decode(<string) -- decode base64 symbols over a copy, collapsing spaces.
+	// 
 	inline
 	std::string		decode(
-				    std::string		symbols )
+				    std::string		symbols,
+				    std::vector<int>   *erasure = 0 )
 	{
-	    decode( symbols.begin(), symbols.end() );
+	    auto		last	= decode( symbols.begin(), symbols.end(), erasure );
+	    if ( last != symbols.end() )
+		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 	    return symbols;
 	}
 
     } // namespace ezpwd::base32
 
 
-    class rs_9_12 {
+    class rs_5_10 {
     public:
 	double			lat;
 	double			lon;
@@ -226,11 +250,11 @@ namespace ezpwd {
 
 	typedef ezpwd::array< std::pair<size_t, size_t>, 9>
 				bits_t;
-	static const ezpwd::array< std::pair<size_t, size_t>, 9>
-				bits;	
+	static const bits_t	bits;
+
 	static RS_31(31-3)	rscodec;
 
-				rs_9_12(
+				rs_5_10(
 				    double	_lat	= 0,
 				    double	_lon	= 0 )
 				    : lat( _lat )
@@ -238,9 +262,26 @@ namespace ezpwd {
 	{
 	    ;
 	}
-	virtual		       ~rs_9_12()
+				rs_5_10(
+				    const std::string  &str)
+				    : lat( 0 )
+				    , lon( 0 )
+	{
+	    decode( str );
+	}
+	virtual		       ~rs_5_10()
 	{
 	    ;
+	}
+
+	std::ostream	       &output( std::ostream &lhs )
+	    const
+	{
+	    std::streamsize	prec	= lhs.precision();
+	    lhs.precision( 10 );
+	    lhs << std::setprecision( 10 ) << lat << ", " << lon << " == " << encode();
+	    lhs.precision( prec );
+	    return lhs;
 	}
 
 	std::string		encode()
@@ -249,9 +290,10 @@ namespace ezpwd {
 	    long		lat_rem	= ( lat +  90 ) * lat_parts / 180;
 	    long		lon_rem	= ( lon + 180 ) * lon_parts / 360;
 	    if ( lat_rem < 0 || lat_rem > lat_parts )
-		throw std::runtime_error( "ezpwd::rs_9_12::encode: Latitude not in range [-90,90]" );
+		throw std::runtime_error( "ezpwd::rs_5_10::encode: Latitude not in range [-90,90]" );
 	    if ( lon_rem < 0 || lon_rem > lon_parts )
-		throw std::runtime_error( "ezpwd::rs_9_12::encode: Longitude not in range [-180,180]" );
+		throw std::runtime_error( "ezpwd::rs_5_10::encode: Longitude not in range [-180,180]" );
+
 	    long		lat_mult= lat_parts << 1;
 	    long		lon_mult= lon_parts << 1;
 	    std::string		res;
@@ -284,15 +326,7 @@ namespace ezpwd {
 	    ezpwd::base32::encode( res.begin(), res.end() );
 	    return res;
 	}
-	std::ostream	       &output( std::ostream &lhs )
-	    const
-	{
-	    std::streamsize	prec	= lhs.precision();
-	    lhs.precision( 10 );
-	    lhs << std::setprecision( 10 ) << lat << ", " << lon << " == " << encode();
-	    lhs.precision( prec );
-	    return lhs;
-	}
+
 	void			decode( const std::string &s )
 	{
 	    long		lat_tot	= 0;
@@ -300,15 +334,13 @@ namespace ezpwd {
 
 	    long		lat_mult= lat_parts << 1;
 	    long		lon_mult= lon_parts << 1;
-	    std::string		dec;
-	    std::copy_if( s.begin(), s.end(), std::back_inserter( dec ),
-			  []( char c ) -> bool {
-			      return not ::isspace( c );
-			  } );
-	    base32::decode( dec.begin(), dec.end() );
-	    if ( dec.size() > 6 ) {
-		// Some R-S parity symbol(s) provided.  See if we can decode/correct.
-		std::vector<int> erasure;
+
+	    // Decode base-32 into a copy, skip whitespace, and mark invalid symbols as erasures.
+	    std::vector<int>	erasure;
+	    std::string		dec	= base32::decode( s, &erasure );
+	    if ( dec.size() > 6 || erasure.size() > 0 ) {
+		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
+		// successfully decode/correct.
 		while ( dec.size() < 9 ) {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
@@ -316,7 +348,7 @@ namespace ezpwd {
 		int		correct	= rscodec.decode( dec, &erasure );
 		std::cout << "Corrected " << correct << " errors/erasures" << std::endl;
 		if ( correct < 0 )
-		    throw std::runtime_error( "ezpwd::rs_9_12::decode: Error correction failed" );
+		    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed" );
 	    }
 	    auto		di	= dec.begin();
 	    for ( auto &b : bits ) {
@@ -337,27 +369,28 @@ namespace ezpwd {
 	    lat				= double( lat_tot ) * 180 / lat_parts - 90;
 	    lon				= double( lon_tot ) * 360 / lon_parts - 180;
 	}
-    }; // class rs_9_12
+    }; // class rs_5_10
 
-    const rs_9_12::bits_t	rs_9_12::bits = { {
-	    rs_9_12::bits_t::value_type( 2, 3 ), // lat, lon bits per symbol
-	    rs_9_12::bits_t::value_type( 3, 2 ),
-	    rs_9_12::bits_t::value_type( 2, 3 ),
+    const rs_5_10::bits_t	rs_5_10::bits = { {
+	    rs_5_10::bits_t::value_type( 2, 3 ), // lat, lon bits per symbol
+	    rs_5_10::bits_t::value_type( 3, 2 ),
+	    rs_5_10::bits_t::value_type( 2, 3 ),
 
-	    rs_9_12::bits_t::value_type( 2, 3 ),
-	    rs_9_12::bits_t::value_type( 3, 2 ),
-	    rs_9_12::bits_t::value_type( 2, 3 ),
+	    rs_5_10::bits_t::value_type( 2, 3 ),
+	    rs_5_10::bits_t::value_type( 3, 2 ),
+	    rs_5_10::bits_t::value_type( 2, 3 ),
 
-	    rs_9_12::bits_t::value_type( 3, 2 ),
-	    rs_9_12::bits_t::value_type( 2, 3 ),
-	    rs_9_12::bits_t::value_type( 3, 2 ),
+	    rs_5_10::bits_t::value_type( 3, 2 ),
+	    rs_5_10::bits_t::value_type( 2, 3 ),
+	    rs_5_10::bits_t::value_type( 3, 2 ),
 	} };
-    RS_31(31-3)			rs_9_12::rscodec;
+
+    RS_31(31-3)			rs_5_10::rscodec;
 } // namespace ezpwd
 
 std::ostream		       &operator<<(
 				    std::ostream	&lhs,
-				    const ezpwd::rs_9_12 &rhs )
+				    const ezpwd::rs_5_10 &rhs )
 {
     return rhs.output( lhs );
 }
@@ -373,24 +406,24 @@ int				main()
 
     double		lat	= 53.555556;
     double		lon	= 113.873889;
-    ezpwd::rs_9_12	inp( lat, lon );
-    std::cout << inp << std::endl;
-    ezpwd::rs_9_12	out;
+    ezpwd::rs_5_10	edm( lat, lon );
+    std::cout << edm << std::endl;
+    ezpwd::rs_5_10	out;
 
     // No errors on decode
-    std::string		outstr	= inp.encode();
+    std::string		outstr	= edm.encode();
     outstr[3] = '0';
     out.decode( outstr );
     std::cout << out << std::endl;
 
     // Only 1 parity symbol
-    outstr			= inp.encode();
+    outstr			= edm.encode();
     outstr.resize( outstr.size() - 2 );
     out.decode( outstr );
     std::cout << out << std::endl;
 
     // Only 1 parity symbol; overwhelm with errors
-    outstr			= inp.encode();
+    outstr			= edm.encode();
     outstr.resize( outstr.size() - 2 );
     outstr[3] = '0';
     try {
@@ -398,5 +431,13 @@ int				main()
 	std::cout << out << std::endl;
     } catch ( std::exception &exc ) {
 	std::cout << "decode failed, as expected, due to error correction failure:" << exc.what() << std::endl;
+    }
+
+    // Does location precision scale linearly with the number
+    // of symbols provided?
+    outstr			= edm.encode();
+    for ( size_t i = 1; i < outstr.size(); ++i ) {
+	std::string	loc( outstr.begin(), outstr.begin() + i );
+	std::cout << ezpwd::hexstr( loc ) << " ==> " << ezpwd::rs_5_10( loc ) << std::endl;
     }
 }
