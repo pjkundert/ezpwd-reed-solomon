@@ -278,9 +278,13 @@ namespace ezpwd {
 	    const
 	{
 	    std::streamsize	prec	= lhs.precision();
+	    std::ios_base::fmtflags flg	= lhs.flags();	    
 	    lhs.precision( 10 );
-	    lhs << std::setprecision( 10 ) << lat << ", " << lon << " == " << encode();
+	    lhs << std::fixed << std::showpos << std::setprecision( 10 ) 
+		<< std::setw( 15 ) << lat << ", " 
+		<< std::setw( 15 ) << lon << " == " << encode();
 	    lhs.precision( prec );
+	    lhs.flags( flg );
 	    return lhs;
 	}
 
@@ -323,6 +327,10 @@ namespace ezpwd {
 	    // Add the 3 R-S parity symbols and base-32 encode
 	    rscodec.encode( res );
 	    ezpwd::base32::encode( res.begin(), res.end() );
+	    res.insert( 3,  1, ' ' );
+	    res.insert( 7,  1, ' ' );
+	    res.insert( 12, 1, ' ' );
+	    
 	    return res;
 	}
 
@@ -345,7 +353,6 @@ namespace ezpwd {
 		    dec.resize( dec.size() + 1 );
 		}
 		int		correct	= rscodec.decode( dec, &erasure );
-		std::cout << "Corrected " << correct << " errors/erasures" << std::endl;
 		if ( correct < 0 )
 		    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed" );
 	    }
@@ -440,8 +447,9 @@ int				main()
     // Does location precision scale linearly with the number
     // of symbols provided?
     outstr			= edm.encode();
-    for ( size_t i = 1; i < outstr.size(); ++i ) {
+    for ( size_t i = 0; i <= outstr.size(); ++i ) {
 	std::string	loc( outstr.begin(), outstr.begin() + i );
+	loc.resize( outstr.size(), ' ' );
 	std::cout << ezpwd::hexstr( loc ) << " ==> " << ezpwd::rs_5_10( loc ) << std::endl;
     }
 }
