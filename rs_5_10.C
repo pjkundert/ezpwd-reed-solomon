@@ -1,6 +1,6 @@
 
 #include <ezpwd/rs>
-#include <ezpwd/hex>
+#include <ezpwd/output>
 
 // 
 // 5:10 code w/ Reed-Solomon Error Correction, and improved locality
@@ -224,9 +224,10 @@ namespace ezpwd {
 		    // Invalid symbol.  Mark as erasure?  Or throw.
 		    if ( erasure ) {
 			erasure->push_back( o - begin ); // index of offending // symbol in dest
-			continue;
+			chri		= chrs.begin();
+		    } else {
+			throw std::runtime_error( "ezpwd::base32::decode: invalid symbol presented" );
 		    }
-		    throw std::runtime_error( "ezpwd::base32::decode: invalid symbol presented" );
 		}
 		*o++			= chri - chrs.begin();
 	    }
@@ -389,7 +390,6 @@ namespace ezpwd {
 		    if ( parity == 1 and erasure.size() == 2 ) {
 			std::string chk( dec.begin(), dec.begin() + 9 );
 			rscodec.encode( chk );
-			std::cout << "checking " << ezpwd::hexstr( dec ) << " vs. re-encoded: " << ezpwd::hexstr( chk ) << std::endl;
 			if ( dec[9] != chk[9] )
 			    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; check character mismatch" );
 			confidence	= 100 - 100 * 2 / 3; // Check character matched; 2/3 of confidence gone
@@ -402,10 +402,15 @@ namespace ezpwd {
 		    int		corrects= rscodec.decode( dec, &position );
 		    if ( corrects < 0 )
 			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; R-S decode failed" );
-		    // Compute confidence, from spare parity capacity.  Since R-S decode will not return
-		    // the position of erasures that turn out (by accident) to be correct, but they have
-		    // consumed parity capacity, we re-add them into the correction position vector.
+		    // Compute confidence, from spare parity capacity.  Since R-S decode will not
+		    // return the position of erasures that turn out (by accident) to be correct,
+		    // but they have consumed parity capacity, we re-add them into the correction
+		    // position vector.  If the R-S correction reports more corrections than the
+		    // parity can possibly have handled correctly, (eg. 2 reported erasures and an
+		    // unexpected error), then the decode is almost certainly incorrect; fail.
 		    confidence		= ezpwd::strength<3>( corrects, erasure, position );
+		    if ( confidence < 0 )
+			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; R-S decode overwhelmed" );
 		}
 	    }
 
@@ -477,39 +482,43 @@ int				main()
     std::cout << edm << std::endl;
     ezpwd::rs_5_10	out;
 
-    // No errors on decode
-    std::string		outstr	= edm.encode();
-    outstr[3] = '0';
-    int			confidence = out.decode( outstr );
-    std::cout << out << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
-
-    // Only 1 parity symbol
-    outstr			= edm.encode();
-    outstr.resize( outstr.size() - 2 );
-    confidence			= out.decode( outstr );
-    std::cout << out << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
-
-    // Only 1 parity symbol; overwhelm with errors
-    outstr			= edm.encode();
-    outstr.resize( outstr.size() - 2 );
-    outstr[3] = '0';
-    try {
-	confidence		= out.decode( outstr );
-	std::cout << out << " (" << std::setw( 3 ) << confidence << "%) (INCORRECT -- should have failed)" << std::endl;
-    } catch ( std::exception &exc ) {
-	std::cout << "decode failed, as expected, due to error correction failure:" << exc.what() << std::endl;
-    }
-
-    // Does location precision scale linearly with the number
-    // of symbols provided?
-    outstr			= edm.encode();
-    for ( size_t i = 0; i <= outstr.size(); ++i ) {
-	std::string	str( outstr.begin(), outstr.begin() + i );
-	str.resize( outstr.size(), ' ' );
-	ezpwd::rs_5_10	code;
-	confidence		= code.decode( str );
-	std::cout
-	    << ezpwd::hexstr( str ) << " ==> " << code
-	    << " (" << std::setw( 3 ) << confidence << "%)" << std::endl;
+    // Does location precision scale linearly with the number of symbols provided?  Are errors
+    // detected/corrected successfully?
+    for ( int test = 0; test < 5; ++test ) {
+	std::string	manip	= edm.encode();
+	switch ( test ) {
+	case 0: std::cout << std::endl << "no errors:" << std::endl;
+	    break;
+	case 1: std::cout << std::endl << "one erasure: 1/3 parity consumed" << std::endl;
+	    manip[8] = '_';
+	    break;
+	case 2: std::cout << std::endl << "one error: 2/3 parity consumed" << std::endl;
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break; 
+	case 3: std::cout << std::endl << "one error, one erasure; 3/3 parity consumed" << std::endl;
+	    manip[8] = '_';
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break;
+	case 4: std::cout << std::endl << "parity capacitgy overwhelmed" << std::endl;
+	    manip[8] = ( manip[8] == '0' ? '1' : '0' );
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break;
+	}
+	for ( size_t i = 0; i <= manip.size(); ++i ) {
+	    std::string		trunc( manip.begin(), manip.begin() + i );
+	    if ( trunc.back() == ' ' )
+		continue;
+	    trunc.resize( manip.size(), ' ' );
+	    ezpwd::rs_5_10	code;
+	    try {
+		int		conf	= code.decode( trunc );
+		std::cout
+		    << ezpwd::hexstr( trunc ) << " ==> " << code
+		    << " (" << std::setw( 3 ) << conf << "%)" << std::endl;
+	    } catch ( std::exception &exc ) {
+		std::cout
+		    << ezpwd::hexstr( trunc ) << " =x> " << exc.what() << std::endl;
+	    }
+	}
     }
 }

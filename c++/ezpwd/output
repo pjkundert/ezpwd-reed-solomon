@@ -125,4 +125,89 @@ std::ostream		       &operator<<(
     return ezpwd::hexout( lhs, rhs.begin(), rhs.end() );
 }
 
+// 
+//    <ostream&> << pair<T,U>
+//    <ostream&> << set<T>		-- sorted by T
+//    <ostream&> << map<T,U>		-- sorted by T (key)
+//    <ostream&> << vector<T>
+// 
+//     Handle output of various container types.
+// 
+//     Output pairs and sets of pairs, respecting specified widths (as appropriate).  For example
+// a set of pairs of integeters 's', if output as "... << std::setw( 13 ) << s;", would yield:
+// 
+//	   (	1,    2) (    3,   4) ...
+// 
+
+template <class T, class U>
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::pair<T,U> &rhs )
+{
+    std::streamsize		w	= std::max( std::streamsize( 0 ),
+						    std::streamsize( lhs.width() - 3 ));
+    lhs << std::setw( 0 )
+	<< '('	<< std::setw(	  w / 2 ) << rhs.first 
+	<< ','	<< std::setw( w - w / 2 ) << rhs.second 
+	<< ')';
+    return lhs;
+}
+
+template <class T>
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::set<T>  &rhs )
+{
+    std::streamsize		w	= lhs.width();		// If width is set, use if for each item
+    for ( typename std::set<T>::const_iterator
+				si	= rhs.begin()
+	      ; si		       != rhs.end()
+	      ; ++si ) {
+	if ( si != rhs.begin()) 
+	    lhs << ' ';
+	lhs << std::setw( w ) << *si;
+    }
+    lhs << std::setw( 0 );					// If container empty, must clear
+    return lhs;
+}
+
+template <class T, class U>
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::map<T,U>&rhs )
+{
+    std::streamsize		w	= lhs.width();		// If width is set, use if for each item
+    std::vector<T>		key;
+    for ( typename std::map<T,U>::const_iterator
+				mi	= rhs.begin()
+	      ; mi		       != rhs.end()
+	      ; ++mi )
+	key.push_back( mi->first );
+    std::sort( key.begin(), key.end() );
+    for ( typename std::vector<T>::const_iterator
+				ki	= key.begin()
+	      ; ki		       != key.end()
+	      ; ++ki ) {
+	if ( ki != key.begin()) 
+	    lhs << ' ';
+	lhs << std::setw( w ) << *rhs.find( *ki );
+    }
+    lhs << std::setw( 0 );					// If container empty, must clear
+    return lhs;
+}
+
+template <class T>
+std::ostream		       &operator<<(
+				    std::ostream	   &lhs, 
+				    const std::vector<T>   &rhs )
+{
+    for( size_t i = 0; i < rhs.size(); ++i ) {
+	if ( i )
+	    lhs << ", ";
+	lhs << rhs[i];
+    }
+
+    return lhs;
+}
+
 #endif // _EZPWD_HEX

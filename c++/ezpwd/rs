@@ -21,6 +21,7 @@
 #include <vector>
 #include <array>
 #include <map>
+#include <set>
 #include <type_traits>
 #include <cstdint>
 #include <cstring>
@@ -33,7 +34,7 @@
 // EZPWD_ARRAY_TEST -- define to force erroneous sizing of some arrays for non-production testing
 // 
 
-#include "hex"		// ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
+#include "output"	// ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
 #include "array_safe"	// ezpwd::array std::array, optionally bounds-checked if EZPWD_ARRAY_SAFE set
 
 namespace ezpwd {
@@ -1298,6 +1299,10 @@ namespace ezpwd {
 		++erased;
 	    }
 	}
+#if defined( DEBUG ) && DEBUG > 2
+	std::cout << corrects << " corrections, " << erased << " erasures (vs. " 
+		  << erasure.size() << " reported: " << erasure << ")" << std::endl;
+#endif
 	int			errors	= corrects - erased;
 	return 100 - ( errors * 2 + erased ) * 100 / N;
     }
