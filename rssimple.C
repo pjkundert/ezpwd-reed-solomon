@@ -30,9 +30,10 @@ int main()
 	    data[i]		       ^= 1 << i % 8;	// error
 	    std::cout << "Corrupt: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl;
 	}
-	int 			count	= rs.decode( data, &erasure );
+	std::vector<int>	position;
+	int 			count	= rs.decode( data, erasure, &position );
 	std::string		fixes( data.size() * 2, ' ' );
-	for ( int i : erasure )
+	for ( int i : position )
 	    fixes[i*2+0] = fixes[i*2+1]	= '^';
 	std::cout << "Fixed:   " << fixes << "(count: " << count << ")" << std::endl;
 	std::cout << "Decoded: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl << std::endl;

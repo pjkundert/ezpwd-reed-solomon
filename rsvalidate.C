@@ -355,14 +355,23 @@ int main()
 	::free_rs_char( rs1 );
 
 	int			res2	= -1;
+	std::vector<int>	pos2;
 	if ( era1cnt <= parity )
-	    res2			= rs2->decode( err2, pad, &era2 );
+	    res2			= rs2->decode( err2, pad, era2, &pos2 );
 	if ( assert.ISEQUAL( res2, res1, "ezpwd  decoder return different results" )) // Decoder results should always be identical, no matter what
 	    failmsgs
 		<< assert
 		<< *rs2 << " decoded buffer:"
 		<< std::endl
 		<< std::vector<uint8_t>( err2.begin() + pad, err2.begin() + pad + payload + parity )
+		<< std::endl;
+	if ( res2 >= 0 && assert.ISEQUAL( res2, int( pos2.size() ), "ezpwd  decoder return +'ve value, but different number of positions" ))
+	    failmsgs
+		<< assert
+		<< *rs2 << " decoded buffer:"
+		<< std::endl
+		<< std::vector<uint8_t>( err2.begin() + pad, err2.begin() + pad + payload + parity )
+		<< "; wrong position count: " << pos2.size() << " vs. return value: " << res2
 		<< std::endl;
 
 	std::vector<uint8_t>	dif2( 255, ' ' );

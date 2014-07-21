@@ -2,7 +2,6 @@
 SHELL		= /bin/bash
 CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
-CXX		= g++
 
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
@@ -21,11 +20,11 @@ EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-por
 
 all:	testjs js/ezpwd/rspwd.js
 
-test:	rsexample rssimple rsexercise rscompare rsvalidate rspwd-test rs_5_10
-	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./rs_5_10
+test:	rsexample rssimple rsexercise rscompare rsvalidate rspwd-test ezcod_5
+	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./ezcod_5
 
-testjs:	rsexample.js rssimple.js rsexercise.js rspwd-test.js rs_5_10.js
-	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./rs_5_10.js
+testjs:	rsexample.js rssimple.js rsexercise.js rspwd-test.js ezcod_5.js
+	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./ezcod_5.js
 
 rspwd-test.js:	rspwd-test.C rspwd.C				\
 		emscripten
@@ -41,7 +40,7 @@ clean:
 	      rspwd-test	rspwd-test.o	rspwd-test.js	\
 	      rscompare		rscompare.o			\
 	      rsvalidate	rsvalidate.o			\
-	      rs_5_10		rs_5_10.o	rs_5_10.js
+	      ezcod_5		ezcod_5.o	ezcod_5.js
 	make -C phil-karn clean
 
 rsexample.o:	rsexample.C c++/ezpwd/rs
@@ -64,7 +63,7 @@ rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs
 
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h
 rscompare: CXXFLAGS += -I./phil-karn
-rscompare:	rscompare.o  phil-karn/librs.a
+rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
@@ -76,10 +75,11 @@ rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs
 rspwd-test:	rspwd-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rs_5_10.o:	rs_5_10.C c++/ezpwd/rs
-rs_5_10:	rs_5_10.o
+ezcod_5.o:	ezcod_5.C c++/ezpwd/rs
+#ezcod_5: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_5:	ezcod_5.o # phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rs_5_10.js:	rs_5_10.C c++/ezpwd/rs
+ezcod_5.js:	ezcod_5.C c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) -s DISABLE_EXCEPTION_CATCHING=0 -s EXPORTED_FUNCTIONS=$(EMXX_MAIN) $< -o $@ 
 
 phil-karn/fec/rs-common.h					\

@@ -62,10 +62,11 @@ namespace ezpwd {
 	// 
 	// {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded container
 	// 
-	///     The parity symbols may be included in 'data', or may (optionally) supplied
-	/// separately in (at least nroots-sized) 'parity'.  Optionally specify some known erasure
-	/// positions.  If 'erasures' is specified, its capacity will be increased to be capable of
-	/// storing up to 'nroots()' ints; the actual deduced error locations will be returned.
+	///     The parity symbols may be included in 'data' (len includes nroots() parity symbols),
+	/// or may (optionally) supplied separately in (at least nroots()-sized) 'parity'.  Optionally
+	/// specify some known erasure positions (up to nroots()).  If 'erasures' is specified, its
+	/// capacity will be increased to be capable of storing up to 'nroots()' ints; the actual
+	/// deduced error locations will be returned.
 	///  
 	/// RETURN VALUE
 	/// 
@@ -73,12 +74,14 @@ namespace ezpwd {
 	/// they are actually different than the deduced value.  In other words, if a symbol is
 	/// marked as an erasure but it actually turns out to be correct, it's index will NOT be
 	/// included in the returned count, nor the modified erasure vector!
-	///
+	/// 
 
 	// 
 	// encode(<string>) -- extend string to contain parity, or place in supplied parity string
 	// encode(<vector>) -- extend vector to contain parity, or place in supplied parity vector
 	// encode(<array>)  -- ignore 'pad' elements of array, puts nroots() parity symbols at end
+	// encode(pair<iter,iter>) -- encode all except the last nroots() of the data, put parity at end
+	// encode(pair<iter,iter>, pair<iter,iter>) -- encode data between first <iter> pair, put parity in second pair
 	// 
 	void			encode(
 				    std::string	       &data )
@@ -187,20 +190,24 @@ namespace ezpwd {
 
 	int			decode(
 				    std::string	       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
-			   erasure );
+			   erasure, position );
 	}
 
 	int			decode(
 				    std::string	       &data,
 				    std::string	       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
@@ -208,13 +215,15 @@ namespace ezpwd {
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
 			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ),
-			   erasure );
+			   erasure, position );
 	}
 
 	template < typename T >
 	int			decode(
 				    std::vector<T>     &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -222,14 +231,16 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
-			   erasure );
+			   erasure, position );
 	}
 
 	template < typename T >
 	int			decode(
 				    std::vector<T>     &data,
 				    std::vector<T>     &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -238,14 +249,16 @@ namespace ezpwd {
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
 			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ),
-			   erasure );
+			   erasure, position );
 	}
 
 	template < typename T, size_t N >
 	int			decode(
 				    std::array<T,N>    &data,
 				    int			pad	= 0, // ignore 'pad' symbols at start of array
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -253,13 +266,15 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front() + pad, (uT *)&data.front() + data.size() ),
-			   erasure );
+			   erasure, position );
 	}
 
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -267,13 +282,17 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -281,13 +300,17 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -295,7 +318,9 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
     };
@@ -611,10 +636,13 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
-	    return decode_mask( data.first, data.second - data.first, (uint8_t *)0, erasure );
+	    return decode_mask( data.first, data.second - data.first, (uint8_t *)0,
+				erasure, position );
 	}
 
 	virtual int		decode(
@@ -622,21 +650,27 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS )
 		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
-	    return decode_mask( data.first, data.second - data.first, parity.first, erasure );
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
 	}
 
 	virtual int		decode(
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
-	    return decode_mask( data.first, data.second - data.first, (uint16_t *)0, erasure );
+	    return decode_mask( data.first, data.second - data.first, (uint16_t *)0,
+				erasure, position );
 	}
 
 	virtual int		decode(
@@ -644,21 +678,27 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS )
 		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
-	    return decode_mask( data.first, data.second - data.first, parity.first, erasure );
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
 	}
 
 	virtual int		decode(
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
-	    return decode_mask( data.first, data.second - data.first, (uint32_t *)0, erasure );
+	    return decode_mask( data.first, data.second - data.first, (uint32_t *)0,
+				erasure, position );
 	}
 
 	virtual int		decode(
@@ -666,12 +706,15 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS )
 		throw std::runtime_error( "reed-solomon: parity length incompatible with number of roots" );
-	    return decode_mask( data.first, data.second - data.first, parity.first, erasure );
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
 	}
 
 	// 
@@ -687,7 +730,9 @@ namespace ezpwd {
 				    INP		       *data,
 				    int			len,
 				    INP		       *parity	= 0,	// either 0, or pointer to all parity symbols
-				    std::vector<int>   *erasure	= 0 )
+				    const std::vector<int>
+				    		       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( len < ( parity ? 0 : NROOTS ) + 1 )
@@ -727,15 +772,24 @@ namespace ezpwd {
 	    }
 
 	    int			corrects;
-	    if ( ! erasure ) {
+	    if ( ! erasure.size() && ! position ) {
+		// No erasures, and error position info not wanted.
 		corrects			= decode( dataptr, len, pariptr );
 	    } else {
-		// Prepare 'erasure' for the maximum number of corrections, and then reduce
-		int		erasures	= erasure->size();
-		erasure->resize( NROOTS );
+		// Either erasure location info specified, or resultant error position info wanted;
+		// Prepare pos (a temporary, if no position vector provided), and copy any provided
+		// erasure positions.  After number of corrections is know, resize the position
+		// vector.  Thus, we use any supplied erasure info, and optionally return any
+		// correction position info separately.
+		std::vector<int>       _pos;
+		std::vector<int>       &pos	= position ? *position : _pos;
+		pos.resize( std::max( size_t( NROOTS ), erasure.size() ));
+		std::copy( erasure.begin(), erasure.end(), pos.begin() );
 		corrects			= decode( dataptr, len, pariptr,
-							  &erasure->front(), erasures );
-		erasure->resize( std::max( 0, corrects ));
+							  &pos.front(), erasure.size() );
+		if ( corrects > int( pos.size() ))
+		    throw std::runtime_error( "reed-solomon: FATAL: produced too many corrections; possible corruption!" );
+		pos.resize( std::max( 0, corrects ));
 	    }
 
 	    if ( cpy && corrects > 0 ) {
@@ -819,10 +873,10 @@ namespace ezpwd {
 	int			decode(
 				    TYP		       *data,
 				    int			len,
-				    TYP		       *parity,
-				    int		       *eras_pos= 0,
-				    int			no_eras	= 0,
-				    TYP		       *corr	= 0,
+				    TYP		       *parity,		// Requires: at least NROOTS
+				    int		       *eras_pos= 0,	// Capacity: at least NROOTS
+				    int			no_eras	= 0,	// Maximum:  at most  NROOTS
+				    TYP		       *corr	= 0,	// Capacity: at least NROOTS
 				    TYP			invmsk	= 0 )
 	    const
 	{
@@ -892,7 +946,7 @@ namespace ezpwd {
 	    int			deg_omega = 0;
 	    int			r	= no_eras;
 	    int			el	= no_eras;
-	    if (!syn_error) {
+	    if ( ! syn_error ) {
 		// if syndrome is zero, data[] is a codeword and there are no errors to correct.
 		count			= 0;
 		goto finish;
@@ -993,7 +1047,7 @@ namespace ezpwd {
 		    }
 		    if ( 2 * el <= r + no_eras - 1 ) {
 			el		= r + no_eras - el;
-			//2 lines below: B(x) <-- inv(discr_r) * lambda(x)
+			// 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
 			for ( int i = 0; i <= NROOTS; i++ ) {
 			    b[i]	= ((lambda[i] == 0)
 					   ? A0
@@ -1075,14 +1129,14 @@ namespace ezpwd {
 			den	       ^= alpha_to[modnn(lambda[i + 1] + i * root[j])];
 		    }
 		}
-#if DEBUG >= 1
-		if (den == 0) {
+#if defined( DEBUG ) && DEBUG >= 1
+		if ( den == 0 ) {
 		    std::cout << "ERROR: denominator = 0" << std::endl;
 		    count = -1;
 		    goto finish;
 		}
 #endif
-		// Apply error to data
+		// Apply error to data.
 		if ( num1 != 0 && loc[j] >= pad ) {
 		    TYP		cor	= alpha_to[modnn(index_of[num1]
 							 + index_of[num2]
@@ -1100,10 +1154,28 @@ namespace ezpwd {
 		        if ( parity )
 		            parity[loc[j] - ( NN - NROOTS )] ^= cor;
 		    }
+		} else {
+		    // If the computed error position is in the 'pad' (the unused portion of the R-S
+		    // data capacity), then our solution has failed -- we've computed a correction
+		    // location outside of the data and parity we've been provided!
+#if DEBUG >= 2
+		    std::cout
+			<< "ERROR: RS(" << SIZE <<"," << LOAD
+			<< ") computed error location: " << loc[j]
+			<< " within " << pad << " pad symbols, not within "
+			<< LOAD - pad << " data or " << NROOTS << " parity"
+			<< std::endl;
+#endif
+		    count = -1;
+		    goto finish;
 		}
 	    }
 
 	finish:
+#if defined( DEBUG ) && DEBUG > 0
+	    if ( count > NROOTS )
+		std::cout << "ERROR: Number of corrections: " << count << " exceeds NROOTS: " << NROOTS << std::endl;
+#endif
 	    if ( eras_pos != NULL ) {
 		for ( int i = 0; i < count; i++)
 		    eras_pos[i]		= loc[i] - pad;
@@ -1511,8 +1583,8 @@ namespace ezpwd {
 			    erasure.push_back( p ); // bad parity symbol; might have been mistyped
 			}
 		    }
-		    std::vector<int>	position= erasure;
-		    int corrects	= rscodec.decode( fixed, &position );
+		    std::vector<int>	position;
+		    int corrects	= rscodec.decode( fixed, erasure, &position );
 		    confidence		= strength<N>( corrects, erasure, position );
 		    if ( confidence > 0 ) {
 			std::string candidate( fixed, 0, fixed.size() - N );
