@@ -1,4 +1,8 @@
 
+#include <math.h> // M_PI
+#include <cmath>
+
+#include <cstdint>
 #include <ezpwd/rs>
 #include <ezpwd/output>
 
@@ -247,37 +251,43 @@ namespace ezpwd {
 
     } // namespace ezpwd::base32
 
-
-    class rs_5_10 {
+    template < size_t P=3 >				// 3 parity symbols default
+    class ezcod_5 {
+	static const size_t	L	= 9;		// 9 location symbols default
     public:
-	double			lat;
-	double			lon;
+	double			lat;			// [-90,+90] angle, degrees
+	double			lon;			// [-180,180]
 
-	static const long	lat_parts = 1<<23; // 8,388,608
-	static const long	lon_parts = 1<<22; // 4,194,304
+	double			lat_m;			// resolution, meters
+	double			lon_m;
+
+	static const uint32_t	lat_parts = 1 << 22;	// [ -90,90 ] / 4,194,304 parts
+	static const uint32_t	lon_parts = 1 << 23;	// [-180,180] / 8,388,608 parts
 
 	typedef ezpwd::array< std::pair<size_t, size_t>, 9>
 				bits_t;
 	static const bits_t	bits;
 
-	static RS_31(31-3)	rscodec;
+	static RS_31( 31-P )	rscodec;
 
-				rs_5_10(
+				ezcod_5(
 				    double	_lat	= 0,
 				    double	_lon	= 0 )
 				    : lat( _lat )
 				    , lon( _lon )
+				    , lat_m( 0 )
+				    , lon_m( 0 )
 	{
-	    ;
+	    if ( P < 1 )
+		throw std::runtime_error( "ezpwd::ezcod_5<P>:: At least one parity symbol must be specified" );
 	}
-				rs_5_10(
+				ezcod_5(
 				    const std::string  &str)
-				    : lat( 0 )
-				    , lon( 0 )
+				    : ezcod_5()
 	{
 	    decode( str );
 	}
-	virtual		       ~rs_5_10()
+	virtual		       ~ezcod_5()
 	{
 	    ;
 	}
@@ -286,11 +296,14 @@ namespace ezpwd {
 	    const
 	{
 	    std::streamsize	prec	= lhs.precision();
-	    std::ios_base::fmtflags flg	= lhs.flags();	    
+	    std::ios_base::fmtflags
+				flg	= lhs.flags();
 	    lhs.precision( 10 );
-	    lhs << std::fixed << std::showpos << std::setprecision( 10 ) 
-		<< std::setw( 15 ) << lat << ", " 
-		<< std::setw( 15 ) << lon << " == " << encode();
+	    lhs << std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << lat
+		<< std::noshowpos << std::scientific << std::setprecision( 1 )<< " +/-" << lat_m << "m, "
+		<< std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << lon
+		<< std::noshowpos << std::scientific << std::setprecision( 1 ) << " +/-" << lon_m << "m"
+		<< " == " << encode();
 	    lhs.precision( prec );
 	    lhs.flags( flg );
 	    return lhs;
@@ -299,17 +312,23 @@ namespace ezpwd {
 	std::string		encode()
 	    const
 	{
-	    long		lat_rem	= ( lat +  90 ) * lat_parts / 180;
-	    long		lon_rem	= ( lon + 180 ) * lon_parts / 360;
-	    if ( lat_rem < 0 || lat_rem > lat_parts )
-		throw std::runtime_error( "ezpwd::rs_5_10::encode: Latitude not in range [-90,90]" );
-	    if ( lon_rem < 0 || lon_rem > lon_parts )
-		throw std::runtime_error( "ezpwd::rs_5_10::encode: Longitude not in range [-180,180]" );
+	    // Convert lat/lon into a fraction of number of parts assigned to each
+	    double		lat_frac= ( lat +  90 ) / 180;
+	    if ( lat_frac < 0 || lat_frac > 1.0 )
+		throw std::runtime_error( "ezpwd::ezcod_5<P>::encode: Latitude not in range [-90,90]" );
+	    uint32_t		lat_rem	= lat_parts * lat_frac;
+	    double		lon_frac= ( lon + 180 ) / 360;
+	    if ( lon_frac < 0 || lon_frac > 1.0 )
+		throw std::runtime_error( "ezpwd::ezcod_5<P>::encode: Longitude not in range [-180,180]" );
+	    uint32_t		lon_rem	= lon_parts * lon_frac;
 
-	    long		lat_mult= lat_parts << 1;
-	    long		lon_mult= lon_parts << 1;
+	    // Initial loop condition; lat/lon multiplier is left at the base multiplier of the
+	    // previous loop.
+	    unsigned int	lat_mult= lat_parts;
+	    unsigned int	lon_mult= lon_parts;
+
 	    std::string		res;
-	    res.reserve( 9 );
+	    res.reserve( L+P+3 );
 	    for ( auto &b : bits ) {
 		size_t		lat_bits= b.first;
 		size_t		lon_bits= b.second;
@@ -322,22 +341,22 @@ namespace ezpwd {
 		// indicating as a 3-bit value, how many multiples of 128 there are in the value
 		// 199.  199 / 128 == 1.
 		lat_mult       	      >>= lat_bits;
-		long		lat_val	= lat_rem / lat_mult;
+		uint32_t	lat_val	= lat_rem / lat_mult;
 		lat_rem		       -= lat_val * lat_mult;
 
 		lon_mult       	      >>= lon_bits;
-		long		lon_val	= lon_rem / lon_mult;
+		uint32_t	lon_val	= lon_rem / lon_mult;
 		lon_rem		       -= lon_val * lon_mult;
 		char		c	= char( ( lat_val << lon_bits ) | lon_val );
 		res		       += c;
 	    }
 
-	    // Add the 3 R-S parity symbols and base-32 encode
+	    // Add the P R-S parity symbols and base-32 encode
 	    rscodec.encode( res );
 	    ezpwd::base32::encode( res );
 	    res.insert( 3,  1, ' ' );
 	    res.insert( 7,  1, ' ' );
-	    res.insert( 12, 1, ' ' );
+	    res.insert( 11, 1, ' ' );
 	    
 	    return res;
 	}
@@ -358,61 +377,66 @@ namespace ezpwd {
 	{
 	    int			confidence = 0;
 
-	    long		lat_tot	= 0;
-	    long		lon_tot	= 0;
-
-	    long		lat_mult= lat_parts << 1;
-	    long		lon_mult= lon_parts << 1;
-
 	    // Decode base-32 into a copy, skip whitespace, and mark invalid symbols as erasures.
 	    std::vector<int>	erasure;
 	    std::string		dec	= str;
 	    base32::decode( dec, &erasure );
-	    if ( dec.size() > 9 || erasure.size() > 0 ) {
+	    if ( dec.size() > L || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
 		// successfully decode/correct, or (at least) use one parity symbol as a check
 		// character.  If we identify more erasures than R-S parity, we must fail; we can't
 		// recover the data.  This will of course be the case if we have *any* erasures in
 		// the data, and no parity.
 		size_t		parity	= 0;
-		if ( dec.size() > 9 )
-		    parity		= dec.size() - 9;
-		while ( dec.size() < 12 ) {
+		if ( dec.size() > L )
+		    parity		= dec.size() - L;
+		while ( dec.size() < L + P ) {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
 		}
 		if ( erasure.size() > parity ) {
 		    // We cannot do R-S decoding; not enough parity.  If exactly one parity symbol
 		    // was provided, and all erasures were due the missing remaining parity symbols,
-		    // we can try a simple re-encode of the supplied non-parity data, and see if the
-		    // first generated parity symbol matches the one supplied parity symbol.  This
-		    // is basically the same as the 10:10 code's check character.
-		    if ( parity == 1 and erasure.size() == 2 ) {
-			std::string chk( dec.begin(), dec.begin() + 9 );
+		    // we can use the existing parity symbol(s) as a "check character", by simply
+		    // re-encoding the supplied non-parity data, and see if the generated parity
+		    // symbol(s) match the supplied parity.  This is basically the same as the 10:10
+		    // code's check character.
+		    if ( parity + erasure.size() == P ) {
+			std::string chk( dec.begin(), dec.begin() + L );
 			rscodec.encode( chk );
-			if ( dec[9] != chk[9] )
-			    throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; check character mismatch" );
-			confidence	= 100 - 100 * 2 / 3; // Check character matched; 2/3 of confidence gone
+			if ( dec[L] != chk[L] )
+			    throw std::runtime_error( "ezpwd::ezcod_5<P>::decode: Error correction failed; check character mismatch" );
+			confidence	= 100 - 100 * (P-1) / P; // Check character matched; (P-1)/P of confidence gone
 		    } else
-			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; too many erasures" );
+			throw std::runtime_error( "ezpwd::ezcod_5<P>::decode: Error correction failed; too many erasures" );
 		} else {
 		    // We can try R-S decoding; we have (at least) enough parity to try to recover
 		    // missing symbol(s).
 		    std::vector<int>position( erasure );
 		    int		corrects= rscodec.decode( dec, &position );
 		    if ( corrects < 0 )
-			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; R-S decode failed" );
+			throw std::runtime_error( "ezpwd::ezcod_5<P>::decode: Error correction failed; R-S decode failed" );
 		    // Compute confidence, from spare parity capacity.  Since R-S decode will not
 		    // return the position of erasures that turn out (by accident) to be correct,
 		    // but they have consumed parity capacity, we re-add them into the correction
 		    // position vector.  If the R-S correction reports more corrections than the
 		    // parity can possibly have handled correctly, (eg. 2 reported erasures and an
 		    // unexpected error), then the decode is almost certainly incorrect; fail.
-		    confidence		= ezpwd::strength<3>( corrects, erasure, position );
+		    confidence		= ezpwd::strength<P>( corrects, erasure, position );
 		    if ( confidence < 0 )
-			throw std::runtime_error( "ezpwd::rs_5_10::decode: Error correction failed; R-S decode overwhelmed" );
+			throw std::runtime_error( "ezpwd::ezcod_5<P>::decode: Error correction failed; R-S decode overwhelmed" );
 		}
+		if ( dec.size() > L )
+		    dec.resize( L ); // Discard any parity symbols
 	    }
+
+	    // Unpack the supplied location data; we'll take as much as we are given (up to the
+	    // maximum 9 symbols supported, yielding <5m resolution).
+	    uint32_t		lat_tot	= 0;
+	    uint32_t		lon_tot	= 0;
+
+	    uint32_t		lat_mult= lat_parts;
+	    uint32_t		lon_mult= lon_parts;
 
 	    auto		di	= dec.begin();
 	    for ( auto &b : bits ) {
@@ -421,8 +445,8 @@ namespace ezpwd {
 		if ( di == dec.end() )
 		    break;
 		char		c	= *di++;
-		long		lat_val	= c >> lon_bits;
-		long		lon_val	= c & (( 1 << lon_bits ) - 1 );
+		uint32_t	lat_val	= c >> lon_bits;
+		uint32_t	lon_val	= c & (( 1 << lon_bits ) - 1 );
 
 		lat_mult	      >>= lat_bits;
 		lat_tot		       += lat_val * lat_mult;
@@ -432,39 +456,102 @@ namespace ezpwd {
 	    }
 	    lat				= double( lat_tot ) * 180 / lat_parts - 90;
 	    lon				= double( lon_tot ) * 360 / lon_parts - 180;
+
+	    // Compute the resolution (in m.) of the decoded lat/lon.  Resolution of Latitude is
+	    // linear.  Longitude resolution changes due to the circumference of the earth reducing
+	    // as Latitude moves towards the poles.
+	    double		lon_circ= 1 * M_PI * 6371000;
+	    lat_m			= lon_circ * lat_mult / lat_parts;
+	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( lat * M_PI / 180 );
+	    lon_m			= lat_circ * lon_mult / lon_parts;
+	    
 	    return confidence;
 	}
-    }; // class rs_5_10
+    }; // class ezcod_5<P>
 
     // 
-    // rs_5_10::bits -- distribution of lat/lon precision in each code symbol
+    // ezcod_5<P>::rscodec -- Reed-Solomon parity codec
+    // ezcod_5<P>::bits	   -- distribution of lat/lon precision in each code symbol
     // 
     //     Quickly establishes an extra bit of precision for Longitude, and then evenly distributes
     // future precision between lat/lon.
     // 
-    const rs_5_10::bits_t	rs_5_10::bits = { {
-	    rs_5_10::bits_t::value_type( 2, 3 ), // lat, lon bits per symbol
-	    rs_5_10::bits_t::value_type( 2, 3 ),
-	    rs_5_10::bits_t::value_type( 3, 2 ),
-
-	    rs_5_10::bits_t::value_type( 2, 3 ),
-	    rs_5_10::bits_t::value_type( 3, 2 ),
-	    rs_5_10::bits_t::value_type( 2, 3 ),
-
-	    rs_5_10::bits_t::value_type( 3, 2 ),
-	    rs_5_10::bits_t::value_type( 2, 3 ),
-	    rs_5_10::bits_t::value_type( 3, 2 ),
+    template < size_t P >
+    RS_31( 31-P )		ezcod_5<P>::rscodec;
+    template < size_t P >
+    const typename ezcod_5<P>::bits_t	ezcod_5<P>::bits = { {
+	    //  bits per symbol         lat lon
+	    ezcod_5<P>::bits_t::value_type( 2,  3 ),
+	    ezcod_5<P>::bits_t::value_type( 2,  3 ),
+	    ezcod_5<P>::bits_t::value_type( 3,  2 ),
+					      
+	    ezcod_5<P>::bits_t::value_type( 2,  3 ),
+	    ezcod_5<P>::bits_t::value_type( 3,  2 ),
+	    ezcod_5<P>::bits_t::value_type( 2,  3 ),
+					      
+	    ezcod_5<P>::bits_t::value_type( 3,  2 ),
+	    ezcod_5<P>::bits_t::value_type( 2,  3 ),
+	    ezcod_5<P>::bits_t::value_type( 3,  2 ),
+	    //                          --  --
+	    //                          22  23
 	} };
 
-    RS_31(31-3)			rs_5_10::rscodec;
 } // namespace ezpwd
 
+template < size_t P >
 std::ostream		       &operator<<(
 				    std::ostream	&lhs,
-				    const ezpwd::rs_5_10 &rhs )
+				    const ezpwd::ezcod_5<P>
+				    			&rhs )
 {
     return rhs.output( lhs );
 }
+
+template < size_t P > void
+ezcod_5_exercise( const ezpwd::ezcod_5<P> &ezc )
+{
+    // Does location precision scale linearly with the number of symbols provided?  Are errors
+    // detected/corrected successfully?
+    for ( int test = 0; test < 5; ++test ) {
+	std::string	manip	= ezc.encode();
+	switch ( test ) {
+	case 0: std::cout << std::endl << "no errors:" << std::endl;
+	    break;
+	case 1: std::cout << std::endl << "one erasure: 1/" << P << " parity consumed" << std::endl;
+	    manip[8] = '_';
+	    break;
+	case 2: std::cout << std::endl << "one error: 2/" << P << " parity consumed" << std::endl;
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break; 
+	case 3: std::cout << std::endl << "one error, one erasure; 3/" << P << " parity consumed" << std::endl;
+	    manip[8] = '_';
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break;
+	case 4: std::cout << std::endl << "parity capacity overwhelmed" << std::endl;
+	    manip[8] = ( manip[8] == '0' ? '1' : '0' );
+	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
+	    break;
+	}
+	for ( size_t i = 0; i <= manip.size(); ++i ) {
+	    std::string		trunc( manip.begin(), manip.begin() + i );
+	    if ( trunc.back() == ' ' )
+		continue;
+	    trunc.resize( manip.size(), ' ' );
+	    ezpwd::ezcod_5<P>	code;
+	    try {
+		int		conf	= code.decode( trunc );
+		std::cout
+		    << ezpwd::hexstr( trunc ) << " ==> " << code
+		    << " (" << std::setw( 3 ) << conf << "%)" << std::endl;
+	    } catch ( std::exception &exc ) {
+		std::cout
+		    << ezpwd::hexstr( trunc ) << " =x> " << exc.what() << std::endl;
+	    }
+	}
+    }
+}
+
+
 
 int				main()
 {
@@ -478,47 +565,19 @@ int				main()
 
     double		lat	= 53.555556;
     double		lon	= 113.873889;
-    ezpwd::rs_5_10	edm( lat, lon );
-    std::cout << edm << std::endl;
-    ezpwd::rs_5_10	out;
-
-    // Does location precision scale linearly with the number of symbols provided?  Are errors
-    // detected/corrected successfully?
-    for ( int test = 0; test < 5; ++test ) {
-	std::string	manip	= edm.encode();
-	switch ( test ) {
-	case 0: std::cout << std::endl << "no errors:" << std::endl;
-	    break;
-	case 1: std::cout << std::endl << "one erasure: 1/3 parity consumed" << std::endl;
-	    manip[8] = '_';
-	    break;
-	case 2: std::cout << std::endl << "one error: 2/3 parity consumed" << std::endl;
-	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
-	    break; 
-	case 3: std::cout << std::endl << "one error, one erasure; 3/3 parity consumed" << std::endl;
-	    manip[8] = '_';
-	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
-	    break;
-	case 4: std::cout << std::endl << "parity capacitgy overwhelmed" << std::endl;
-	    manip[8] = ( manip[8] == '0' ? '1' : '0' );
-	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
-	    break;
-	}
-	for ( size_t i = 0; i <= manip.size(); ++i ) {
-	    std::string		trunc( manip.begin(), manip.begin() + i );
-	    if ( trunc.back() == ' ' )
-		continue;
-	    trunc.resize( manip.size(), ' ' );
-	    ezpwd::rs_5_10	code;
-	    try {
-		int		conf	= code.decode( trunc );
-		std::cout
-		    << ezpwd::hexstr( trunc ) << " ==> " << code
-		    << " (" << std::setw( 3 ) << conf << "%)" << std::endl;
-	    } catch ( std::exception &exc ) {
-		std::cout
-		    << ezpwd::hexstr( trunc ) << " =x> " << exc.what() << std::endl;
-	    }
-	}
-    }
+    ezpwd::ezcod_5<1>	edm1( lat, lon );
+    std::cout << edm1 << std::endl;
+    ezcod_5_exercise( edm1 );
+    ezpwd::ezcod_5<2>	edm2( lat, lon );
+    std::cout << edm2 << std::endl;
+    ezcod_5_exercise( edm2 );
+    ezpwd::ezcod_5<3>	edm3( lat, lon );
+    std::cout << edm3 << std::endl;
+    ezcod_5_exercise( edm3 );
+    ezpwd::ezcod_5<4>	edm4( lat, lon );
+    std::cout << edm4 << std::endl;
+    ezcod_5_exercise( edm4 );
+    ezpwd::ezcod_5<5>	edm5( lat, lon );
+    std::cout << edm5 << std::endl;
+    ezcod_5_exercise( edm5 );
 }
