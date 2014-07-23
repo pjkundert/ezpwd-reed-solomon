@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <title>title</title>
+    <link rel="stylesheet" href="css/style.css">
+  </head>
+  <body>
+    <!-- page content -->
+    <div>
+        Location:
+        <input type="text" id="lat", placeholder="Latitude"></input>
+        <input type="text" id="lon", placeholder="Longitude"></input>
+    </div>
+    <div>
+        EZCOD:
+        <input type="text" id="ezcod_5_10", placeholder="EZCOD 5:10">
+        <input type="text" id="ezcod_5_11", placeholder="EZCOD 5:11">
+        <input type="text" id="ezcod_5_12", placeholder="EZCOD 5:12">
+    </div>
+
+    <script src="js/jquery-1.10.2.min.js"></script>
+    <script src="js/ezpwd/ezcod_5.js"></script>		<!-- emscripten compiled ezcod_5 API -->
+    <script src="js/ezpwd/ezcod_5_wrap.js"></script>
+    <script type="text/javascript">
+        var $lat	= $('input#lat');
+        var $lon	= $('input#lon');
+        var encode	= function( e ) {
+            // On blur/<return>, send new lat/lon values to encode
+            if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
+                return;
+            var lat	= $lat.val();
+            var lon	= $lon.val();
+            // console.log( "Encoding location: " + lat + ", " + lon );
+            $('input#ezcod_5_10').val( ezcod_5_10_encode( lat, lon ));
+            $('input#ezcod_5_11').val( ezcod_5_11_encode( lat, lon ));
+            $('input#ezcod_5_12').val( ezcod_5_12_encode( lat, lon ));
+        }
+        $lat
+            .off('blur keyup' )
+            .on( 'blur keyup', encode );
+        $lon
+            .off('blur keyup' )
+            .on( 'blur keyup', encode );
+    </script>
+  </body>
+</html>
