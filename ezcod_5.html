@@ -39,14 +39,14 @@
         $('input[id^="pos"]')
             .off( 'blur keyup' )
             .on(  'blur keyup', encoding );
-        $('input[id^="ezcod"')
+        $('input[id^="ezcod"]')
             .off( 'blur keyup' )
             .on(  'blur keyup', decoding );
 
         function updating( lat, lon )
         {
             console.log([ "updating w/ lat:", lat, "lon:", lon ]);
-            $('input[id^="ezcod"')
+            $('input[id^="ezcod"]')
                 .each( function() {
                     $(this).val( $(this).data( 'encode' )( lat, lon ));
                 });
@@ -96,6 +96,7 @@
         function show_position( position ) {
             console.log( "Current browser geolocation lat: "
                          + position.coords.latitude + ", " + position.coords.longitude );
+            // TODO: ignore if user has entered any data in any input field!
             updating( position.coords.latitude, position.coords.longitude );
         }
     </script>
