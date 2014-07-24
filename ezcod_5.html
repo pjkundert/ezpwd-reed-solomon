@@ -18,7 +18,11 @@
         <input type="text" id="ezcod_5_11", placeholder="EZCOD 5:11">
         <input type="text" id="ezcod_5_12", placeholder="EZCOD 5:12">
     </div>
-
+    <div>
+        <iframe id="map" width="600" height="450" frameborder="0" style="border:0"
+                src="https://www.google.com/maps/embed/v1/place?q=0,0&key=AIzaSyA78qkyxebEk4-XOJWfbedywxc7Bxen1eY">
+        </iframe>
+    </div>
     <script src="js/jquery-1.10.2.min.js"></script>
     <script src="js/ezpwd/ezcod_5.js"></script>		<!-- emscripten compiled ezcod_5 API -->
     <script src="js/ezpwd/ezcod_5_wrap.js"></script>
@@ -32,44 +36,55 @@
         $('input#ezcod_5_12')
             .data( 'encode', ezcod_5_12_encode )
             .data( 'decode', ezcod_5_12_decode );
-        var 			updating= function( lat, lon )
+        $('input[id^="pos"]')
+            .off( 'blur keyup' )
+            .on(  'blur keyup', encoding );
+        $('input[id^="ezcod"')
+            .off( 'blur keyup' )
+            .on(  'blur keyup', decoding );
+
+        function updating( lat, lon )
         {
+            console.log([ "updating w/ lat:", lat, "lon:", lon ]);
             $('input[id^="ezcod"')
                 .each( function() {
                     $(this).val( $(this).data( 'encode' )( lat, lon ));
                 });
-            $('input#pos_lat').val( lat.toFixed( 7 ));
-            $('input#pos_lon').val( lon.toFixed( 7 ));
-       }
+            var			latnum	= parseFloat( lat );
+            var			lonnum	= parseFloat( lon );
+            if ( isNaN( lat ) || isNaN( lon ))
+                return;
+            var			latstr	= latnum.toFixed( 7 );
+            var			lonstr	= lonnum.toFixed( 7 );
+            $('input#pos_lat').val( latstr );
+            $('input#pos_lon').val( lonstr );
+            $('#map').attr( 'src',
+                            'https://www.google.com/maps/embed/v1/place?q='
+                            + latstr + ',' + lonstr 
+                            + '&key=AIzaSyA78qkyxebEk4-XOJWfbedywxc7Bxen1eY' );
+        }
 
-        var			encoding= function( e ) {
+        function encoding( e ) {
             // On blur/<return>, send new lat/lon values to encode
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
                 return;
             var			lat	= $('input#pos_lat').val();
             var			lon	= $('input#pos_lon').val();
-            if ( lat === undefined || lat == '' || lon === undefined || lon == '' )
-                return;
+            if ( ! lat || ! lon )
+                return; // one or both are empty/undefined
             updating( lat, lon );
         }
-        $('input[id^="pos"]')
-            .off('blur keyup' )
-            .on( 'blur keyup', encoding );
 
-        var decoding	= function( e ) {
+        function decoding( e ) {
             // On blur/<return>, send new ezcod 5:N to decode and get new lat/lon
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
                 return;
             var			cod	= $(this).val();
-            if ( cod === undefined || cod == '' )
+            if ( ! cod )
                 return;
             var			pos	= $(this).data( 'decode' )( cod );
             updating( pos[0], pos[1] );
         }
-        $('input[id^="ezcod"')
-            .off( 'blur keyup' )
-            .on(  'blur keyup', decoding );
-
     </script>
   </body>
 </html>
