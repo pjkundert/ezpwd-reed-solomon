@@ -9,8 +9,8 @@
     <!-- page content -->
     <div>
         Location:
-        <input type="text" id="lat", placeholder="Latitude"></input>
-        <input type="text" id="lon", placeholder="Longitude"></input>
+        <input type="text" id="pos_lat", placeholder="Latitude"></input>
+        <input type="text" id="pos_lon", placeholder="Longitude"></input>
     </div>
     <div>
         EZCOD:
@@ -23,25 +23,53 @@
     <script src="js/ezpwd/ezcod_5.js"></script>		<!-- emscripten compiled ezcod_5 API -->
     <script src="js/ezpwd/ezcod_5_wrap.js"></script>
     <script type="text/javascript">
-        var $lat	= $('input#lat');
-        var $lon	= $('input#lon');
-        var encode	= function( e ) {
+        $('input#ezcod_5_10')
+            .data( 'encode', ezcod_5_10_encode )
+            .data( 'decode', ezcod_5_10_decode );
+        $('input#ezcod_5_11')
+            .data( 'encode', ezcod_5_11_encode )
+            .data( 'decode', ezcod_5_11_decode );
+        $('input#ezcod_5_12')
+            .data( 'encode', ezcod_5_12_encode )
+            .data( 'decode', ezcod_5_12_decode );
+        var 			updating= function( lat, lon )
+        {
+            $('input[id^="ezcod"')
+                .each( function() {
+                    $(this).val( $(this).data( 'encode' )( lat, lon ));
+                });
+            $('input#pos_lat').val( lat.toFixed( 7 ));
+            $('input#pos_lon').val( lon.toFixed( 7 ));
+       }
+
+        var			encoding= function( e ) {
             // On blur/<return>, send new lat/lon values to encode
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
                 return;
-            var lat	= $lat.val();
-            var lon	= $lon.val();
-            // console.log( "Encoding location: " + lat + ", " + lon );
-            $('input#ezcod_5_10').val( ezcod_5_10_encode( lat, lon ));
-            $('input#ezcod_5_11').val( ezcod_5_11_encode( lat, lon ));
-            $('input#ezcod_5_12').val( ezcod_5_12_encode( lat, lon ));
+            var			lat	= $('input#pos_lat').val();
+            var			lon	= $('input#pos_lon').val();
+            if ( lat === undefined || lat == '' || lon === undefined || lon == '' )
+                return;
+            updating( lat, lon );
         }
-        $lat
+        $('input[id^="pos"]')
             .off('blur keyup' )
-            .on( 'blur keyup', encode );
-        $lon
-            .off('blur keyup' )
-            .on( 'blur keyup', encode );
+            .on( 'blur keyup', encoding );
+
+        var decoding	= function( e ) {
+            // On blur/<return>, send new ezcod 5:N to decode and get new lat/lon
+            if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
+                return;
+            var			cod	= $(this).val();
+            if ( cod === undefined || cod == '' )
+                return;
+            var			pos	= $(this).data( 'decode' )( cod );
+            updating( pos[0], pos[1] );
+        }
+        $('input[id^="ezcod"')
+            .off( 'blur keyup' )
+            .on(  'blur keyup', decoding );
+
     </script>
   </body>
 </html>
