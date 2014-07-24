@@ -85,6 +85,19 @@
             var			pos	= $(this).data( 'decode' )( cod );
             updating( pos[0], pos[1] );
         }
+
+        // Obtain geolocation if possible
+        if ( navigator.geolocation.getCurrentPosition ) {
+            navigator.geolocation.getCurrentPosition( show_position );
+        } else {
+            console.log( "Geolocation is not supported by this browser." );
+        }
+
+        function show_position( position ) {
+            console.log( "Current browser geolocation lat: "
+                         + position.coords.latitude + ", " + position.coords.longitude );
+            updating( position.coords.latitude, position.coords.longitude );
+        }
     </script>
   </body>
 </html>
