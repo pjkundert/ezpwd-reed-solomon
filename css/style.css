@@ -1,0 +1,27 @@
+/* Small devices (tablets, 768px and up) */
+@media (min-width: 768px) 
+{ 
+    div[class^="col"]{padding-left:5px; padding-right:5px;}
+}
+
+/* Medium devices (desktops, 992px and up) */
+@media (min-width: 992px) 
+{   
+    div[class^="col"]{padding-left:10px; padding-right:10px;}
+}
+
+/* Large devices (large desktops, 1200px and up) */
+@media (min-width: 1200px) 
+{   
+    /*default so you don't need this*/
+    div[class^="col"]{padding-left:15px; padding-right:15px;}
+}
+
+.form-control {
+  padding-left:  3px;
+  padding-right: 3px;
+}
+.form-horizontal .control-group {
+  margin-left:  0;
+  margin-right: 0;
+}

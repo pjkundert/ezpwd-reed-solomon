@@ -1,32 +1,72 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <title>title</title>
-    <link rel="stylesheet" href="css/style.css">
-  </head>
-  <body>
-    <!-- page content -->
-    <div>
-        Location:
-        <input type="text" id="pos_lat", placeholder="Latitude"></input>
-        <input type="text" id="pos_lon", placeholder="Longitude"></input>
-    </div>
-    <div>
-        EZCOD:
-        <input type="text" id="ezcod_5_10", placeholder="EZCOD 5:10">
-        <input type="text" id="ezcod_5_11", placeholder="EZCOD 5:11">
-        <input type="text" id="ezcod_5_12", placeholder="EZCOD 5:12">
-    </div>
-    <div>
-        <iframe id="map" width="600" height="450" frameborder="0" style="border:0"
-                src="https://www.google.com/maps/embed/v1/place?q=0,0&key=AIzaSyA78qkyxebEk4-XOJWfbedywxc7Bxen1eY">
-        </iframe>
-    </div>
-    <script src="js/jquery-1.10.2.min.js"></script>
-    <script src="js/ezpwd/ezcod_5.js"></script>		<!-- emscripten compiled ezcod_5 API -->
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport"
+              content="width=device-width, initial-scale=1, user-scalable=no, minimal-ui">
+        <title>EZCOD</title>
+        <link rel="stylesheet" href="static/bootstrap/css/bootstrap.min.css">
+        <link rel="stylesheet" href="css/style.css">
+    </head>
+    <body>
+        <div class="container">
+            <div class="row">
+                <div class="col-md-6">
+                    <form class="form-horizontal" role="form">
+                        <div class="form-group">
+                            
+                            <div class="col-xs-4">
+                                <input class="form-control" type="text" id="pos_lat" placeholder="Latitude">
+                            </div>
+                            <div class="col-xs-4">
+                                <input class="form-control" type="text" id="pos_lon" placeholder="Longitude">
+                            </div>
+                            <div class="col-xs-4">
+                                <input class="form-control" type="text" id="pos_acc" placeholder="Accuracy m." disabled>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+                <div class="col-md-6">
+                    <form class="form-horizontal" role="form">
+                        <div class="form-group">
+                            <div class="col-xs-2">
+                                <button id="home" type="button" class="btn btn-default btn-md">
+                                    <span class="glyphicon glyphicon-home"></span>
+                                </button>
+                            </div>
+                            <div class="col-xs-4">
+                                <select id="parity" class="form-control" data-placeholder="Parity">
+                                    <option value="ezcod_5_10">5:10</option>
+                                    <option value="ezcod_5_11">5:11</option>
+                                    <option value="ezcod_5_12">5:12</option>
+                                </select>
+                            </div>
+                            <div class="col-xs-6">
+                                <input class="form-control"        type="text" id="ezcod_5_10" placeholder="EZCOD 5:10">
+                                <input class="form-control hidden" type="text" id="ezcod_5_11" placeholder="EZCOD 5:11">
+                                <input class="form-control hidden" type="text" id="ezcod_5_12" placeholder="EZCOD 5:12">
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="row">
+                <div class"col-xs-12">
+                    <iframe id="map" width="100%" height="450" frameborder="0" style="border:0">
+                    </iframe>
+                </div>
+            </div>
+        </div>
+
+    <script src="static/jquery/js/jquery-2.1.1.min.js"></script>
+    <script src="static/bootstrap/js/bootstrap.min.js"></script>
+
+    <script src="js/ezpwd/ezcod_5.js"></script>
     <script src="js/ezpwd/ezcod_5_wrap.js"></script>
+
     <script type="text/javascript">
+
         $('input#ezcod_5_10')
             .data( 'encode', ezcod_5_10_encode )
             .data( 'decode', ezcod_5_10_decode );
@@ -42,63 +82,102 @@
         $('input[id^="ezcod"]')
             .off( 'blur keyup' )
             .on(  'blur keyup', decoding );
+        $('select#parity')
+            .on( 'change', function( e ) {
+                var		alive	= $('select#parity').val();
+                console.log( ["unhiding", alive, "; event", e]);
+                $('input[id^="ezcod"]')
+                    .addClass('hidden');
+                $('input#'+alive)
+                    .removeClass('hidden');
+            });
+        $('button#home')
+            .on( 'click', function( e ) {
+                home();
+            });
 
-        function updating( lat, lon )
+        function updating( confidence, lat, lon, acc )
         {
-            console.log([ "updating w/ lat:", lat, "lon:", lon ]);
-            $('input[id^="ezcod"]')
-                .each( function() {
-                    $(this).val( $(this).data( 'encode' )( lat, lon ));
-                });
+            console.log([ "updating w/ confidence:", confidence,
+                          " lat:", lat, "lon:", lon, "acc:", acc ]);
             var			latnum	= parseFloat( lat );
             var			lonnum	= parseFloat( lon );
-            if ( isNaN( lat ) || isNaN( lon ))
+            var			accnum	= parseFloat( acc );
+            if ( isNaN( lat ) || isNaN( lon )) {
+                console.log( "not update due to invalid lat/lon" );
                 return;
+            }
+            $('input[id^="ezcod"]')
+                .each( function() {
+                    $(this).val( $(this).data( 'encode' )( latnum, lonnum ));
+                });
             var			latstr	= latnum.toFixed( 7 );
             var			lonstr	= lonnum.toFixed( 7 );
+            var			accstr	= '';
+            if ( ! isNaN( accnum )) {
+                if ( accnum < 1000 ) {
+                    accstr		= accnum.toFixed( 1 ) + "m";
+                } else {
+                    accstr		= ( accnum / 1000 ).toFixed( 1 ) + "km";
+                }
+            }
             $('input#pos_lat').val( latstr );
             $('input#pos_lon').val( lonstr );
-            $('#map').attr( 'src',
-                            'https://www.google.com/maps/embed/v1/place?q='
-                            + latstr + ',' + lonstr 
-                            + '&key=AIzaSyA78qkyxebEk4-XOJWfbedywxc7Bxen1eY' );
+            $('input#pos_acc').val( accstr );
+            // Compute the 
+            var			uri	= (
+                'https://www.google.com/maps/embed/v1/place?q='
+                    + latstr + ',' + lonstr 
+                    + '&key=AIzaSyA78qkyxebEk4-XOJWfbedywxc7Bxen1eY'
+            );
+            if ( $('#map').attr( 'src' ) != uri )
+                $('#map').attr( 'src', uri );
         }
 
+        // On blur/<return> of lat/lon inputs, send lat/lon values to encode and
+        // update to get ezcod 5:N.  We presume that these input coordinates are
+        // exact (high confidence, precise accuracy).
         function encoding( e ) {
-            // On blur/<return>, send new lat/lon values to encode
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
                 return;
             var			lat	= $('input#pos_lat').val();
             var			lon	= $('input#pos_lon').val();
             if ( ! lat || ! lon )
                 return; // one or both are empty/undefined
-            updating( lat, lon );
+            updating( 1.0, lat, lon, 0 );
         }
 
+        // On blur/<return>, send ezcod 5:N to decode and get confidence,
+        // lat/lon and accuracy.  The confidence and accuracy is deduced from
+        // the supplied ezcod.
         function decoding( e ) {
-            // On blur/<return>, send new ezcod 5:N to decode and get new lat/lon
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
                 return;
             var			cod	= $(this).val();
             if ( ! cod )
-                return;
+                return; // ezcod was empty/undefined
             var			pos	= $(this).data( 'decode' )( cod );
-            updating( pos[0], pos[1] );
+            updating( pos[0], pos[1], pos[2], pos[3] );
         }
 
         // Obtain geolocation if possible
-        if ( navigator.geolocation.getCurrentPosition ) {
-            navigator.geolocation.getCurrentPosition( show_position );
-        } else {
-            console.log( "Geolocation is not supported by this browser." );
-        }
-
+        // 
+        // TODO: ignore if user has entered any data in any input field!  It is
+        // extremely impolite to overwrite user data input.
         function show_position( position ) {
             console.log( "Current browser geolocation lat: "
                          + position.coords.latitude + ", " + position.coords.longitude );
-            // TODO: ignore if user has entered any data in any input field!
-            updating( position.coords.latitude, position.coords.longitude );
+            updating( 1.0, position.coords.latitude, position.coords.longitude, position.coords.accuracy );
         }
+        function home() {
+            if ( navigator.geolocation.getCurrentPosition ) {
+                navigator.geolocation.getCurrentPosition( show_position );
+            } else {
+                console.log( "Geolocation is not supported by this browser." );
+            }
+        }
+        home();
+
     </script>
   </body>
 </html>

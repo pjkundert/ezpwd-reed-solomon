@@ -31,6 +31,9 @@ buf_t			operator<<(
     return buf; // NULL pointer or 0 size.
 }
 
+// 
+// Encode lat/lon with about 5m. accuracy (1 part in 2^23 in both dimensions).
+// 
 template < size_t P=1, size_t L=9 >
 int				ezcod_5_encode(
 				    double		lat,
@@ -63,20 +66,36 @@ int				ezcod_5_encode(
     return res;
 }
 
+// 
+// Decode lat/lon position in degrees and (optionally) accuracy in m, returning confidence in %.
+// 
 template < size_t P=1, size_t L=9 >
 int				ezcod_5_decode(
-				    double	       *lat,
-				    double	       *lon,
 				    char	       *dec,
-				    size_t		siz )
+				    size_t		siz,
+				    double	       *lat	= 0,
+				    double	       *lon	= 0,
+				    double	       *acc	= 0 )
 {
     int				res;
     std::string			str;
     try {
 	ezpwd::ezcod_5<P,L>	loc;
 	res				= loc.decode( dec );
-	*lat				= loc.lat;
-	*lon				= loc.lon;
+#if defined( DEBUG ) && DEBUG > 0
+    std::cout
+	<< "ezcod_5_decode<" << P << "," << L << ">("
+	<< " lat (" << (void *)lat << ") == " << loc.lat
+	<< ", lon (" << (void *)lon << ") == " << loc.lon
+	<< ", acc (" << (void *)acc << ") == " << loc.lat_m << " x " << loc.lon_m
+	<< std::endl;
+#endif
+	if ( lat )
+	    *lat			= loc.lat;
+	if ( lon )
+	    *lon			= loc.lon;
+	if ( acc )
+	    *acc			= loc.lat_m / 2 + loc.lon_m / 2;
     } catch ( std::exception &exc ) {
 	str				= exc.what();
 	res				= -1;
@@ -93,9 +112,9 @@ extern "C" {
     {
 	return ezcod_5_encode<1,9>( lat, lon, enc, siz );
     }
-    int ezcod_5_10_decode( double *lat, double *lon, char *dec, size_t siz )
+    int ezcod_5_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_5_decode<1,9>( lat, lon, dec, siz );
+	return ezcod_5_decode<1,9>( dec, siz, lat, lon, acc );
     }
 
     /* ezcod 5:11 -- 9+2 Reed-Solomon parity symbols */
@@ -103,9 +122,9 @@ extern "C" {
     {
 	return ezcod_5_encode<2,9>( lat, lon, enc, siz );
     }
-    int ezcod_5_11_decode( double *lat, double *lon, char *dec, size_t siz )
+    int ezcod_5_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_5_decode<2,9>( lat, lon, dec, siz );
+	return ezcod_5_decode<2,9>( dec, siz, lat, lon, acc );
     }
 
     /* ezcod 5:12 -- 9+3 Reed-Solomon parity symbols */
@@ -113,9 +132,9 @@ extern "C" {
     {
 	return ezcod_5_encode<3,9>( lat, lon, enc, siz );
     }
-    int ezcod_5_12_decode( double *lat, double *lon, char *dec, size_t siz )
+    int ezcod_5_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_5_decode<3,9>( lat, lon, dec, siz );
+	return ezcod_5_decode<3,9>( dec, siz, lat, lon, acc );
     }
 
 } // extern "C"

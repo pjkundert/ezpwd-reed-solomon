@@ -16,15 +16,15 @@ extern "C" {
 
     /* ezcod 5:10 -- 9+1 Reed-Solomon parity symbol */
     int ezcod_5_10_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_5_10_decode( double *lat, double *lon, char *dec, size_t siz );
+    int ezcod_5_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
 
     /* ezcod 5:11 -- 9+2 Reed-Solomon parity symbols */
     int ezcod_5_11_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_5_11_decode( double *lat, double *lon, char *dec, size_t siz );
+    int ezcod_5_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
 
     /* ezcod 5:12 -- 9+3 Reed-Solomon parity symbols */
     int ezcod_5_12_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_5_12_decode( double *lat, double *lon, char *dec, size_t siz );
+    int ezcod_5_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
 
 #if defined( __cplusplus )
 } // extern "C"
