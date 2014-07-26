@@ -46,7 +46,9 @@ int				ezcod_5_encode(
 	<< "ezcod_5_encode<" << P << "," << L << ">("
 	<< " lat == " << lat
 	<< ", lon == " << lon
-	<< ", buf(" << (void *)enc << ")[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
+#if DEBUG > 2
+	<< ", buf[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
+#endif
 	<< std::endl;
 #endif
     int				res;
