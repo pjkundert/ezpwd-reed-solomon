@@ -16,18 +16,17 @@
 // - sub-10m precision achieved in 9 symbols
 //   - more than 4 digits of precision in both lat and lon after the decimal
 // - from 1 to 3 symbols of Reed-Solomon parity
-//   - 1 parity symbol supplies validation w/ strength similar to check character
+//   - 1 parity symbol supplies validation w/ strength equivalent to a check character
 //   - 2 parity symbols provides correction of 1 lost symbol (no errors)
 //   - 3 parity symbols provides correction of any 1 error, with verification,
 //     or recovery of up to any 3 lost symbols (with no other errors)
 // 
 
 // 
-//     To achieve at least 4 decimal digits of precision after the decimal
-// point, we must have defined lat to within 1 part in 1,800,000, and lon to
-// within 1 part in 3,600,000.  As each symbol supplies bits, we'll refine the
-// computed lat/lon further, reducing the outstanding fraction of "parts" yet to
-// be defined.
+//     To achieve at least 4 decimal digits of precision after the decimal point, we must have
+// defined lat to within 1 part in 1,800,000, and lon to within 1 part in 3,600,000.  As each symbol
+// supplies bits, we'll refine the computed lat/lon further, reducing the outstanding fraction of
+// "parts" yet to be defined.
 // 
 // 
 //             bits      
@@ -49,98 +48,57 @@
 //                 vs. 1,800,000             3,600,000 parts resolution in 10:10 code
 //                over [-90, 90]       over [-180,180] yields <5m resolution
 // 
-//     Therefore, within 9 symbols we define lat and long with about double the
-// precision of 10:10 code's 4 decimal digits after the decimal point.  This
-// yields an approximate lineal precision of 40,075,000m / 8,388,608 == 5m in
-// both dimensions, vs. 40,075,000m / 3,600,000 == ~11m for 10:10 codes.
+//     Therefore, within 9 symbols we define lat and long with about double the precision of 10:10
+// code's 4 decimal digits after the decimal point.  This yields an approximate lineal precision of
+// 40,075,000m / 8,388,608 == 5m in both dimensions, vs. 40,075,000m / 3,600,000 == ~11m for 10:10
+// codes.
 // 
-//     Errors in the first digits matter much more than serious than errors in the
-// last.  Errors in the low bits (keyboard nearby character substitutions) are
-// much more likely than errors in high bits (keyboard row or column errors).
-// However, with only 1-3 symbols to encode parity symbols in, it is difficult
-// to supply multiple parity encodings.  What we would like is:
+//     Errors in the first digits matter much more than serious than errors in the last.  Errors in
+// the low bits (keyboard nearby character substitutions) are much more likely than errors in high
+// bits (keyboard row or column errors).  However, with only 1-3 symbols to encode parity symbols
+// in, it is difficult to supply multiple parity encodings.  What we would like is:
 // 
-// 1 parity symbol: adequate to act as a check character (like 10:10 codes)
-// 2 parity symbols: provide 1 symbol of erasure correction (w/ no other errors)
-// 3 parity symbols: correct 1 error anywhere w/validation, or up to 3 erasures
+//         1 parity symbol: adequate to act as a check character (like 10:10 codes)
+//         2 parity symbols: provide 1 symbol of erasure correction (w/ no other errors)
+//         3 parity symbols: correct 1 error anywhere w/validation, or up to 3 erasures
 // 
-//     Therefore, we'll provide Reed-Solomon RS(31,28) error correction (5 bit
-// symbols, indicating 31 symbols in the field, and 3 roots, therefore up to 28
-// data symbols in the field) over the 9 lat/lon data symbols.
+//     Therefore, we'll provide Reed-Solomon RS(31,28-30) error correction (5 bit symbols,
+// indicating 31 symbols in the field, and from 1 to 3 roots, therefore up to 28 data symbols in the
+// field) over the 9 lat/lon data symbols.
 // 
-
 // 
-//     The first 3-tuple encodes roughly the integer lat (-90,90] w/ resolution
-// 1 degree and lon (-180,180] w/ resolution of 2 degrees. This is encoded as 3
-// 5-bit values, each encoding 2 or 3 bits each of lat and long.
+// MINIMIZING ERROR
 // 
-// 15-bit value with the range (0,180*180] or (0,32400], and encoded as 3 5-bit
-// characters.  There is no error coding.
+//     Each input lat/lon coordinate will be effectively truncated by the encoding procedure to the
+// level of precision (parts) encoded by each symbol.  Subsequent symbols then add their (smaller)
+// parts to increase precision.
 // 
-
+//     After the last symbol, we know that the actual input coordinates where somewhere
+// within the square:
 // 
-//     The first 3-tuple encodes the integer lat (-90,90] w/ resolution 1 degree
-// and lon (-180,180] w/ resolution of 2 degrees. This is encoded a 15-bit value
-// with the range (0,180*180] or (0,32400], and encoded as 3 5-bit characters.
-// There is no error coding.
+//         [0,0] -> [0,lon_precision] -> [lat_precision,lon_precision] -> [lat_precision,0]
 // 
-
-//     For Edmonton, we would get 54N, 114W (note: rounded, not truncated),
-// which results in 54+90 == 144 lat, 114/2+90 == 57+90 == 147 lon; 144*180+147
-// == 26067 == 01100 10111 10011 == "???".
+//     At first glance, the best way is to perform rounding instead of truncation, by simply adding
+// 1/2 of the precision.  Then, the output encoding represents the point nearest actual input
+// coordinate.  However, this is NOT ideal.  Remember -- the decoding may not have access to all the 
+// symbols!  We want to minimize the error even if only some of the symbols are available.  Thus, 
+// we must apply a correction on decoding.
 // 
-//     To achieve at least 4 decimal digits of precision after the decimal
-// point, we must have defined lat and long to within 1 part in 10,000 after the
-// decimal point.  For lat, we have 10,000 parts remaining.  For lon, since we
-// are missing 1 bit (1 doubling) of precision before the decimal place, we have
-// 20,000 parts remaining.
+//    One way gain rounding instead of truncation on decoding is, after adding the last symbol's
+// precision, to add 50% of the value represented by the first bit of the next (missing) symbol's
+// precision parts.  This would be analogous to receiving the first 2 digits of a 3 digit number:
 // 
-//    The second 3-tuple encodes 1 signed digit (plus 2 bits of sub-digit
-// precision, eg. .00, .25, .50, .75) of lat and 2 signed digits (with 1 bit of
-// sub-digit precision, eg. .0, .5) of lon precision.  This requires a value in
-// the range (0, 80*400], or (0,32000] requiring 15 bits (with 2.3% waste).
-// There is no error coding.  For Edmonton, we would now get 53.55N, 113.50W.
+//         original:  123
+//         received:  12_
+//         range:     [120,130)
+//         guessed:   125 (add 1/2 of the parts represented by the missing digit)
 // 
-//     Thus, after 6 symbols "XXX YYY", you have (-180.0,180.0] plus 2 bits
-// (eg. .25) of lat precision, and (-360.0,360.0] plus 1 bit (eg. .5) of lon
-// precision, and no error correction.
-// 
-//    Now, we have 10,000/80 == 1 part in 125 remaining for lat, and 20,000/400
-// == 1 part in 50 remaining for lon.  So, we need to supply 7 bits (128) for
-// lat and 6 bits (64) for lon, totalling 13 bits.  This achieves slightly
-// better than 10m precision in both latitude and longitude, leaving 7 bits for
-// Reed-Solomon encoding
-// 
-//    The final 4-tuple is contains 3 signed digits of lat and 3 signed digits of
-// lon, requiring a value (0,2000*2000] or (0,4000000) or 21 bits (with 4.6%
-// waste).  The remaining 4 bits
-
-
-// parity is added, applied to the low 2 bits of all previous 3+2 == 5 symbols.
-// This allows us to validate AND CORRECT against common keyboard errors on each
-// half of the keyboard (mistyping '2'/'3', 'Q'/'W', 'N'/'M') at a very low cost
-// of 4 bits; it won't catch errors involving substitutions of a corresponding
-// character from a different row (eg. substituting up 'Q'/'A'/'X' for '1').
-// However, with the one remaining bit, we provide 1 R-S parity bit encoding bit
-// 4/5 of all previous 5 symbols.  This will detect up to one error in row
-// substitution (but will not be able to correct it.)
-// 
-//    The final 4-tuple contains 3 signed digits of lat and 2.5 signed digits of
-// lon, requiring a value (0,1000*2000] or (0,2000000) or 21 bits (with 4.6%
-// waste).  The remaining 4 bits
+//     If this is done, then the resulting coordinate would be in the middle of the square of
+// possible input lat/lon values that could have resulted in the encoded value.  This also works if
+// we don't receive and decode all of the symbols; We'll end up with a lat/lon in the middle of the
+// (large) square of possible input coordinates.
 // 
 
-
-// long as there are no other errors.  For example, if 1 symbol gets rubbed off
-// of an address label but the others are legible, we can recover the complete
-// lat/lon, correct to 1 digit of precision beyond the decimal point (eg. 53.5N,
-// 113.5W == Edmonton)!
-// 
-
-//     Finally, the last 4-tuple contains 4 digits of lat/lon precision,
-// requiring a value in the range (0,10000*10000] or (0,1_000_000_000)
-// 
-// 
 
 namespace ezpwd {
     // 
@@ -180,7 +138,7 @@ namespace ezpwd {
 				    iter	end )
 	{
 	    for ( iter i = begin; i != end; ++i ) {
-		if ( *i >= 0 && *i < 32 )
+		if ( *i >= 0 && size_t( *i ) < chrs.size() )
 		    *i			= chrs[*i];
 		else
 		    throw std::runtime_error( "ezpwd::base32::encode: invalid symbol presented" );
@@ -259,11 +217,9 @@ namespace ezpwd {
     template < size_t P=1, size_t L=9 >			// 1 parity + 9 location symbols
     class ezcod_5 {
     public:
-	double			lat;			// [-90,+90] angle, degrees
-	double			lon;			// [-180,180]
-
-	double			lat_m;			// resolution, meters
-	double			lon_m;
+	double			latitude;		// [-90,+90] angle, degrees
+	double			longitude;		// [-180,180]
+	double			accuracy;		// linear accuracy, in meters
 
 	static const uint32_t	lat_parts = 1 << 22;	// [ -90,90 ] / 4,194,304 parts
 	static const uint32_t	lon_parts = 1 << 23;	// [-180,180] / 8,388,608 parts
@@ -277,10 +233,9 @@ namespace ezpwd {
 				ezcod_5(
 				    double	_lat	= 0,
 				    double	_lon	= 0 )
-				    : lat( _lat )
-				    , lon( _lon )
-				    , lat_m( 0 )
-				    , lon_m( 0 )
+				    : latitude( _lat )
+				    , longitude( _lon )
+				    , accuracy( 0 )
 	{
 	    if ( P < 1 )
 		throw std::runtime_error( "ezpwd::ezcod_5:: At least one parity symbol must be specified" );
@@ -305,10 +260,11 @@ namespace ezpwd {
 	    std::ios_base::fmtflags
 				flg	= lhs.flags();
 	    lhs.precision( 10 );
-	    lhs << std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << lat
-		<< std::noshowpos << std::scientific << std::setprecision( 1 )<< " +/-" << lat_m << "m, "
-		<< std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << lon
-		<< std::noshowpos << std::scientific << std::setprecision( 1 ) << " +/-" << lon_m << "m"
+	    bool		km	= accuracy > 1000;	
+	    lhs << std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << latitude << ", "
+		<< std::showpos << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << longitude
+		<< std::noshowpos << std::fixed << std::setprecision( 1 ) 
+		<< " +/-" << ( km ? accuracy / 1000 : accuracy ) << ( km ? "km" : "m" )
 		<< " == " << encode();
 	    lhs.precision( prec );
 	    lhs.flags( flg );
@@ -319,14 +275,17 @@ namespace ezpwd {
 	    const
 	{
 	    // Convert lat/lon into a fraction of number of parts assigned to each
-	    double		lat_frac= ( lat +  90 ) / 180;
+	    double		lat_frac= ( latitude +  90 ) / 180;
 	    if ( lat_frac < 0 || lat_frac > 1 )
 		throw std::runtime_error( "ezpwd::ezcod_5::encode: Latitude not in range [-90,90]" );
-	    uint32_t		lat_rem	= lat_parts * lat_frac;
-	    double		lon_frac= ( lon + 180 ) / 360;
+	    double		lon_frac= ( longitude + 180 ) / 360;
 	    if ( lon_frac < 0 || lon_frac > 1 )
 		throw std::runtime_error( "ezpwd::ezcod_5::encode: Longitude not in range [-180,180]" );
-	    uint32_t		lon_rem	= lon_parts * lon_frac;
+
+	    // Compute the integer number of lat/lon parts represented by each coordinate.
+	    // Truncate to the range [0,..._parts), eg. Latitude 90 --> 89.999...
+	    uint32_t		lat_rem	= std::min( lat_parts-1, uint32_t( lat_parts * lat_frac ));
+	    uint32_t		lon_rem	= std::min( lon_parts-1, uint32_t( lon_parts * lon_frac ));
 
 	    // Initial loop condition; lat/lon multiplier is left at the base multiplier of the
 	    // previous loop.
@@ -343,9 +302,9 @@ namespace ezpwd {
 		// division by the number of bits we're outputting) would go into the remainder.
 		// Eg. If _mult was 1024, and _rem is 123 and _bits is 3, we're going to put out
 		// the next 3 bits of the value 199.  The last value ended removing all multiples of 
-		// 1024.  So, we first get the new multiplier. 1024 >> 3 == 128.  So, we're
-		// indicating as a 3-bit value, how many multiples of 128 there are in the value
-		// 199.  199 / 128 == 1.
+		// 1024.  So, we first get the new multiplier: 1024 >> 3 == 128.  So, we're
+		// indicating, as a 3-bit value, how many multiples of 128 there are in the value
+		// 199: 199 / 128 == 1, so the 3-bit value we output is 001
 		lat_mult       	      >>= lat_bits;
 		uint32_t	lat_val	= lat_rem / lat_mult;
 		lat_rem		       -= lat_val * lat_mult;
@@ -357,7 +316,7 @@ namespace ezpwd {
 		res		       += c;
 	    }
 
-	    // Add the P R-S parity symbols and base-32 encode
+	    // Add the R-S parity symbols and base-32 encode
 	    rscodec.encode( res );
 	    ezpwd::base32::encode( res );
 	    res.insert( 3,  1, ' ' );
@@ -467,24 +426,39 @@ namespace ezpwd {
 		lon_mult	      >>= lon_bits;
 		lon_tot		       += lon_val * lon_mult;
 	    }
-	    lat				= double( lat_tot ) * 180 / lat_parts - 90;
-	    lon				= double( lon_tot ) * 360 / lon_parts - 180;
 
-	    // Compute the resolution (in m.) of the decoded lat/lon.  Resolution of Latitude is
-	    // linear.  Longitude resolution changes due to the circumference of the earth reducing
-	    // as Latitude moves towards the poles.
+	    // Convert the summed up lat/lon parts back into degrees
+	    latitude			= lat_tot * 180.0 / lat_parts -  90.0;
+	    longitude			= lon_tot * 360.0 / lon_parts - 180.0;
+
+	    // Round the (truncated) value to the middle of the error square.  This allows us to
+	    // minimize error even if we didn't have access to all of the origin symbols to decode.
+	    latitude		       += lat_mult * 180.0 / lat_parts / 2.0;
+	    longitude		       += lon_mult * 360.0 / lon_parts / 2.0;
+
+	    // Compute the resolution (in m.) of the decoded lat/lon and compute average accuracy.
+	    // Resolution of Latitude is linear.  Longitude resolution changes due to the
+	    // circumference of the earth reducing as Latitude moves towards the poles (the
+	    // circumference of the earth at higher Latitude's gets smaller).  Thus, use the
+	    // computed lat_circ full diameter to compute the error per part on Longitude,
+	    // multiplied by the last part multiplier used.  For example, if the last value we added
+	    // worked out to be worth 25m of the circumference, then we must be within <25m of the
+	    // original point.  In fact, our average error in each dimension will be 1/2 of the full
+	    // range represented by the *next* bit of resolution data (which is 1/2 the scale of the
+	    // current bit), and the accuracy will be the diagonal of the error rectangle.
 	    double		lon_circ= 1 * M_PI * 6371000;
-	    lat_m			= lon_circ * lat_mult / lat_parts;
-	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( lat * M_PI / 180 );
-	    lon_m			= lat_circ * lon_mult / lon_parts;
-	    
+	    double		lat_m	= lon_circ * lat_mult / 2 / lat_parts / 2;
+	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( latitude * M_PI / 180 );
+	    double		lon_m	= lat_circ * lon_mult / 2 / lon_parts / 2;
+	    accuracy			= sqrt( lat_m * lat_m + lon_m * lon_m );
+
 	    return confidence;
 	}
     }; // class ezcod_5
 
     // 
     // ezcod_5::rscodec -- Reed-Solomon parity codec
-    // ezcod_5::bits	   -- distribution of lat/lon precision in each code symbol
+    // ezcod_5::bits	-- distribution of lat/lon precision in each code symbol
     // 
     //     Quickly establishes an extra bit of precision for Longitude, and then evenly distributes
     // future precision between lat/lon.
@@ -496,10 +470,10 @@ namespace ezpwd {
     const typename 
     ezcod_5<P,L>::bits_t	ezcod_5<P,L>::bits = {
 	{
-	    //  bits per symbol         lat lon           
+	    //  bits per symbol              lat lon           
 	    ezcod_5<P,L>::bits_t::value_type( 2,  3 ),
 	    ezcod_5<P,L>::bits_t::value_type( 2,  3 ),
-	    ezcod_5<P,L>::bits_t::value_type( 3,  2 ), // 
+	    ezcod_5<P,L>::bits_t::value_type( 3,  2 ),
 					      
 	    ezcod_5<P,L>::bits_t::value_type( 2,  3 ),
 	    ezcod_5<P,L>::bits_t::value_type( 3,  2 ),
@@ -508,8 +482,8 @@ namespace ezpwd {
 	    ezcod_5<P,L>::bits_t::value_type( 3,  2 ),
 	    ezcod_5<P,L>::bits_t::value_type( 2,  3 ),
 	    ezcod_5<P,L>::bits_t::value_type( 3,  2 ),
-	    //                          --  --
-	    //                          22  23
+	    //                               --  --
+	    //                               22  23
 	}
     };
 } // namespace ezpwd

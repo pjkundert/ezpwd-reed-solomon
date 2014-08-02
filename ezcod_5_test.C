@@ -1,11 +1,14 @@
 
 #include <math.h> // M_PI
 #include <cmath>
+#include <random>
 
 #include <cstdint>
 #include <ezpwd/rs>
 #include <ezpwd/output>
 #include <ezpwd/ezcod_5>
+
+#include "ezcod_5.h"
 
 #if defined( DEBUG )
 extern "C" {
@@ -93,7 +96,6 @@ int				main()
     ezpwd::ezcod_5<5>	edm5( lat, lon );
     ezcod_5_exercise( edm5 );
 
-
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in
@@ -136,5 +138,119 @@ int				main()
 	<< " @" << era_31_29
 	<< std::endl;
 #endif // DEBUG
-    
+
+
+    // Test the actual precision of ezcod for various lat/lon positions.  The returned value should
+    // always be within the given error bars.
+    std::minstd_rand		rnd_gen( (unsigned int)time( 0 ));
+    auto			rnd_dbl	= std::uniform_real_distribution<double>( 0.0, 1.0 );
+
+    typedef std::map<int, std::pair<int, double>> // <degrees> --> (<count>,<average>)
+		     		deg_err_t;
+    deg_err_t			lat_err;  // average absolute error; should tend toward avg. error bar
+    deg_err_t			lon_err;
+    deg_err_t			lat_dif;  // average signed difference; should tend toward 0
+    deg_err_t			lon_dif;
+    deg_err_t			lat_acc;  // average reported accuracy
+    deg_err_t			lon_acc;
+    std::cout << std::setprecision( 8 );
+    for ( int i = 0; i < 100000; ++i ) {
+	double			lat	= 90;
+	double			lon	= 180;
+	switch ( i ) {
+	case 0:
+	    break;
+	case 1:
+	    lat				= -lat;
+	    break;
+	case 2:
+	    lon				= -lon;
+	    break;
+	case 3:
+	    lat				= -lat;
+	    lon				= -lon;
+	    break;
+	default:
+	    lat				= 180 * rnd_dbl( rnd_gen ) - 90;
+	    lon				= 360 * rnd_dbl( rnd_gen ) - 180;
+	    break;
+	}
+	int			lat_i	= int( lat + ( lat > 0 ? .5 : -.5 ));
+	int			lon_i	= int( lon + ( lon > 0 ? .5 : -.5 ));
+
+	// Get EZCOD using C API for chuckles; gotta love NUL terminated strings...
+	std::string		cod;
+	cod.resize( 256 );
+	int			siz	= ezcod_5_10_encode( lat, lon, &cod.front(), cod.size() );
+	if ( siz < 0 ) {
+	    std::cout << "encode " << lat << ", " << lon << " failed: " << &cod.front() << std::endl;
+	    continue;
+	}
+	cod.resize( siz );
+#if defined( DEBUG ) && DEBUG > 2
+	std::cout
+	    << "encode " << std::setw( 16 ) << lat << ", " << std::setw( 16 ) << lon
+	    << " == " << cod
+	    << " == " << ezpwd::ezcod_5<1,9>( ezpwd::ezcod_5<1,9>( lat, lon ).encode() ) << std::endl;
+#endif
+	double			lat_o;
+	double			lon_o;
+	double			acc_o;
+	cod += char( 0 );
+	cod.resize( 256 );
+	int			cnf	= ezcod_5_10_decode( &cod.front(), cod.size(), &lat_o, &lon_o, &acc_o );
+	if ( cnf < 0 ) {
+	    std::cout << "decode " << lat_o << ", " << lon_o << " failed: " << &cod.front() << std::endl;
+	    continue;
+	}
+	auto			&lat_acc_lon_i	= lat_acc[lon_i];
+	lat_acc_lon_i.second	       += ( acc_o - lat_acc_lon_i.second ) / ++lat_acc_lon_i.first;
+	auto			&lon_acc_lat_i	= lon_acc[lat_i];
+	lon_acc_lat_i.second	       += ( acc_o - lon_acc_lat_i.second ) / ++lon_acc_lat_i.first;
+
+	double			lat_d	= lat_o - lat;
+	double			lat_e	= fabs( lat_d );
+	double			lon_d	= lon_o - lon;
+	double			lon_e	= fabs( lon_d );
+
+	double			lon_circ= 1 * M_PI * 6371000;
+	double 			lat_dm	= lon_circ * lat_d / 180;
+	double 			lat_em	= lon_circ * lat_e / 180;
+	double			lat_circ= 2 * M_PI * 6371000 * std::cos( lat * M_PI / 180 );
+	double			lon_dm	= lat_circ * lon_d / 360;
+	double			lon_em	= lat_circ * lon_e / 360;
+
+	// absolute error
+	auto			&lat_err_lon_i	= lat_err[lon_i];
+	lat_err_lon_i.second		       += ( lat_em - lat_err_lon_i.second ) / ++lat_err_lon_i.first;
+	auto			&lon_err_lat_i	= lon_err[lat_i];
+	lon_err_lat_i.second		       += ( lon_em - lon_err_lat_i.second ) / ++lon_err_lat_i.first;
+	//std::cout << "decode " << lat << " --> " << lat_o << " w/ " << lat_em << "m. error ==> " << lat_err_lon_i.second << "m. avg." << std::endl;
+	//std::cout << "decode " << lon << " --> " << lon_o << " w/ " << lon_em << "m. error ==> " << lon_err_lat_i.second << "m. avg." << std::endl;
+
+	// signed error
+	auto			&lat_dif_lon_i	= lat_dif[lon_i];
+	lat_dif_lon_i.second		       += ( lat_dm - lat_dif_lon_i.second ) / ++lat_dif_lon_i.first;
+	auto			&lon_dif_lat_i	= lon_dif[lat_i];
+	lon_dif_lat_i.second		       += ( lon_dm - lon_dif_lat_i.second ) / ++lon_dif_lat_i.first;
+
+    }
+    std::cout << "Longitude error, signed difference and reported accuracy (at integer Latitudes): " << std::endl;
+    for ( int lat_i = -90; lat_i <= 90; ++lat_i ) {
+	std::cout
+	    << std::setw(  5 ) << lat_i << ": "
+	    << std::setw( 16 ) << lon_err[lat_i].second << ", " 
+	    << std::setw( 16 ) << lon_dif[lat_i].second << ", "
+	    << std::setw( 16 ) << lon_acc[lat_i].second
+	    << std::endl;
+    }
+    std::cout << "Latitude error, signed difference and reported accuracy (at integer Longitudes): " << std::endl;
+    for ( int lon_i = -180; lon_i <= 180; ++lon_i ) {
+	std::cout
+	    << std::setw(  5 ) << lon_i << ": "
+	    << std::setw( 16 ) << lat_err[lon_i].second << ", " 
+	    << std::setw( 16 ) << lat_dif[lon_i].second << ", "
+	    << std::setw( 16 ) << lat_acc[lon_i].second << ", "
+	    << std::endl;
+    }
 }

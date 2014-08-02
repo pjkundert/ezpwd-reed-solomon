@@ -93,11 +93,11 @@ int				ezcod_5_decode(
 	<< std::endl;
 #endif
 	if ( lat )
-	    *lat			= loc.lat;
+	    *lat			= loc.latitude;
 	if ( lon )
-	    *lon			= loc.lon;
+	    *lon			= loc.longitude;
 	if ( acc )
-	    *acc			= loc.lat_m / 2 + loc.lon_m / 2;
+	    *acc			= loc.accuracy;
     } catch ( std::exception &exc ) {
 	str				= exc.what();
 	res				= -1;
