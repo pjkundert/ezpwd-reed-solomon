@@ -766,7 +766,7 @@ namespace ezpwd {
 		}
 		pariptr				= &tmp[LOAD];
 	    } else {
-		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches
+		// Our R-S SYMBOL size, DATUM size and INPUT type sizes exactly matches
 		dataptr				= reinterpret_cast<TYP *>( data );
 		pariptr				= reinterpret_cast<TYP *>( parity );
 	    }

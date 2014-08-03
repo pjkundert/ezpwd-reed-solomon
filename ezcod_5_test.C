@@ -153,8 +153,10 @@ int				main()
     deg_err_t			lon_dif;
     deg_err_t			lat_acc;  // average reported accuracy
     deg_err_t			lon_acc;
+    deg_err_t			lat_all;  // linear combined error by latitude, longitude
+    deg_err_t			lon_all;
     std::cout << std::setprecision( 8 );
-    for ( int i = 0; i < 100000; ++i ) {
+    for ( int i = 0; i < 500000; ++i ) {
 	double			lat	= 90;
 	double			lon	= 180;
 	switch ( i ) {
@@ -220,7 +222,7 @@ int				main()
 	double			lon_dm	= lat_circ * lon_d / 360;
 	double			lon_em	= lat_circ * lon_e / 360;
 
-	// absolute error
+	// absolute error.
 	auto			&lat_err_lon_i	= lat_err[lon_i];
 	lat_err_lon_i.second		       += ( lat_em - lat_err_lon_i.second ) / ++lat_err_lon_i.first;
 	auto			&lon_err_lat_i	= lon_err[lat_i];
@@ -228,19 +230,26 @@ int				main()
 	//std::cout << "decode " << lat << " --> " << lat_o << " w/ " << lat_em << "m. error ==> " << lat_err_lon_i.second << "m. avg." << std::endl;
 	//std::cout << "decode " << lon << " --> " << lon_o << " w/ " << lon_em << "m. error ==> " << lon_err_lat_i.second << "m. avg." << std::endl;
 
-	// signed error
+	// signed error.  Should approach 0.
 	auto			&lat_dif_lon_i	= lat_dif[lon_i];
 	lat_dif_lon_i.second		       += ( lat_dm - lat_dif_lon_i.second ) / ++lat_dif_lon_i.first;
 	auto			&lon_dif_lat_i	= lon_dif[lat_i];
 	lon_dif_lat_i.second		       += ( lon_dm - lon_dif_lat_i.second ) / ++lon_dif_lat_i.first;
 
+	// linear error.  Should approach 1/2 computed accuracy.
+	double			lin_em		= sqrt( lat_dm * lat_dm + lon_dm * lon_dm );
+	auto		       &lat_all_lon_i	= lat_all[lon_i];
+	lat_all_lon_i.second		       += ( lin_em - lat_all_lon_i.second ) / ++lat_all_lon_i.first;
+	auto		       &lon_all_lat_i	= lon_all[lat_i];
+	lon_all_lat_i.second		       += ( lin_em - lon_all_lat_i.second ) / ++lon_all_lat_i.first;
     }
-    std::cout << "Longitude error, signed difference and reported accuracy (at integer Latitudes): " << std::endl;
+    std::cout << "Longitude avg error, signed difference, total linear and reported accuracy (at integer Latitudes): " << std::endl;
     for ( int lat_i = -90; lat_i <= 90; ++lat_i ) {
 	std::cout
 	    << std::setw(  5 ) << lat_i << ": "
 	    << std::setw( 16 ) << lon_err[lat_i].second << ", " 
 	    << std::setw( 16 ) << lon_dif[lat_i].second << ", "
+	    << std::setw( 16 ) << lon_all[lat_i].second << ", "
 	    << std::setw( 16 ) << lon_acc[lat_i].second
 	    << std::endl;
     }
@@ -250,7 +259,8 @@ int				main()
 	    << std::setw(  5 ) << lon_i << ": "
 	    << std::setw( 16 ) << lat_err[lon_i].second << ", " 
 	    << std::setw( 16 ) << lat_dif[lon_i].second << ", "
-	    << std::setw( 16 ) << lat_acc[lon_i].second << ", "
+	    << std::setw( 16 ) << lat_all[lon_i].second << ", "
+	    << std::setw( 16 ) << lat_acc[lon_i].second
 	    << std::endl;
     }
 }
