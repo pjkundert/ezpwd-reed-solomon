@@ -1,6 +1,6 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11 -DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DDEBUG=2
+CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11 # -DDEBUG=1 -DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DDEBUG=2
 CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
 
 EMSDK		= ./emscripten/emsdk_portable
@@ -11,7 +11,7 @@ DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/va
 
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= -s ASSERTIONS=2 -s DISABLE_EXCEPTION_CATCHING=0 
+EMXXFLAGS	= -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
 
 EMXX_EXPORTS_EZCOD = "['_ezcod_5_10_encode', '_ezcod_5_10_decode', \
 		       '_ezcod_5_11_encode', '_ezcod_5_11_decode', \
@@ -72,12 +72,14 @@ js/ezpwd/ezcod_5.js:	ezcod_5.C ezcod_5.h c++/ezpwd/ezcod_5 c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_EZCOD) $< -o $@ 
 
 clean:
-	rm -f rssimple		rssimple.o	rssimple.js	\
+	rm -f rsexample		rsexample.o	rsexample.js	\
+	      rssimple		rssimple.o	rssimple.js	\
 	      rsexercise	rsexercise.o	rsexercise.js	\
 	      rspwd-test	rspwd-test.o	rspwd-test.js	\
 	      rscompare		rscompare.o			\
 	      rsvalidate	rsvalidate.o			\
-	      ezcod_5		ezcod_5.o	ezcod_5.js
+	      ezcod_5		ezcod_5.o	ezcod_5.js	\
+	      ezcod_5_test	ezcod_5_test.o	ezcod_5_test.jsn
 	make -C phil-karn clean
 
 rsexample.o:	rsexample.C c++/ezpwd/rs
@@ -117,8 +119,8 @@ ezcod_5_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil
 ezcod_5_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_5_test:	ezcod_5_test.o ezcod_5.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
-ezcod_5_test.js: ezcod_5_test.C c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< -o $@ 
+ezcod_5_test.js: ezcod_5_test.C ezcod_5.C c++/ezpwd/rs
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< ezcod_5.C -o $@
 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.

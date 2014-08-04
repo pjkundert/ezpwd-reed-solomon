@@ -1,0 +1,89 @@
+#ifndef _EZPWD_ASSERTER
+#define _EZPWD_ASSERTER
+
+#include <iostream>
+#include <iomanip>
+
+namespace ezpwd {
+
+
+#define ISEQUAL( ... ) isequal( __FILE__, __LINE__, __VA_ARGS__ )
+#define ISTRUE( ... )  istrue(  __FILE__, __LINE__, __VA_ARGS__ )
+
+    struct asserter {
+	bool			failed;		// The last test failed
+	int			failures;	// Total number of failures
+	std::string		out;		// Last failure
+
+				asserter()
+				    : failed( false )
+				    , failures( 0 )
+				    , out()
+	{
+	    ;
+	}
+
+	// 
+	// output( <std::ostream> )		-- Output description of last failed test (or nothing if successful)
+	// <std::ostream> << <asserter>
+	// 
+	std::ostream  	       &output(
+				    std::ostream       &lhs )
+	    const
+	{
+	    return lhs << out;
+	}
+
+	// 
+	// (bool) <asserter> -- Return status of last test
+	//
+    				operator bool()
+	{
+	    return failed;
+	}
+
+	template < typename T >
+	asserter	       &istrue(  const char *file, int line, const T &a, const std::string &comment = std::string() )
+	{
+	    return isequal( file, line, !!a, true, comment );
+	}
+
+	template < typename T >
+	asserter	       &isequal( const char *file, int line, const T &a, const T &b, const std::string &comment = std::string() )
+	{
+	    const char	       *needle	= "/";
+	    const char	       *slash	= std::find_end( file, file + strlen( file ),
+							 needle, needle + strlen( needle ));
+	    if ( slash == file + strlen( file ))
+		slash			= file;
+	    else
+		slash		       += 1;
+
+	    if ( ! ( a == b )) {
+		++failures;
+		std::ostringstream oss;
+		oss
+		    << std::setw( 24 ) << slash << ", "
+		    << std::setw( -5 ) << line
+		    << "; FAILURE: " << a << " != " << b
+		    << ( comment.size() ? ": " : "" ) << comment
+		    << std::endl;
+		out			= oss.str();
+		failed = true;
+		return *this;
+	    }
+	    out.clear();
+	    failed = false;
+	    return *this;
+	}
+    }; // class asserter
+} // namespace ezpwd
+
+std::ostream	       	       &operator<<(
+				    std::ostream       &lhs,
+				    ezpwd::asserter    &rhs )
+{
+    return rhs.output( lhs );
+}
+
+#endif // _EZPWD_ARRAY

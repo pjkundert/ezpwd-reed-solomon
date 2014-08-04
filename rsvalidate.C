@@ -8,94 +8,18 @@
 #include <iostream>
 #include <sstream>
 
+#include <ezpwd/asserter>
 #include <ezpwd/rs>
+
 extern "C" {
 #include <rs.h> // Phil Karn's implementation
 }
 
-#define ISEQUAL( ... ) isequal( __FILE__, __LINE__, __VA_ARGS__ )
-#define ISTRUE( ... )  istrue(  __FILE__, __LINE__, __VA_ARGS__ )
-struct asserter {
-    bool			failed;		// The last test failed
-    int				failures;	// Total number of failures
-    std::string			out;		// Last failure
-
-				asserter()
-				    : failed( false )
-				    , failures( 0 )
-				    , out()
-    {
-	;
-    }
-
-    // 
-    // output( <std::ostream> )		-- Output description of last failed test (or nothing if successful)
-    // <std::ostream> << <asserter>
-    // 
-    std::ostream       	       &output(
-				    std::ostream       &lhs )
-	const
-    {
-	return lhs << out;
-    }
-
-    // 
-    // (bool) <asserter> -- Return status of last test
-    //
-    				operator bool()
-    {
-	return failed;
-    }
-
-    template < typename T >
-    asserter	       &istrue(  const char *file, int line, const T &a, const std::string &comment = std::string() )
-    {
-	return isequal( file, line, !!a, true, comment );
-    }
-
-    template < typename T >
-    asserter	       &isequal( const char *file, int line, const T &a, const T &b, const std::string &comment = std::string() )
-    {
-	const char	       *needle	= "/";
-	const char	       *slash	= std::find_end( file, file + strlen( file ),
-							 needle, needle + strlen( needle ));
-	if ( slash == file + strlen( file ))
-	    slash			= file;
-	else
-	    slash		       += 1;
-
-	if ( ! ( a == b )) {
-	    ++failures;
-	    std::ostringstream	oss;
-	    oss
-		<< std::setw( 24 ) << slash << ", "
-		<< std::setw( -5 ) << line
-		<< "; FAILURE: " << a << " != " << b
-		<< ( comment.size() ? ": " : "" ) << comment
-		<< std::endl;
-	    out				= oss.str();
-	    failed = true;
-	    return *this;
-	}
-	out.clear();
-	failed = false;
-	return *this;
-    }
-};
-
-std::ostream	       	       &operator<<(
-				    std::ostream       &lhs,
-				    asserter           &rhs )
-{
-    return rhs.output( lhs );
-}
-
-static const int RS_t_LIMIT	= 128;
-
+static const int		RS_t_LIMIT = 128;
 
 int main()
 {
-    asserter			assert;
+    ezpwd::asserter		assert;
     const int			tests	= 10000;
 
     // Track the number of success/failures, at varying amounts of error loading. +'ve numbers
@@ -307,7 +231,10 @@ int main()
 	era1.resize( parity );
 	if ( era1cnt <= parity ) {
 	    res1			= ::decode_rs_char( rs1, &err1.front() + pad, &era1.front(), era1cnt );
-	    assert.ISTRUE( res1 <= parity, "Number of corrections incorrectly exceeded parity" );
+	    if ( assert.ISTRUE( res1 <= parity, "Number of corrections incorrectly exceeded parity" ))
+		failmsgs
+		    << assert
+		    << std::endl;
 	    if ( res1 > 0 )
 		era1.resize( res1 );
 	}

@@ -218,8 +218,10 @@ namespace ezpwd {
     class ezcod_5 {
     public:
 	double			latitude;		// [-90,+90] angle, degrees
+	double			latitude_error;		// total error bar, in meters
 	double			longitude;		// [-180,180]
-	double			accuracy;		// linear accuracy, in meters
+	double			longitude_error;	// total error bar, in meters
+	double			accuracy;		// linear accuracy radius, in meters
 
 	static const uint32_t	lat_parts = 1 << 22;	// [ -90,90 ] / 4,194,304 parts
 	static const uint32_t	lon_parts = 1 << 23;	// [-180,180] / 8,388,608 parts
@@ -234,7 +236,9 @@ namespace ezpwd {
 				    double	_lat	= 0,
 				    double	_lon	= 0 )
 				    : latitude( _lat )
+				    , latitude_error( 0 )
 				    , longitude( _lon )
+				    , longitude_error( 0 )
 				    , accuracy( 0 )
 	{
 	    if ( P < 1 )
@@ -427,30 +431,44 @@ namespace ezpwd {
 		lon_tot		       += lon_val * lon_mult;
 	    }
 
-	    // Convert the summed up lat/lon parts back into degrees
-	    latitude			= lat_tot * 180.0 / lat_parts -  90.0;
-	    longitude			= lon_tot * 360.0 / lon_parts - 180.0;
+	    // Convert the sum of lat/lon parts back into degrees, and round the (truncated) value
+	    // to the middle of the error square.  This allows us to minimize error even if we
+	    // didn't have access to all of the origin symbols to decode.  The absolute error bar as
+	    // a proportional factor [0,1) for lat/lon is at most the scale of the last parts
+	    // multiplier used.  We'll use this later to compute the error in meters; for example,
+	    // if the last value we added worked out to be worth units of 25m of the circumference,
+	    // then we must now be within [0,25m) of the original point.
+	    double		lat_err	= double( lat_mult ) / lat_parts;
+	    double		lon_err	= double( lon_mult ) / lon_parts;
 
-	    // Round the (truncated) value to the middle of the error square.  This allows us to
-	    // minimize error even if we didn't have access to all of the origin symbols to decode.
-	    latitude		       += lat_mult * 180.0 / lat_parts / 2.0;
-	    longitude		       += lon_mult * 360.0 / lon_parts / 2.0;
+	    latitude			= 180 * ( double( lat_tot ) / lat_parts + lat_err / 2 ) -  90;
+	    longitude			= 360 * ( double( lon_tot ) / lon_parts + lon_err / 2 ) - 180;
 
-	    // Compute the resolution (in m.) of the decoded lat/lon and compute average accuracy.
-	    // Resolution of Latitude is linear.  Longitude resolution changes due to the
-	    // circumference of the earth reducing as Latitude moves towards the poles (the
-	    // circumference of the earth at higher Latitude's gets smaller).  Thus, use the
-	    // computed lat_circ full diameter to compute the error per part on Longitude,
-	    // multiplied by the last part multiplier used.  For example, if the last value we added
-	    // worked out to be worth 25m of the circumference, then we must be within <25m of the
-	    // original point.  In fact, our average error in each dimension will be 1/2 of the full
-	    // range represented by the *next* bit of resolution data (which is 1/2 the scale of the
-	    // current bit), and the accuracy will be the diagonal of the error rectangle.
+	    // Compute the resolution error (in m.) of the decoded lat/lon and compute the minimum
+	    // accuracy -- the radius of the circle around the computed latitude/longitude, inside
+	    // which the original latitude/longitude must have been.
+	    // 
+	    //            original   latitude error bar
+	    //                 \     /
+	    //                  o  - 
+	    //                     |   longitude error bar
+	    //                     |   /
+	    //                  |--x--| 
+	    //                     |\
+	    //                     |  \
+	    //                     -   computed
+	    // 
+	    // The maximum distance is the length of the diagonal of the error rectangle defined by
+	    // 1/2 the latitude/longitude error bars.
+	    // 
 	    double		lon_circ= 1 * M_PI * 6371000;
-	    double		lat_m	= lon_circ * lat_mult / 2 / lat_parts / 2;
 	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( latitude * M_PI / 180 );
-	    double		lon_m	= lat_circ * lon_mult / 2 / lon_parts / 2;
-	    accuracy			= sqrt( lat_m * lat_m + lon_m * lon_m );
+	    latitude_error		= lat_err * lon_circ;
+	    longitude_error		= lon_err * lat_circ;
+
+
+	    accuracy			= sqrt(  latitude_error  / 2 * latitude_error  / 2
+					       + longitude_error / 2 * longitude_error / 2 );
 
 	    return confidence;
 	}

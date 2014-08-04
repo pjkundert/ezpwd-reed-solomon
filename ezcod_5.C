@@ -41,7 +41,7 @@ int				ezcod_5_encode(
 				    char	       *enc,
 				    size_t		siz )
 {
-#if defined( DEBUG ) && DEBUG > 0
+#if defined( DEBUG ) && DEBUG > 1
     std::cout
 	<< "ezcod_5_encode<" << P << "," << L << ">("
 	<< " lat == " << lat
@@ -84,12 +84,12 @@ int				ezcod_5_decode(
     try {
 	ezpwd::ezcod_5<P,L>	loc;
 	res				= loc.decode( dec );
-#if defined( DEBUG ) && DEBUG > 0
+#if defined( DEBUG ) && DEBUG > 1
     std::cout
 	<< "ezcod_5_decode<" << P << "," << L << ">("
-	<< " lat (" << (void *)lat << ") == " << loc.lat
-	<< ", lon (" << (void *)lon << ") == " << loc.lon
-	<< ", acc (" << (void *)acc << ") == " << loc.lat_m << " x " << loc.lon_m
+	<< " lat (" << (void *)lat << ") == " << loc.latitude
+	<< ", lon (" << (void *)lon << ") == " << loc.longitude
+	<< ", acc (" << (void *)acc << ") == " << loc.accuracy
 	<< std::endl;
 #endif
 	if ( lat )
