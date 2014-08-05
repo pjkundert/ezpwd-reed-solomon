@@ -1,19 +1,27 @@
 // 
-// string_to_heap  -- allocate buffer of (at least) len of type (eg. i8), initializing from str
+// string_to_heapi8	-- allocate buffer of (at least) len of type (eg. i8), initializing from str
+// heapi8_to_string	-- decode a JS string from the buffer, til NUL
+// array_to_heap	-- allocate an array of max( arr.length, len ) elements of type typ
+// index_in_heap	-- return pointer to index ptr[idx] in an array of type typ
 // 
 //     The returned buffer may be longer than the C representation of UTF-8 str, but won't be
-// shorter, and will be NUL terminated.
+// shorter, and will be NUL terminated.  Account for size of native type in all heap allocations and
+// indexing.
 // 
-function string_to_heap( typ, str, len ) {
+function string_to_heapi8( str, len ) {
     var			arr	= intArrayFromString( str ); // will NUL terminate
     if ( len && arr.length < len )
         arr.length		= len;
     return allocate( arr, 'i8', ALLOC_NORMAL );
 }
 
+function heapi8_to_string( ptr, len ) {
+    return Pointer_stringify( ptr );
+};
+
 function array_to_heap( typ, arr, len ) {
-    if ( len && arr.length < len )
-        arr.length		= len
+    if ( len && arr.length / Runtime.getNativeTypeSize( typ ) < len )
+        arr.length		= len * Runtime.getNativeTypeSize( typ );
     return allocate( arr, typ, ALLOC_NORMAL );
 }
 
@@ -21,14 +29,7 @@ function index_in_heap( typ, ptr, idx ) {
     return ptr + idx * Runtime.getNativeTypeSize( typ );
 }
 
-// 
-// heapu8_to_str -- decode a JS string from the buffer
-// 
-//     Decode's UTF-8 string 'til NUL; len ignored.
-// 
-function heapu8_to_str( ptr, len ) {
-    return Pointer_stringify( ptr );
-};
+
 
 // 
 // ezcod_5_<N>_encode -- encodes the lat/lon as an ezcod 5:<N> code, returning the encoded string
@@ -58,10 +59,10 @@ ezcod_5_N_encode_wrap = function( func_name ) {
         var 		len	= 1024; // room for error message, spaces, etc.
         var		res	= -1;
         var		str	= func_name + " invocation failed.";
-        var		buf	= string_to_heap( 'i8', "", len );
+        var		buf	= string_to_heapi8( "", len );
         try { // must de-allocate buf after this point
             res			= func( lat, lon, buf, len );
-            str			= heapu8_to_str( buf );
+            str			= heapi8_to_string( buf );
         } finally {
             if ( buf ) _free( buf );
         }
@@ -88,16 +89,17 @@ ezcod_5_N_decode_wrap = function( func_name ) {
         var		cnf	= -1;
         var		str	= func_name + " invocation failed.";
         var		ret;
-        var		buf, lat, lon, acc;
+        var		pos;
+        var 		len	= 1024; // room for error message, spaces, etc.
+        var		buf	= string_to_heapi8( cod, len );
         try { // must de-allocate buf and lat/lon/acc after this point
-            var 	len	= 1024; // room for error message, spaces, etc.
-            buf			= string_to_heap( 'i8', cod, len );
-            lat			= array_to_heap( 'double', [], 1 );
-            lon			= array_to_heap( 'double', [], 1 );
-            acc			= array_to_heap( 'double', [], 1 );
+            pos			= array_to_heap( 'double', [], 3 );
+            var		lat	= index_in_heap( 'double', pos, 0 );
+            var		lon	= index_in_heap( 'double', pos, 1 );
+            var		acc	= index_in_heap( 'double', pos, 2 );
             cnf			= func( buf, len, lat, lon, acc );
             if ( cnf < 0 ) {
-                str		= heapu8_to_str( buf );
+                str		= heapi8_to_string( buf );
             } else {
                 ret		= [
                     cnf / 100.0, getValue( lat, 'double', 1 ), getValue( lon, 'double', 1 ), getValue( acc, 'double', 1 )
@@ -105,9 +107,7 @@ ezcod_5_N_decode_wrap = function( func_name ) {
             }
         } finally {
             if ( buf ) _free( buf );
-            if ( lat ) _free( lat );
-            if ( lon ) _free( lon );
-            if ( acc ) _free( acc );
+            if ( pos ) _free( pos );
         }
         if ( cnf < 0 ) { // call failed, or call attempt failed w/o exception
             console.log( str );
