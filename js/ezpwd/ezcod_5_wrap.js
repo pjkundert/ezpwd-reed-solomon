@@ -6,25 +6,19 @@
 // 
 function string_to_heap( typ, str, len ) {
     var			arr	= intArrayFromString( str ); // will NUL terminate
-    //console.log( "string_to_heap( " + typ + ", ...): " + str + " --> buffer[" + arr.length + "] == " + arr );
     if ( len && arr.length < len )
         arr.length		= len;
-    var			ptr	= allocate( arr, 'i8', ALLOC_NORMAL );
-    return ptr;
+    return allocate( arr, 'i8', ALLOC_NORMAL );
 }
 
 function array_to_heap( typ, arr, len ) {
     if ( len && arr.length < len )
         arr.length		= len
-    var			ptr	= allocate( arr, typ, ALLOC_NORMAL );
-    //console.log( "array_to_heap( " + typ + ", [...], " + len + "): ==> " + ptr );
-    return ptr;
+    return allocate( arr, typ, ALLOC_NORMAL );
 }
 
 function index_in_heap( typ, ptr, idx ) {
-    var			itm	= ptr + idx * Runtime.getNativeTypeSize( typ );
-    //console.log( "index_in_heap( " + typ + ", ptr: " + ptr + ", idx: " + idx + "): ==> " + itm );
-    return itm
+    return ptr + idx * Runtime.getNativeTypeSize( typ );
 }
 
 // 
@@ -62,16 +56,15 @@ ezcod_5_N_encode_wrap = function( func_name ) {
                                                  ,'number'] );	// array size
     return function( lat, lon ) {
         var 		len	= 1024; // room for error message, spaces, etc.
-        var		buf	= string_to_heap( 'i8', "", len );
         var		res	= -1;
         var		str	= func_name + " invocation failed.";
+        var		buf	= string_to_heap( 'i8', "", len );
         try { // must de-allocate buf after this point
             res			= func( lat, lon, buf, len );
             str			= heapu8_to_str( buf );
         } finally {
-            _free( buf );
+            if ( buf ) _free( buf );
         }
-
         if ( res < 0 ) { // call failed, or call attempt failed w/o exception
             console.log( str );
             throw str;
@@ -92,16 +85,16 @@ ezcod_5_N_decode_wrap = function( func_name ) {
                                                  ,'number'	// lon *  ''
                                                  ,'number'] );	// acc *  ''
     return function( cod ) {
-        var 		len	= 1024; // room for error message, spaces, etc.
-        var		buf	= string_to_heap( 'i8', cod, len );
-        var		pos	= array_to_heap( 'double', [], 3 );
-        var		lat	= index_in_heap( 'double', pos, 0 );
-        var		lon	= index_in_heap( 'double', pos, 1 );
-        var		acc	= index_in_heap( 'double', pos, 2 );
         var		cnf	= -1;
         var		str	= func_name + " invocation failed.";
         var		ret;
+        var		buf, lat, lon, acc;
         try { // must de-allocate buf and lat/lon/acc after this point
+            var 	len	= 1024; // room for error message, spaces, etc.
+            buf			= string_to_heap( 'i8', cod, len );
+            lat			= array_to_heap( 'double', [], 1 );
+            lon			= array_to_heap( 'double', [], 1 );
+            acc			= array_to_heap( 'double', [], 1 );
             cnf			= func( buf, len, lat, lon, acc );
             if ( cnf < 0 ) {
                 str		= heapu8_to_str( buf );
@@ -111,8 +104,10 @@ ezcod_5_N_decode_wrap = function( func_name ) {
                 ];
             }
         } finally {
-            _free( buf );
-            _free( pos );
+            if ( buf ) _free( buf );
+            if ( lat ) _free( lat );
+            if ( lon ) _free( lon );
+            if ( acc ) _free( acc );
         }
         if ( cnf < 0 ) { // call failed, or call attempt failed w/o exception
             console.log( str );

@@ -13,14 +13,17 @@ EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
 EMXXFLAGS	= -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
 
-EMXX_EXPORTS_EZCOD = "['_ezcod_5_10_encode', '_ezcod_5_10_decode', \
-		       '_ezcod_5_11_encode', '_ezcod_5_11_decode', \
-		       '_ezcod_5_12_encode', '_ezcod_5_12_decode', \
+EMXX_EXPORTS_EZCOD = "[	'_ezcod_5_10_encode',			\
+			'_ezcod_5_10_decode',			\
+			'_ezcod_5_11_encode',			\
+			'_ezcod_5_11_decode',			\
+			'_ezcod_5_12_encode',			\
+			'_ezcod_5_12_decode',			\
 			'_malloc', '_free' ]"
-EMXX_EXPORTS_RSPWD = "[ '_rspwd_encode_1', \
-			'_rspwd_encode_2', \
-			'_rspwd_encode_3', \
-			'_rspwd_encode_4', \
+EMXX_EXPORTS_RSPWD = "[	'_rspwd_encode_1',			\
+			'_rspwd_encode_2',			\
+			'_rspwd_encode_3',			\
+			'_rspwd_encode_4',			\
 			'_rspwd_encode_5' ]"
 EMXX_EXPORTS_MAIN  = "[ '_main' ]"
 
