@@ -13,12 +13,12 @@ EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
 EMXXFLAGS	= -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
 
-EMXX_EXPORTS_EZCOD = "[	'_ezcod_5_10_encode',			\
-			'_ezcod_5_10_decode',			\
-			'_ezcod_5_11_encode',			\
-			'_ezcod_5_11_decode',			\
-			'_ezcod_5_12_encode',			\
-			'_ezcod_5_12_decode',			\
+EMXX_EXPORTS_EZCOD = "[	'_ezcod_3_10_encode',			\
+			'_ezcod_3_10_decode',			\
+			'_ezcod_3_11_encode',			\
+			'_ezcod_3_11_decode',			\
+			'_ezcod_3_12_encode',			\
+			'_ezcod_3_12_decode',			\
 			'_malloc', '_free' ]"
 EMXX_EXPORTS_RSPWD = "[	'_rspwd_encode_1',			\
 			'_rspwd_encode_2',			\
@@ -37,13 +37,13 @@ test:		testbin testjs
 js:		jsprod jstest
 
 jsprod:		js/ezpwd/rspwd.js				\
-		js/ezpwd/ezcod_5.js
+		js/ezpwd/ezcod_3.js
 
 jstest:		rsexample.js					\
 		rssimple.js					\
 		rsexercise.js					\
 		rspwd-test.js					\
-		ezcod_5_test.js
+		ezcod_3_test.js
 
 bintest:	rsexample					\
 		rssimple					\
@@ -51,13 +51,13 @@ bintest:	rsexample					\
 		rscompare					\
 		rsvalidate					\
 		rspwd-test					\
-		ezcod_5_test
+		ezcod_3_test
 
 testbin:	bintest
-	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./ezcod_5_test
+	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./ezcod_3_test
 
 testjs:		jstest
-	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./ezcod_5_test.js
+	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./ezcod_3_test.js
 
 rspwd-test.js:	rspwd-test.C rspwd.C c++/ezpwd/rs		\
 		emscripten
@@ -68,10 +68,10 @@ js/ezpwd/rspwd.js: rspwd.C c++/ezpwd/rs				\
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_RSPWD) $< -o $@ 
 
 
-ezcod_5.o:	ezcod_5.C ezcod_5.h c++/ezpwd/ezcod_5 c++/ezpwd/rs
-ezcod_5:	ezcod_5.o
+ezcod_3.o:	ezcod_3.C ezcod_3.h c++/ezpwd/ezcod_3 c++/ezpwd/rs
+ezcod_3:	ezcod_3.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-js/ezpwd/ezcod_5.js:	ezcod_5.C ezcod_5.h c++/ezpwd/ezcod_5 c++/ezpwd/rs
+js/ezpwd/ezcod_3.js:	ezcod_3.C ezcod_3.h c++/ezpwd/ezcod_3 c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_EZCOD) $< -o $@ 
 
 clean:
@@ -81,8 +81,8 @@ clean:
 	      rspwd-test	rspwd-test.o	rspwd-test.js	\
 	      rscompare		rscompare.o			\
 	      rsvalidate	rsvalidate.o			\
-	      ezcod_5		ezcod_5.o	ezcod_5.js	\
-	      ezcod_5_test	ezcod_5_test.o	ezcod_5_test.jsn
+	      ezcod_3		ezcod_3.o	ezcod_3.js	\
+	      ezcod_3_test	ezcod_3_test.o	ezcod_3_test.jsn
 	make -C phil-karn clean
 
 rsexample.o:	rsexample.C c++/ezpwd/rs
@@ -117,13 +117,13 @@ rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs
 rspwd-test:	rspwd-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-ezcod_5_test.o:	ezcod_5_test.C ezcod_5.C ezcod_5.h c++/ezpwd/ezcod_5 c++/ezpwd/rs
-ezcod_5_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
-ezcod_5_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
-ezcod_5_test:	ezcod_5_test.o ezcod_5.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
+ezcod_3_test.o:	ezcod_3_test.C ezcod_3.C ezcod_3.h c++/ezpwd/ezcod_3 c++/ezpwd/rs
+ezcod_3_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_3_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_3_test:	ezcod_3_test.o ezcod_3.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
-ezcod_5_test.js: ezcod_5_test.C ezcod_5.C c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< ezcod_5.C -o $@
+ezcod_3_test.js: ezcod_3_test.C ezcod_3.C c++/ezpwd/rs
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< ezcod_3.C -o $@
 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.

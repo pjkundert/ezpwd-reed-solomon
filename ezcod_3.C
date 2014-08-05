@@ -2,8 +2,8 @@
 #include <iostream>
 #include <utility>
 
-#include <ezpwd/ezcod_5>	// C++ implementation
-#include "ezcod_5.h"		// C API declarations
+#include <ezpwd/ezcod_3>	// C++ implementation
+#include "ezcod_3.h"		// C API declarations
 #if defined( DEBUG )
 #include <ezpwd/output>
 #endif
@@ -32,10 +32,10 @@ buf_t			operator<<(
 }
 
 // 
-// Encode lat/lon with about 5m. accuracy (1 part in 2^23 in both dimensions).
+// Encode lat/lon with average 3m. accuracy (~1 part in 2^23 in both dimensions).
 // 
 template < size_t P=1, size_t L=9 >
-int				ezcod_5_encode(
+int				ezcod_3_encode(
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
@@ -43,7 +43,7 @@ int				ezcod_5_encode(
 {
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
-	<< "ezcod_5_encode<" << P << "," << L << ">("
+	<< "ezcod_3_encode<" << P << "," << L << ">("
 	<< " lat == " << lat
 	<< ", lon == " << lon
 #if DEBUG > 2
@@ -54,11 +54,11 @@ int				ezcod_5_encode(
     int				res;
     std::string			str;
     try {
-	ezpwd::ezcod_5<P,L>	loc( lat, lon );
+	ezpwd::ezcod_3<P,L>	loc( lat, lon );
 	str				= loc.encode();
 	res				= str.size();
 	if ( str.size() + 1 > siz )
-	    throw std::runtime_error( "ezcod_5_encode: insufficient buffer provided" );
+	    throw std::runtime_error( "ezcod_3_encode: insufficient buffer provided" );
 	res				= str.size();
     } catch ( std::exception &exc ) {
 	str				= exc.what();
@@ -72,7 +72,7 @@ int				ezcod_5_encode(
 // Decode lat/lon position in degrees and (optionally) accuracy in m, returning confidence in %.
 // 
 template < size_t P=1, size_t L=9 >
-int				ezcod_5_decode(
+int				ezcod_3_decode(
 				    char	       *dec,
 				    size_t		siz,
 				    double	       *lat	= 0,
@@ -82,11 +82,11 @@ int				ezcod_5_decode(
     int				res;
     std::string			str;
     try {
-	ezpwd::ezcod_5<P,L>	loc;
+	ezpwd::ezcod_3<P,L>	loc;
 	res				= loc.decode( dec );
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
-	<< "ezcod_5_decode<" << P << "," << L << ">("
+	<< "ezcod_3_decode<" << P << "," << L << ">("
 	<< " lat (" << (void *)lat << ") == " << loc.latitude
 	<< ", lon (" << (void *)lon << ") == " << loc.longitude
 	<< ", acc (" << (void *)acc << ") == " << loc.accuracy
@@ -109,34 +109,34 @@ int				ezcod_5_decode(
 
 extern "C" {
 
-    /* ezcod 5:10 -- 9+1 Reed-Solomon parity symbol */
-    int ezcod_5_10_encode( double lat, double lon, char *enc, size_t siz )
+    /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
+    int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz )
     {
-	return ezcod_5_encode<1,9>( lat, lon, enc, siz );
+	return ezcod_3_encode<1,9>( lat, lon, enc, siz );
     }
-    int ezcod_5_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
+    int ezcod_3_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_5_decode<1,9>( dec, siz, lat, lon, acc );
-    }
-
-    /* ezcod 5:11 -- 9+2 Reed-Solomon parity symbols */
-    int ezcod_5_11_encode( double lat, double lon, char *enc, size_t siz )
-    {
-	return ezcod_5_encode<2,9>( lat, lon, enc, siz );
-    }
-    int ezcod_5_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
-    {
-	return ezcod_5_decode<2,9>( dec, siz, lat, lon, acc );
+	return ezcod_3_decode<1,9>( dec, siz, lat, lon, acc );
     }
 
-    /* ezcod 5:12 -- 9+3 Reed-Solomon parity symbols */
-    int ezcod_5_12_encode( double lat, double lon, char *enc, size_t siz )
+    /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
+    int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz )
     {
-	return ezcod_5_encode<3,9>( lat, lon, enc, siz );
+	return ezcod_3_encode<2,9>( lat, lon, enc, siz );
     }
-    int ezcod_5_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
+    int ezcod_3_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_5_decode<3,9>( dec, siz, lat, lon, acc );
+	return ezcod_3_decode<2,9>( dec, siz, lat, lon, acc );
+    }
+
+    /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
+    int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz )
+    {
+	return ezcod_3_encode<3,9>( lat, lon, enc, siz );
+    }
+    int ezcod_3_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
+    {
+	return ezcod_3_decode<3,9>( dec, siz, lat, lon, acc );
     }
 
 } // extern "C"

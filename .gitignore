@@ -1,8 +1,8 @@
 *.o
 /emscripten/*
-/ezcod_5
-/ezcod_5_test
-/ezcod_5_test.js
+/ezcod_3
+/ezcod_3_test
+/ezcod_3_test.js
 /rscompare
 /rsexample
 /rsexample.js
@@ -22,3 +22,4 @@
 /phil-karn/gen_ccsds
 /phil-karn/gen_ccsds_tal
 /phil-karn/librs.a
+*.js.map

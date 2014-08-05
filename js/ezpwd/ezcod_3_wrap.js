@@ -32,15 +32,15 @@ function index_in_heap( typ, ptr, idx ) {
 
 
 // 
-// ezcod_5_<N>_encode -- encodes the lat/lon as an ezcod 5:<N> code, returning the encoded string
-// ezcod_5_<N>_decode -- decodes the 5:<N> encoded string to confidence, lat/lon and accuracy
+// ezcod_3_<N>_encode -- encodes the lat/lon as an ezcod 3:<N> code, returning the encoded string
+// ezcod_3_<N>_decode -- decodes the 3:<N> encoded string to confidence, lat/lon and accuracy
 // 
 //     Since arrays are used to communicate, they must be allocated locally and release after the
 // wrapped call.  The underlying "C" decode returns a -'ve confidence and a (NUL terminated) string
 // describing the error on failure, or a zero or +'ve confidence and the decoded lat/lon and
 // accuracy on success.
 // 
-//     Decoding an EZCOD 5:10/11/12 encoded string returns an array:
+//     Decoding an EZCOD 3:10/11/12 encoded string returns an array:
 // 
 //         [<confidence>, <latitude>, <longitude>, <accuracy>]
 // 
@@ -49,7 +49,7 @@ function index_in_heap( typ, ptr, idx ) {
 // <longitude>	-- Longitude in degrees [-180,180]
 // <accuracy>	-- Estimated accuracty in meters
 // 
-ezcod_5_N_encode_wrap = function( func_name ) {
+ezcod_3_N_encode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
                                                 ['number'	// lat
                                                  ,'number'	// lon
@@ -74,11 +74,11 @@ ezcod_5_N_encode_wrap = function( func_name ) {
     }
 }
 
-ezcod_5_10_encode		= ezcod_5_N_encode_wrap( 'ezcod_5_10_encode' );
-ezcod_5_11_encode		= ezcod_5_N_encode_wrap( 'ezcod_5_11_encode' );
-ezcod_5_12_encode		= ezcod_5_N_encode_wrap( 'ezcod_5_12_encode' );
+ezcod_3_10_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_10_encode' );
+ezcod_3_11_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_11_encode' );
+ezcod_3_12_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_12_encode' );
 
-ezcod_5_N_decode_wrap = function( func_name ) {
+ezcod_3_N_decode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
                                                 ['number'	// array (buf allocated here)
                                                  ,'number'	// array size
@@ -118,6 +118,6 @@ ezcod_5_N_decode_wrap = function( func_name ) {
     }
 }
 
-ezcod_5_10_decode		= ezcod_5_N_decode_wrap( 'ezcod_5_10_decode' );
-ezcod_5_11_decode		= ezcod_5_N_decode_wrap( 'ezcod_5_11_decode' );
-ezcod_5_12_decode		= ezcod_5_N_decode_wrap( 'ezcod_5_12_decode' );
+ezcod_3_10_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_10_decode' );
+ezcod_3_11_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_11_decode' );
+ezcod_3_12_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_12_decode' );

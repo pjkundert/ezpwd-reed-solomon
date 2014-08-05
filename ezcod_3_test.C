@@ -9,9 +9,9 @@
 #include <ezpwd/rs>
 #include <ezpwd/output>
 #include <ezpwd/asserter>
-#include <ezpwd/ezcod_5>
+#include <ezpwd/ezcod_3>
 
-#include "ezcod_5.h"
+#include "ezcod_3.h"
 
 #if defined( DEBUG )
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 
 
 template < size_t P, size_t L > void
-ezcod_5_exercise( const ezpwd::ezcod_5<P,L> &ezc )
+ezcod_3_exercise( const ezpwd::ezcod_3<P,L> &ezc )
 {
     // Does location precision scale linearly with the number of symbols provided?  Are errors
     // detected/corrected successfully?
@@ -60,7 +60,7 @@ ezcod_5_exercise( const ezpwd::ezcod_5<P,L> &ezc )
 	    if ( trunc.back() == ' ' )
 		continue;
 	    trunc.resize( manip.size(), ' ' );
-	    ezpwd::ezcod_5<P,L>	code;
+	    ezpwd::ezcod_3<P,L>	code;
 	    try {
 		int		conf	= code.decode( trunc );
 		std::cout
@@ -93,16 +93,16 @@ int				main( int argc, char **argv )
 
     double			lat	= 53.555556;
     double			lon	= -113.873889;
-    ezpwd::ezcod_5<1>		edm1( lat, lon );
-    ezcod_5_exercise( edm1 );
-    ezpwd::ezcod_5<2>		edm2( lat, lon );
-    ezcod_5_exercise( edm2 );
-    ezpwd::ezcod_5<3>		edm3( lat, lon );
-    ezcod_5_exercise( edm3 );
-    ezpwd::ezcod_5<4>		edm4( lat, lon );
-    ezcod_5_exercise( edm4 );
-    ezpwd::ezcod_5<5>		edm5( lat, lon );
-    ezcod_5_exercise( edm5 );
+    ezpwd::ezcod_3<1>		edm1( lat, lon );
+    ezcod_3_exercise( edm1 );
+    ezpwd::ezcod_3<2>		edm2( lat, lon );
+    ezcod_3_exercise( edm2 );
+    ezpwd::ezcod_3<3>		edm3( lat, lon );
+    ezcod_3_exercise( edm3 );
+    ezpwd::ezcod_3<4>		edm4( lat, lon );
+    ezcod_3_exercise( edm4 );
+    ezpwd::ezcod_3<5>		edm5( lat, lon );
+    ezcod_3_exercise( edm5 );
 
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
@@ -194,7 +194,7 @@ int				main( int argc, char **argv )
 	// Get EZCOD using C API for chuckles; gotta love NUL terminated strings...
 	std::string		cod;
 	cod.resize( 256 );
-	int			siz	= ezcod_5_10_encode( lat, lon, &cod.front(), cod.size() );
+	int			siz	= ezcod_3_10_encode( lat, lon, &cod.front(), cod.size() );
 	if ( siz < 0 ) {
 	    std::cout << "encode " << lat << ", " << lon << " failed: " << &cod.front() << std::endl;
 	    continue;
@@ -210,14 +210,14 @@ int				main( int argc, char **argv )
 	std::cout
 	    << "encode " << std::setw( 16 ) << lat << ", " << std::setw( 16 ) << lon
 	    << " == " << cod
-	    << " == " << ezpwd::ezcod_5<1,9>( ezpwd::ezcod_5<1,9>( lat, lon ).encode() ) << std::endl;
+	    << " == " << ezpwd::ezcod_3<1,9>( ezpwd::ezcod_3<1,9>( lat, lon ).encode() ) << std::endl;
 #endif
 	double			lat_o;
 	double			lon_o;
 	double			acc_o;
 	cod += char( 0 );
 	cod.resize( 256 );
-	int			cnf	= ezcod_5_10_decode( &cod.front(), cod.size(), &lat_o, &lon_o, &acc_o );
+	int			cnf	= ezcod_3_10_decode( &cod.front(), cod.size(), &lat_o, &lon_o, &acc_o );
 	if ( cnf < 0 ) {
 	    std::cout << "decode " << lat_o << ", " << lon_o << " failed: " << &cod.front() << std::endl;
 	    continue;

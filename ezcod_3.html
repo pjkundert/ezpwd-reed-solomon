@@ -46,15 +46,15 @@
                             </div>
                             <div class="col-xs-4">
                                 <select id="parity" class="form-control" data-placeholder="Parity">
-                                    <option value="ezcod_5_10">5:10</option>
-                                    <option value="ezcod_5_11">5:11</option>
-                                    <option value="ezcod_5_12">5:12</option>
+                                    <option value="ezcod_3_10">3:10</option>
+                                    <option value="ezcod_3_11">3:11</option>
+                                    <option value="ezcod_3_12">3:12</option>
                                 </select>
                             </div>
                             <div class="col-xs-6">
-                                <input class="form-control"        type="text" id="ezcod_5_10" placeholder="EZCOD 5:10">
-                                <input class="form-control hidden" type="text" id="ezcod_5_11" placeholder="EZCOD 5:11">
-                                <input class="form-control hidden" type="text" id="ezcod_5_12" placeholder="EZCOD 5:12">
+                                <input class="form-control"        type="text" id="ezcod_3_10" placeholder="EZCOD 3:10">
+                                <input class="form-control hidden" type="text" id="ezcod_3_11" placeholder="EZCOD 3:11">
+                                <input class="form-control hidden" type="text" id="ezcod_3_12" placeholder="EZCOD 3:12">
                             </div>
                         </div>
                     </form>
@@ -71,20 +71,20 @@
     <script src="static/jquery/js/jquery-2.1.1.min.js"></script>
     <script src="static/bootstrap/js/bootstrap.min.js"></script>
 
-    <script src="js/ezpwd/ezcod_5.js"></script>
-    <script src="js/ezpwd/ezcod_5_wrap.js"></script>
+    <script src="js/ezpwd/ezcod_3.js"></script>
+    <script src="js/ezpwd/ezcod_3_wrap.js"></script>
 
     <script type="text/javascript">
 
-        $('input#ezcod_5_10')
-            .data( 'encode', ezcod_5_10_encode )
-            .data( 'decode', ezcod_5_10_decode );
-        $('input#ezcod_5_11')
-            .data( 'encode', ezcod_5_11_encode )
-            .data( 'decode', ezcod_5_11_decode );
-        $('input#ezcod_5_12')
-            .data( 'encode', ezcod_5_12_encode )
-            .data( 'decode', ezcod_5_12_decode );
+        $('input#ezcod_3_10')
+            .data( 'encode', ezcod_3_10_encode )
+            .data( 'decode', ezcod_3_10_decode );
+        $('input#ezcod_3_11')
+            .data( 'encode', ezcod_3_11_encode )
+            .data( 'decode', ezcod_3_11_decode );
+        $('input#ezcod_3_12')
+            .data( 'encode', ezcod_3_12_encode )
+            .data( 'decode', ezcod_3_12_decode );
         $('input[id^="pos"]')
             .off( 'blur keyup' )
             .on(  'blur keyup', encoding );
@@ -144,7 +144,7 @@
         }
 
         // On blur/<return> of lat/lon inputs, send lat/lon values to encode and
-        // update to get ezcod 5:N.  We presume that these input coordinates are
+        // update to get ezcod 3:N.  We presume that these input coordinates are
         // exact (high confidence, precise accuracy).
         function encoding( e ) {
             if (e.type === 'keyup' && e.keyCode !== 10 && e.keyCode !== 13)
@@ -156,7 +156,7 @@
             updating( 1.0, lat, lon, 0 );
         }
 
-        // On blur/<return>, send ezcod 5:N to decode and get confidence,
+        // On blur/<return>, send ezcod 3:N to decode and get confidence,
         // lat/lon and accuracy.  The confidence and accuracy is deduced from
         // the supplied ezcod.
         function decoding( e ) {
