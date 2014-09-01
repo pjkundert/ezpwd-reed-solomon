@@ -2,7 +2,7 @@
 #define _EZPWD_EZCOD_H
 
 /*
- * "C" API for ezcod_3, with 1, 2 or 3 parity symbols.
+ * "C" API for ezcod w/3m accuracy in 9 symbols, with 1, 2 or 3 parity symbols.
  * 
  * ..._encode -- Encode the lat/lon into an ezcod 3:10 string in buffer supplied, returning length
  * ..._decode -- Decode the ezcode 3:10 string into lat, lon, returning confidence percentage
@@ -31,4 +31,3 @@ extern "C" {
 #endif
 
 #endif // _EZPWD_EZCOD_H
-

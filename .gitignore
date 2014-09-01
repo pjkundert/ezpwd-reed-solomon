@@ -1,8 +1,8 @@
 *.o
 /emscripten/*
-/ezcod_3
-/ezcod_3_test
-/ezcod_3_test.js
+/ezcod
+/ezcod_test
+/ezcod_test.js
 /rscompare
 /rsexample
 /rsexample.js

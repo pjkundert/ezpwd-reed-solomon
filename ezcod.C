@@ -2,8 +2,8 @@
 #include <iostream>
 #include <utility>
 
-#include <ezpwd/ezcod_3>	// C++ implementation
-#include "ezcod_3.h"		// C API declarations
+#include <ezpwd/ezcod>		// C++ implementation
+#include "ezcod.h"		// C API declarations
 #if defined( DEBUG )
 #include <ezpwd/output>
 #endif
@@ -32,7 +32,7 @@ buf_t			operator<<(
 }
 
 // 
-// Encode lat/lon with average 3m. accuracy (~1 part in 2^23 in both dimensions).
+// Encode lat/lon with default worst-case 3m. accuracy: 1 part in 2^22 Latitude, 2^23 Longitude.
 // 
 template < size_t P=1, size_t L=9 >
 int				ezcod_3_encode(
@@ -54,7 +54,7 @@ int				ezcod_3_encode(
     int				res;
     std::string			str;
     try {
-	ezpwd::ezcod_3<P,L>	loc( lat, lon );
+	ezpwd::ezcod<P,L>	loc( lat, lon );
 	str				= loc.encode();
 	res				= str.size();
 	if ( str.size() + 1 > siz )
@@ -82,7 +82,7 @@ int				ezcod_3_decode(
     int				res;
     std::string			str;
     try {
-	ezpwd::ezcod_3<P,L>	loc;
+	ezpwd::ezcod<P,L>	loc;
 	res				= loc.decode( dec );
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
@@ -112,32 +112,31 @@ extern "C" {
     /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
     int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz )
     {
-	return ezcod_3_encode<1,9>( lat, lon, enc, siz );
+	return ezcod_3_encode<1>( lat, lon, enc, siz );
     }
     int ezcod_3_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_3_decode<1,9>( dec, siz, lat, lon, acc );
+	return ezcod_3_decode<1>( dec, siz, lat, lon, acc );
     }
 
     /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
     int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz )
     {
-	return ezcod_3_encode<2,9>( lat, lon, enc, siz );
+	return ezcod_3_encode<2>( lat, lon, enc, siz );
     }
     int ezcod_3_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_3_decode<2,9>( dec, siz, lat, lon, acc );
+	return ezcod_3_decode<2>( dec, siz, lat, lon, acc );
     }
 
     /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
     int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz )
     {
-	return ezcod_3_encode<3,9>( lat, lon, enc, siz );
+	return ezcod_3_encode<3>( lat, lon, enc, siz );
     }
     int ezcod_3_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
-	return ezcod_3_decode<3,9>( dec, siz, lat, lon, acc );
+	return ezcod_3_decode<3>( dec, siz, lat, lon, acc );
     }
 
 } // extern "C"
-
