@@ -86,13 +86,37 @@ int				main( int argc, char **argv )
     std::string			abc	= "0123abcz";
     std::string			dec	= abc;
     ezpwd::base32::decode( dec );
-    std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
+    // std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
     std::string			enc	= dec;
     ezpwd::base32::encode( enc );
-    std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
+    // std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
+    if ( assert.ISEQUAL( enc, std::string( "0123ABC2" )))
+	std::cout << assert << std::endl;
 
-    double			lat	= 53.555556;
+    double			lat	=   53.555556;
     double			lon	= -113.873889;
+    // Try all the practical variants of Location and Parity
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 3>( lat, lon ).encode(), std::string( "R3U.9" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 4>( lat, lon ).encode(), std::string( "R3U0.J" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 5>( lat, lon ).encode(), std::string( "R3U08.H" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 6>( lat, lon ).encode(), std::string( "R3U 08M.8" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 7>( lat, lon ).encode(), std::string( "R3U 08MP.U" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 8>( lat, lon ).encode(), std::string( "R3U 08MPV.E" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 9>( lat, lon ).encode(), std::string( "R3U 08M PVT.D" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,10>( lat, lon ).encode(), std::string( "R3U 08M PVTQ.F" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,11>( lat, lon ).encode(), std::string( "R3U 08M PVTQJ.Y" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,12>( lat, lon ).encode(), std::string( "R3U 08M PVT QJQ.E" )))
+	std::cout << assert << std::endl;
+
     ezpwd::ezcod<1>		edm1( lat, lon );
     ezcod_exercise( edm1 );
     ezpwd::ezcod<2>		edm2( lat, lon );
@@ -110,8 +134,8 @@ int				main( int argc, char **argv )
     // data we *know* is correct -- the effective block of zero data in the pad (unused) area of the
     // R-S codeword's capacity!
 
-    // Correct encoding w/2 parity:R3U 08M PVT GY
-    //                      errors: v      v
+    // Correct encoding w/2 parity:        R3U 08M PVT GY
+    //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
     std::string			fix2	= err2;
     ezpwd::base32::decode( fix2 );
