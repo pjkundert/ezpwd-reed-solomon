@@ -10,24 +10,114 @@
  *     All return -'ve value on failure, and as much of an error message as allowed by the 'siz' of
  * the supplied char* buffer.
  */
-#if defined( __cplusplus )
+#  if defined( __cplusplus )
+// Standard C Javascript binding implementation
 extern "C" {
-#endif
+#  endif
+    /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
+    int				ezcod_3_10_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz );
+    int				ezcod_3_10_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc );
+    /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
+    int				ezcod_3_11_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz );
+    int				ezcod_3_11_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc );
+    /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
+    int				ezcod_3_12_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz );
+    int				ezcod_3_12_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc );
+#  if defined( __cplusplus )
+} // extern "C"
+
+#    if defined( __cheerp )
+// Cheerp C++ Javascript binding implementation
+class [[jsexport]] ezcod_cheerp
+{
+  public:
+				ezcod_cheerp()
+				{
+				    ;
+				}
 
     /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
-    int ezcod_3_10_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_3_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
-
+    int				ezcod_3_10_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz )
+    {
+	return ::ezcod_3_10_encode( lat, lon, enc, siz );
+    }
+    int				ezcod_3_10_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc )
+    {
+	return ::ezcod_3_10_decode( dec, siz, lat, lon, acc );
+    }
     /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
-    int ezcod_3_11_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_3_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
-
+    int				ezcod_3_11_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz )
+    {
+	return ::ezcod_3_11_encode( lat, lon, enc, siz );
+    }
+    int				ezcod_3_11_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc )
+    {
+	return ::ezcod_3_11_decode( dec, siz, lat, lon, acc );
+    }
     /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
-    int ezcod_3_12_encode( double  lat, double  lon, char *enc, size_t siz );
-    int ezcod_3_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc );
-
-#if defined( __cplusplus )
-} // extern "C"
-#endif
-
+    int				ezcod_3_12_encode(
+				    double		lat,
+				    double		lon,
+				    char	       *enc,
+				    size_t		siz )
+    {
+	return ::ezcod_3_12_encode( lat, lon, enc, siz );
+    }
+    int				ezcod_3_12_decode(
+				    char	       *dec,
+				    size_t		siz,
+				    double	       *lat,
+				    double	       *lon,
+				    double	       *acc )
+    {
+	return ::ezcod_3_12_decode( dec, siz, lat, lon, acc );
+    }
+};
+#    endif // __cheerp
+#  endif // __cplusplus
 #endif // _EZPWD_EZCOD_H

@@ -8,27 +8,41 @@ EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
 
 EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=$${PATH}:`pwd`/emscripten && em++
 DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
+CHEERP_EMXX	= /opt/cheerp/bin/clang++
 
+# Emscripten
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
+EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
 
-EMXX_EXPORTS_EZCOD = "[	'_ezcod_3_10_encode',			\
+EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
+			'_ezcod_3_10_encode',			\
 			'_ezcod_3_10_decode',			\
 			'_ezcod_3_11_encode',			\
 			'_ezcod_3_11_decode',			\
 			'_ezcod_3_12_encode',			\
 			'_ezcod_3_12_decode',			\
 			'_malloc', '_free' ]"
-EMXX_EXPORTS_RSPWD = "[	'_rspwd_encode_1',			\
+EMXX_EXPORTS_RSPWD = -s EXPORTED_FUNCTIONS="[			\
+			'_rspwd_encode_1',			\
 			'_rspwd_encode_2',			\
 			'_rspwd_encode_3',			\
 			'_rspwd_encode_4',			\
 			'_rspwd_encode_5' ]"
-EMXX_EXPORTS_MAIN  = "[ '_main' ]"
+EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS="[ '_main' ]"
+
+
 
 EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
+
+# # Cheerp
+# EMXX		= $(CHEERP_EMXX)
+# EMXX_ACTIVATE	=
+# EMXXFLAGS	= -fcxx-exceptions -target cheerp -D__cheerp -U__STRICT_ANSI__
+# EMXX_EXPORTS_MAIN=
+# EMXX_EXPORTS_RSPWD=
+# EMXX_EXPORTS_EZCOD=
 
 all:		js
 
@@ -61,18 +75,18 @@ testjs:		jstest
 
 rspwd-test.js:	rspwd-test.C rspwd.C c++/ezpwd/rs		\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 js/ezpwd/rspwd.js: rspwd.C c++/ezpwd/rs				\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_RSPWD) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@ 
 
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
 ezcod:		ezcod.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 js/ezpwd/ezcod.js:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_EZCOD) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@ 
 
 clean:
 	rm -f rsexample		rsexample.o	rsexample.js	\
@@ -82,26 +96,26 @@ clean:
 	      rscompare		rscompare.o			\
 	      rsvalidate	rsvalidate.o			\
 	      ezcod		ezcod.o		ezcod.js	\
-	      ezcod_test	ezcod_test.o	ezcod_test.jsn
+	      ezcod_test	ezcod_test.o	ezcod_test.js
 	make -C phil-karn clean
 
 rsexample.o:	rsexample.C c++/ezpwd/rs
 rsexample:	rsexample.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rsexample.js:	rsexample.C c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rssimple.o:	rssimple.C c++/ezpwd/rs
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rssimple.js:	rssimple.C c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h
 rscompare: CXXFLAGS += -I./phil-karn
@@ -123,7 +137,7 @@ ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) -s EXPORTED_FUNCTIONS=$(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.

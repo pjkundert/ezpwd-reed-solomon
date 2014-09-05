@@ -140,3 +140,10 @@ extern "C" {
     }
 
 } // extern "C"
+
+#if defined( __cheerp )
+int webMain()
+{
+    return 0;
+}
+#endif
