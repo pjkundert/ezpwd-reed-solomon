@@ -607,7 +607,7 @@ namespace ezpwd {
 
 	    ezpwd::array<TYP,SIZE>	tmp;
 	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
-	    static bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
+	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
 	    if ( cpy ) {
 		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
@@ -620,8 +620,8 @@ namespace ezpwd {
 		pariptr				= &tmp[LOAD];
 	    } else {
 		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches
-		dataptr				= reinterpret_cast<const TYP *>( data );
-		pariptr				= reinterpret_cast<TYP *>( parity );
+		dataptr				= (const TYP *)( data );
+		pariptr				= (TYP *)( parity );
 	    }
 
 	    encode( dataptr, len, pariptr );

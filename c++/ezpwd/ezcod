@@ -1,5 +1,5 @@
-#ifndef _EZPWD_EZCOD_3
-#define _EZPWD_EZCOD_3
+#ifndef _EZPWD_EZCOD
+#define _EZPWD_EZCOD
 
 #include <math.h> // M_PI
 #include <cmath>
@@ -105,7 +105,7 @@
 
 namespace ezpwd {
     // 
-    // ezpwd::base32 -- transform individual characters between 5-bit binary and base32
+    // ezpwd::base32 -- transform individual characters between 5-bit binary and a base-32 encoding
     // 
     //     The char values [0,32) are mapped by base32::encode onto:
     // 
@@ -119,8 +119,9 @@ namespace ezpwd {
     //    S -> 5
     //    I -> 1
     // 
-    //    Any characters encountered outside [0,32) by encode and outsside the above set
-    // by decode raise an exception.
+    //    Any characters encountered outside [0,32) by encode and outsside the above set by decode
+    // raise an exception, unless an erasure vector is provided, in which case we supply a 0 value
+    // and store the index of the invalid symbol in the vector.
     // 
     namespace base32 {
 
@@ -166,6 +167,9 @@ namespace ezpwd {
 	// symbol used in the provided range (eg. to shorten the ), leaving any remaining symbols
 	// unchanged.  The <string> version returns the same string reference passed in.
 	// 
+	//     If an invalid vector is supplied, we'll also return the offending input symbol(s); if
+	// an exception is raised (no erasure vector supplied), only one symbol will be in invalid.
+	// 
 	// NOTE: will quite likely return an iterator before the supplied 'end', indicating
 	// that the output has been truncated (shortened), due to collapsing spaces!
 	// 
@@ -173,10 +177,13 @@ namespace ezpwd {
 	iter			decode(
 				    iter		begin,
 				    iter		end,
-				    std::vector<int>   *erasure = 0 )
+				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0 )	//   and return the symbols
 	{
 	    if ( erasure )
 		erasure->clear();
+	    if ( invalid )
+		invalid->clear();
 	    iter		i, o;
 	    for ( i = begin, o = begin; i != end; ++i ) {
 		if ( ::isspace( *i ))
@@ -191,10 +198,12 @@ namespace ezpwd {
 		}
 		auto 		chri	= std::search( chrs.begin(), chrs.end(), i, i+1 );
 		if ( chri == chrs.end() ) {
-		    // Invalid symbol.  Mark as erasure?  Or throw.
+		    // Invalid symbol; optionally remember them.  Mark as erasure?  Or throw.
+		    if ( invalid )
+			invalid->push_back( *i );
 		    if ( erasure ) {
-			erasure->push_back( o - begin ); // index of offending // symbol in dest
-			chri		= chrs.begin();
+			erasure->push_back( o - begin );// index of offending symbol in output
+			chri		= chrs.begin();	//   will be output w/ 0 value
 		    } else {
 			throw std::runtime_error( "ezpwd::base32::decode: invalid symbol presented" );
 		    }
@@ -207,9 +216,10 @@ namespace ezpwd {
 	inline
 	std::string	       &decode(
 				    std::string	       &symbols,
-				    std::vector<int>   *erasure = 0 )
+				    std::vector<int>   *erasure = 0,
+				    std::vector<char>  *invalid	= 0 )
 	{
-	    auto		last	= decode( symbols.begin(), symbols.end(), erasure );
+	    auto		last	= decode( symbols.begin(), symbols.end(), erasure, invalid );
 	    if ( last != symbols.end() )
 		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 	    return symbols;
@@ -218,7 +228,7 @@ namespace ezpwd {
     } // namespace ezpwd::base32
 
     template < size_t P=1, size_t L=9 >			// 1 parity + 9 location symbols
-    class ezcod_3 {
+    class ezcod {
     public:
 	double			latitude;		// [-90,+90] angle, degrees
 	double			latitude_error;		// total error bar, in meters
@@ -226,36 +236,58 @@ namespace ezpwd {
 	double			longitude_error;	// total error bar, in meters
 	double			accuracy;		// linear accuracy radius, in meters
 
-	static const uint32_t	lat_parts = 1 << 22;	// [ -90,90 ] / 4,194,304 parts
-	static const uint32_t	lon_parts = 1 << 23;	// [-180,180] / 8,388,608 parts
+	typedef enum {
+	    SEP_NONE,
+	    SEP_SPACE,
+	    SEP_DOT,
+	    SEP_BANG,
+	}			seper_t;
 
-	typedef ezpwd::array< std::pair<size_t, size_t>, 9>
+	seper_t			seper;
+	size_t			chunk;			// White space between location symbol chunks
+
+	uint32_t		lat_parts;		// [ -90,90 ] / 4,194,304 parts in 9 symbols
+	uint32_t		lon_parts;		// [-180,180] / 8,388,608 parts ''
+
+	
+	typedef ezpwd::array< std::pair<size_t, size_t>, 12>
 				bits_t;
 	static const bits_t	bits;
 
-	static RS_31( 31-P )	rscodec;
+	typedef RS_31( 31-P ) 	rscodec_t;
+	static const rscodec_t	rscodec;
 
-				ezcod_3(
+				ezcod(
 				    double	_lat	= 0,
-				    double	_lon	= 0 )
+				    double	_lon	= 0,
+				    seper_t	_seper	= SEP_DOT,
+				    size_t	_chunk	= 3 )
 				    : latitude( _lat )
 				    , latitude_error( 0 )
 				    , longitude( _lon )
 				    , longitude_error( 0 )
 				    , accuracy( 0 )
+				    , seper( _seper )
+				    , chunk( _chunk )
+				    , lat_parts( 1 )
+				    , lon_parts( 1 )
 	{
 	    if ( P < 1 )
-		throw std::runtime_error( "ezpwd::ezcod_3:: At least one parity symbol must be specified" );
-	    if ( L < 1 || L > 9 )
-		throw std::runtime_error( "ezpwd::ezcod_3:: Only 1-9 location symbol may be specified" );
+		throw std::runtime_error( "ezpwd::ezcod:: At least one parity symbol must be specified" );
+	    if ( L < 1 || L > bits.max_size() )
+		throw std::runtime_error( std::string( "ezpwd::ezcod:: Only 1-" ) + std::to_string( bits.max_size() ) + " location symbol may be specified" );
+	    for ( auto &b : bits ) {
+		lat_parts	      <<= b.first;
+		lon_parts	      <<= b.second;
+	    }
 	}
-				ezcod_3(
-				    const std::string  &str)
-				    : ezcod_3()
+				ezcod(
+				    const std::string  &str )
+				    : ezcod()
 	{
 	    decode( str );
 	}
-	virtual		       ~ezcod_3()
+	virtual		       ~ezcod()
 	{
 	    ;
 	}
@@ -284,10 +316,10 @@ namespace ezpwd {
 	    // Convert lat/lon into a fraction of number of parts assigned to each
 	    double		lat_frac= ( latitude +  90 ) / 180;
 	    if ( lat_frac < 0 || lat_frac > 1 )
-		throw std::runtime_error( "ezpwd::ezcod_3::encode: Latitude not in range [-90,90]" );
+		throw std::runtime_error( "ezpwd::ezcod::encode: Latitude not in range [-90,90]" );
 	    double		lon_frac= ( longitude + 180 ) / 360;
 	    if ( lon_frac < 0 || lon_frac > 1 )
-		throw std::runtime_error( "ezpwd::ezcod_3::encode: Longitude not in range [-180,180]" );
+		throw std::runtime_error( "ezpwd::ezcod::encode: Longitude not in range [-180,180]" );
 
 	    // Compute the integer number of lat/lon parts represented by each coordinate.
 	    // Truncate to the range [0,..._parts), eg. Latitude 90 --> 89.999...
@@ -300,10 +332,10 @@ namespace ezpwd {
 	    unsigned int	lon_mult= lon_parts;
 
 	    std::string		res;
-	    res.reserve( L+P+3 );
-	    for ( auto &b : bits ) {
-		size_t		lat_bits= b.first;
-		size_t		lon_bits= b.second;
+	    res.reserve( L + L/3 + 1 + P );
+	    for ( auto b = bits.begin(); b != bits.begin() + L; ++b ) {
+		size_t		lat_bits= b->first;
+		size_t		lon_bits= b->second;
 
 		// Each set of bits represents the number of times the current multiplier (after
 		// division by the number of bits we're outputting) would go into the remainder.
@@ -326,9 +358,15 @@ namespace ezpwd {
 	    // Add the R-S parity symbols and base-32 encode
 	    rscodec.encode( res );
 	    ezpwd::base32::encode( res );
-	    res.insert( 3,  1, ' ' );
-	    res.insert( 7,  1, ' ' );
-	    res.insert( 11, 1, ' ' );
+	    if ( seper != SEP_NONE )
+		res.insert( L, 1, ( seper == SEP_SPACE
+				    ? ' '
+				    : ( seper == SEP_DOT
+					? '.'
+					: '!' )));
+	    if ( chunk )
+		for ( size_t c = L / chunk - 1; c > 0; --c )
+		    res.insert( c * chunk, 1, ' ' );
 	    
 	    return res;
 	}
@@ -345,13 +383,51 @@ namespace ezpwd {
 	// erasures is <= the supplied parity symbols, then the decode will proceed (using the
 	// parity symbols to fill in the erasures), and the returned confidence will reflect the
 	// amount of unused parity capacity.  Each erasure consumes one parity symbol to repair.
-	//
+	// 
+	//     We'll allow any of the stroke characters: "_-/\" to indicate an erasure.  Either of
+	// the "!."  symbol may be used to indicates the split between location symbols and parity
+	// symbols, and must be in a position that corresponds to the indicated number of location
+	// 'L' and parity 'P' symbols.
+	// 
+	//     Thus, an EZCOD like "R3U 1JU QUY!0" may only be decoded by an ezcod<L=9,P=1>.
+	// Without the "!" or ".", it could be an ezcod<L=8,P=2> -- there's no way to know for sure.
+	// 
 	int			validate( std::string &dec )
 	{
 	    int			confidence = 0; // if no R-S parity provided
+
 	    // Extract base-32, skipping whitespace, and marking invalid symbols as erasures.
+	    // However, the special symbol '!' indicates the end of the EZCOD location symbols and
+	    // the beginning of parity: ensure the symbol counts are consistent with the encoding.
 	    std::vector<int>	erasure;
-	    base32::decode( dec, &erasure );
+	    std::vector<char>	invalid;
+	    base32::decode( dec, &erasure, &invalid );
+
+	    int			parbeg	= L;		// Parity begins after Location, by default
+	    for ( size_t i = 0; i < invalid.size(); ++i ) {
+		switch ( invalid[i] ) {
+		case '!': case '.':
+		    // Remember the offset of the first parity symbol (it'll be in the position of
+		    // the '!' erasure we're about to erase), and adjust the indices of any erasures
+		    // following.
+		    parbeg		= erasure[i];
+		    invalid.erase( invalid.begin() + i );
+		    erasure.erase( erasure.begin() + i );
+		    for ( size_t j = i; j < erasure.size(); ++j )
+			erasure[j]     -= 1;
+		    break;
+		case '_': case '-': case '/': case '\\':
+		    break;
+		default:
+		    throw std::runtime_error( std::string( "ezpwd::ezcod::decode: invalid symbol presented: '" )
+					      + invalid[i] + "'" );
+		}
+	    }
+
+	    if ( parbeg != int( L ))
+		throw std::runtime_error( std::string( "ezpwd::ezcod::decode: Error correction failed; expected " )
+					  + std::to_string( L ) + " location characters; found " + std::to_string( parbeg ));
+	    
 	    if ( dec.size() > L || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
 		// successfully decode/correct, or (at least) use one parity symbol as a check
@@ -376,18 +452,18 @@ namespace ezpwd {
 			std::string chk( dec.begin(), dec.begin() + L );
 			rscodec.encode( chk );
 			if ( dec[L] != chk[L] )
-			    throw std::runtime_error( "ezpwd::ezcod_3::decode: Error correction failed; check character mismatch" );
+			    throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; check character mismatch" );
 			// Check character(s) matched; erasure.size()/P of confidence gone
 			confidence	= ezpwd::strength<P>( erasure.size(), erasure, erasure );
 		    } else
-			throw std::runtime_error( "ezpwd::ezcod_3::decode: Error correction failed; too many erasures" );
+			throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; too many erasures" );
 		} else {
 		    // We can try R-S decoding; we have (at least) enough parity to try to recover
 		    // missing symbol(s).
 		    std::vector<int>position;
 		    int		corrects= rscodec.decode( dec, erasure, &position );
 		    if ( corrects < 0 )
-			throw std::runtime_error( "ezpwd::ezcod_3::decode: Error correction failed; R-S decode failed" );
+			throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; R-S decode failed" );
 		    // Compute confidence, from spare parity capacity.  Since R-S decode will not
 		    // return the position of erasures that turn out (by accident) to be correct,
 		    // but they have consumed parity capacity, we re-add them into the correction
@@ -396,7 +472,7 @@ namespace ezpwd {
 		    // unexpected error), then the decode is almost certainly incorrect; fail.
 		    confidence		= ezpwd::strength<P>( corrects, erasure, position );
 		    if ( confidence < 0 )
-			throw std::runtime_error( "ezpwd::ezcod_3::decode: Error correction failed; R-S decode overwhelmed" );
+			throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; R-S decode overwhelmed" );
 		}
 		if ( dec.size() > L )
 		    dec.resize( L ); // Discard any parity symbols
@@ -475,36 +551,44 @@ namespace ezpwd {
 
 	    return confidence;
 	}
-    }; // class ezcod_3
+    }; // class ezcod
 
     // 
-    // ezcod_3::rscodec -- Reed-Solomon parity codec
-    // ezcod_3::bits	-- distribution of lat/lon precision in each code symbol
+    // ezcod::rscodec	-- Reed-Solomon parity codec
+    // ezcod::bits	-- distribution of lat/lon precision in each code symbol
     // 
     //     Quickly establishes an extra bit of precision for Longitude, and then evenly distributes
-    // future precision between lat/lon.
+    // future precision between lat/lon, always maintaining extra precision for Longitude.
     // 
     template < size_t P, size_t L >
-    RS_31( 31-P )		ezcod_3<P,L>::rscodec;
+    const typename
+    ezcod<P,L>::rscodec_t	ezcod<P,L>::rscodec;
 
     template < size_t P, size_t L >
     const typename 
-    ezcod_3<P,L>::bits_t	ezcod_3<P,L>::bits = {
+    ezcod<P,L>::bits_t		ezcod<P,L>::bits = {
 	{
-	    //  bits per symbol              lat lon           
-	    ezcod_3<P,L>::bits_t::value_type( 2,  3 ),
-	    ezcod_3<P,L>::bits_t::value_type( 2,  3 ),
-	    ezcod_3<P,L>::bits_t::value_type( 3,  2 ),
-					      
-	    ezcod_3<P,L>::bits_t::value_type( 2,  3 ),
-	    ezcod_3<P,L>::bits_t::value_type( 3,  2 ),
-	    ezcod_3<P,L>::bits_t::value_type( 2,  3 ),
-					      
-	    ezcod_3<P,L>::bits_t::value_type( 3,  2 ),
-	    ezcod_3<P,L>::bits_t::value_type( 2,  3 ),
-	    ezcod_3<P,L>::bits_t::value_type( 3,  2 ),
-	    //                               --  --
-	    //                               22  23
+	    //  bits per symbol            lat lon           
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    ezcod<P,L>::bits_t::value_type( 3,  2 ),
+	    //                             --  --
+	    //                              7   8
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    ezcod<P,L>::bits_t::value_type( 3,  2 ),
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    //                             --  --
+	    //                             14  16
+	    ezcod<P,L>::bits_t::value_type( 3,  2 ),
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    ezcod<P,L>::bits_t::value_type( 3,  2 ),
+	    //                             --  --
+	    //                             22  23
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    ezcod<P,L>::bits_t::value_type( 3,  2 ),
+	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
+	    //                             --  --
+	    //                             29  31
 	}
     };
 } // namespace ezpwd
@@ -512,9 +596,9 @@ namespace ezpwd {
 template < size_t P, size_t L >
 std::ostream		       &operator<<(
 				    std::ostream	&lhs,
-				    const ezpwd::ezcod_3<P,L>
+				    const ezpwd::ezcod<P,L>
 				    			&rhs )
 {
     return rhs.output( lhs );
 }
-#endif // _EZPWD_EZCOD_3
+#endif // _EZPWD_EZCOD

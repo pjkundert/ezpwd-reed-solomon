@@ -9,9 +9,9 @@
 #include <ezpwd/rs>
 #include <ezpwd/output>
 #include <ezpwd/asserter>
-#include <ezpwd/ezcod_3>
+#include <ezpwd/ezcod>
 
-#include "ezcod_3.h"
+#include "ezcod.h"
 
 #if defined( DEBUG )
 extern "C" {
@@ -21,7 +21,7 @@ extern "C" {
 
 
 template < size_t P, size_t L > void
-ezcod_3_exercise( const ezpwd::ezcod_3<P,L> &ezc )
+ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 {
     // Does location precision scale linearly with the number of symbols provided?  Are errors
     // detected/corrected successfully?
@@ -60,7 +60,7 @@ ezcod_3_exercise( const ezpwd::ezcod_3<P,L> &ezc )
 	    if ( trunc.back() == ' ' )
 		continue;
 	    trunc.resize( manip.size(), ' ' );
-	    ezpwd::ezcod_3<P,L>	code;
+	    ezpwd::ezcod<P,L>	code;
 	    try {
 		int		conf	= code.decode( trunc );
 		std::cout
@@ -86,23 +86,47 @@ int				main( int argc, char **argv )
     std::string			abc	= "0123abcz";
     std::string			dec	= abc;
     ezpwd::base32::decode( dec );
-    std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
+    // std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
     std::string			enc	= dec;
     ezpwd::base32::encode( enc );
-    std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
+    // std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
+    if ( assert.ISEQUAL( enc, std::string( "0123ABC2" )))
+	std::cout << assert << std::endl;
 
-    double			lat	= 53.555556;
+    double			lat	=   53.555556;
     double			lon	= -113.873889;
-    ezpwd::ezcod_3<1>		edm1( lat, lon );
-    ezcod_3_exercise( edm1 );
-    ezpwd::ezcod_3<2>		edm2( lat, lon );
-    ezcod_3_exercise( edm2 );
-    ezpwd::ezcod_3<3>		edm3( lat, lon );
-    ezcod_3_exercise( edm3 );
-    ezpwd::ezcod_3<4>		edm4( lat, lon );
-    ezcod_3_exercise( edm4 );
-    ezpwd::ezcod_3<5>		edm5( lat, lon );
-    ezcod_3_exercise( edm5 );
+    // Try all the practical variants of Location and Parity
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 3>( lat, lon ).encode(), std::string( "R3U.9" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 4>( lat, lon ).encode(), std::string( "R3U0.J" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 5>( lat, lon ).encode(), std::string( "R3U08.H" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 6>( lat, lon ).encode(), std::string( "R3U 08M.8" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 7>( lat, lon ).encode(), std::string( "R3U 08MP.U" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 8>( lat, lon ).encode(), std::string( "R3U 08MPV.E" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1, 9>( lat, lon ).encode(), std::string( "R3U 08M PVT.D" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,10>( lat, lon ).encode(), std::string( "R3U 08M PVTQ.F" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,11>( lat, lon ).encode(), std::string( "R3U 08M PVTQJ.Y" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ezpwd::ezcod<1,12>( lat, lon ).encode(), std::string( "R3U 08M PVT QJQ.E" )))
+	std::cout << assert << std::endl;
+
+    ezpwd::ezcod<1>		edm1( lat, lon );
+    ezcod_exercise( edm1 );
+    ezpwd::ezcod<2>		edm2( lat, lon );
+    ezcod_exercise( edm2 );
+    ezpwd::ezcod<3>		edm3( lat, lon );
+    ezcod_exercise( edm3 );
+    ezpwd::ezcod<4>		edm4( lat, lon );
+    ezcod_exercise( edm4 );
+    ezpwd::ezcod<5>		edm5( lat, lon );
+    ezcod_exercise( edm5 );
 
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
@@ -110,8 +134,8 @@ int				main( int argc, char **argv )
     // data we *know* is correct -- the effective block of zero data in the pad (unused) area of the
     // R-S codeword's capacity!
 
-    // Correct encoding w/2 parity:R3U 08M PVT GY
-    //                      errors: v      v
+    // Correct encoding w/2 parity:        R3U 08M PVT GY
+    //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
     std::string			fix2	= err2;
     ezpwd::base32::decode( fix2 );
@@ -210,7 +234,7 @@ int				main( int argc, char **argv )
 	std::cout
 	    << "encode " << std::setw( 16 ) << lat << ", " << std::setw( 16 ) << lon
 	    << " == " << cod
-	    << " == " << ezpwd::ezcod_3<1,9>( ezpwd::ezcod_3<1,9>( lat, lon ).encode() ) << std::endl;
+	    << " == " << ezpwd::ezcod<1,9>( ezpwd::ezcod<1,9>( lat, lon ).encode() ) << std::endl;
 #endif
 	double			lat_o;
 	double			lon_o;
@@ -270,14 +294,25 @@ int				main( int argc, char **argv )
 	lon_max_lat_i.second		        = std::max( lin_em, lon_max_lat_i.second );
     }
     std::cout << "Longitude avg error, signed difference, total linear, maximum and reported accuracy (at integer Latitudes): " << std::endl;
-    for ( int lat_i = -90; lat_i <= 90; ++lat_i ) {
+    for ( int lat_i = 90; lat_i >= -90; --lat_i ) {
 	std::cout
 	    << std::setw(  5 ) << lat_i << ": "
 	    << std::setw( 16 ) << lon_err[lat_i].second << ", " 
 	    << std::setw( 16 ) << lon_dif[lat_i].second << ", "
-	    << std::setw( 16 ) << lon_all[lat_i].second << ", "
+	    << std::setw( 16 ) << lon_all[lat_i].second << " ( "
+	    << std::setw( 16 ) << lon_all[lat_i].second * 3.28084 << "ft.), "
 	    << std::setw( 16 ) << lon_max[lat_i].second << ", "
-	    << std::setw( 16 ) << lon_acc[lat_i].second
+	    << std::setw( 16 ) << lon_acc[lat_i].second << " ( "
+	    << std::setw( 16 ) << lon_acc[lat_i].second * 3.28084 << "ft.)"
+	    << ( abs( lat_i ) == 66
+		 ? ( lat_i < 0 ? " polar antarctic" : " polar arctic")
+		 : ( abs( lat_i ) == 23
+		     ? ( lat_i < 0 ? " tropic of capricorn" : " tropic of cancer" )
+		     : ( abs( lat_i ) == 90
+			 ? ( lat_i < 0 ? " south pole" : " north pole" )
+			 : ( lat_i == 0 
+			     ? " equator" 
+			     : "" ))))
 	    << std::endl;
 	if ( assert.ISTRUE( lon_max[lat_i].second <= lon_acc[lat_i].second, "Max linear error by Latitude exceeds computed accuracy" ))
 	    std::cout << assert << std::endl;
@@ -288,9 +323,11 @@ int				main( int argc, char **argv )
 	    << std::setw(  5 ) << lon_i << ": "
 	    << std::setw( 16 ) << lat_err[lon_i].second << ", " 
 	    << std::setw( 16 ) << lat_dif[lon_i].second << ", "
-	    << std::setw( 16 ) << lat_all[lon_i].second << ", "
+	    << std::setw( 16 ) << lat_all[lon_i].second << " ( "
+	    << std::setw( 16 ) << lat_all[lon_i].second * 3.28084 << "ft.), "
 	    << std::setw( 16 ) << lat_max[lon_i].second << ", "
-	    << std::setw( 16 ) << lat_acc[lon_i].second
+	    << std::setw( 16 ) << lat_acc[lon_i].second << " ("
+	    << std::setw( 16 ) << lat_acc[lon_i].second * 3.28084 << "ft.)"
 	    << std::endl;
 	if ( assert.ISTRUE( lat_max[lon_i].second <= lat_acc[lon_i].second, "Max linear error by Longitude exceeds computed accuracy" ))
 	    std::cout << assert << std::endl;
