@@ -142,6 +142,8 @@ ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 
+#     Any tests using Phil Karn's library aren't yet convertible to Javascript
+# 
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
 	make -C phil-karn all
@@ -149,7 +151,7 @@ phil-karn/librs.a:
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.
 # 
-# Presently only works on OS-X as far as I know. Should use a Docker instance.
+#    Presently only works on OS-X as far as I know. Should use a Docker instance.
 # 
 emscripten:	emscripten/python2 				\
 		emscripten/emsdk_portable/emscripten		\

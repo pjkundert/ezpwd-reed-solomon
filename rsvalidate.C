@@ -165,7 +165,7 @@ int main()
 
 	// Figure out if we should succeed.  Certainly, if we have excess parity vs. error load.
 	// Always, if the error load < parity.  Almost never, if the error load > parity.
-	bool		succeed	= ( era1cnt + 2 * err1cnt <= parity );
+	bool			succeed	= ( era1cnt + 2 * err1cnt <= parity );
 
 	if ( ! succeed )
 	    failmsgs
@@ -285,13 +285,22 @@ int main()
 	std::vector<int>	pos2;
 	if ( era1cnt <= parity )
 	    res2			= rs2->decode( err2, pad, era2, &pos2 );
-	if ( assert.ISEQUAL( res2, res1, "ezpwd  decoder return different results" )) // Decoder results should always be identical, no matter what
-	    failmsgs
-		<< assert
-		<< *rs2 << " decoded buffer:"
-		<< std::endl
-		<< std::vector<uint8_t>( err2.begin() + pad, err2.begin() + pad + payload + parity )
-		<< std::endl;
+	// If error load is below correction threshold, decoder results should always be identical,
+	// no matter what.  However, if we've overwhelmed the R-S decoder with errors, the new
+	// decoder MAY return different results.  This is because the Phil Karn decoder will return
+	// error positions in the "pad" area, if the overwhelmed R-S Galois field polynomial solves
+	// to roots located there!  We know this is impossible (the unused "pad" area of the R-S
+	// decoder buffer is all zeros).  Therefore, the new decoder detects this situation and
+	// returns a failure, instead of the (invalid) erasure positions.
+	if ( succeed )
+	    if ( assert.ISEQUAL( res2, res1, "ezpwd  decoder return different results" ))
+		failmsgs
+		    << assert
+		    << *rs2 << " decoded buffer:"
+		    << std::endl
+		    << std::vector<uint8_t>( err2.begin() + pad, err2.begin() + pad + payload + parity )
+		    << std::endl;
+
 	if ( res2 >= 0 && assert.ISEQUAL( res2, int( pos2.size() ), "ezpwd  decoder return +'ve value, but different number of positions" ))
 	    failmsgs
 		<< assert
@@ -300,22 +309,24 @@ int main()
 		<< std::vector<uint8_t>( err2.begin() + pad, err2.begin() + pad + payload + parity )
 		<< "; wrong position count: " << pos2.size() << " vs. return value: " << res2
 		<< std::endl;
-
-	std::vector<uint8_t>	dif2( 255, ' ' );
-	int			dif2cnt	= 0;
-	for ( int i = 0; i < 255; ++i ) {
-	    if ( err2[i] != enc2[i] ) {
-		dif2[i]		= '^';
-		++dif2cnt;
+	if ( res1 >= 0 && res2 >= 0 ) {
+	    // Both R-S decoders claimed to solve the codeword; they should be equivalent
+	    std::vector<uint8_t>	dif2( 255, ' ' );
+	    int			dif2cnt	= 0;
+	    for ( int i = 0; i < 255; ++i ) {
+		if ( err2[i] != enc2[i] ) {
+		    dif2[i]		= '^';
+		    ++dif2cnt;
+		}
 	    }
+	    if ( assert.ISEQUAL( dif2cnt, dif1cnt ))		// Results should be identical
+		failmsgs
+		    << assert
+		    << "differences:"
+		    << std::endl
+		    << std::vector<uint8_t>( dif2.begin() + pad, dif2.begin() + pad + payload + parity )
+		    << std::endl;
 	}
-	if ( assert.ISEQUAL( dif2cnt, dif1cnt ))		// Results should be identical
-	    failmsgs
-		<< assert
-		<< "differences:"
-		<< std::endl
-		<< std::vector<uint8_t>( dif2.begin() + pad, dif2.begin() + pad + payload + parity )
-		<< std::endl;
 
 #if ! defined( DEBUG )
 	if ( assert.failures != failures )
