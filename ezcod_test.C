@@ -6,6 +6,8 @@
 #include <sstream>
 
 #include <cstdint>
+#include <map>
+
 #include <ezpwd/rs>
 #include <ezpwd/output>
 #include <ezpwd/asserter>
@@ -95,27 +97,66 @@ int				main( int argc, char **argv )
 
     double			lat	=   53.555556;
     double			lon	= -113.873889;
+    std::map<std::pair<size_t,size_t>,std::string>
+				str	= {
+	{{1, 3},"R3U.9"},
+	{{2, 3},"R3U.WD"},
+	{{3, 3},"R3U.09K"},
+	{{1, 4},"R3U0.J"},
+	{{2, 4},"R3U0.9K"},
+	{{3, 4},"R3U0.9K0"},
+	{{1, 5},"R3U08.H"},
+	{{1, 6},"R3U 08M.8"},
+	{{1, 7},"R3U 08MP.U"},
+	{{1, 8},"R3U 08MPV.E"},
+	{{1, 9},"R3U 08M PVT.D"},
+	{{1,10},"R3U 08M PVTQ.F"},
+	{{1,11},"R3U 08M PVTQJ.Y"},
+	{{1,12},"R3U 08M PVT QJQ.E"}};
+    std::map<std::pair<size_t,size_t>,double>
+   				acc	= {{{1, 3}, 2.600 },
+					   {{1, 4}, 2.600 },
+					   {{1, 5}, 2.600 },
+					   {{1, 6}, 2.600 },
+					   {{1, 7}, 2.600 },
+					   {{1, 8}, 2.600 },
+					   {{1, 9}, 2.600 },
+					   {{1,10}, 2.600 },
+					   {{1,11}, 2.600 },
+					   {{1,12}, 2.600 }};
+
+    ezpwd::ezcod_base	      *ezc[] = {
+	new ezpwd::ezcod<1, 3>( lat, lon ),
+	new ezpwd::ezcod<2, 3>( lat, lon ),
+	new ezpwd::ezcod<3, 3>( lat, lon ),
+	new ezpwd::ezcod<1, 4>( lat, lon ),
+	new ezpwd::ezcod<2, 4>( lat, lon ),
+	new ezpwd::ezcod<3, 4>( lat, lon ),
+	new ezpwd::ezcod<1, 5>( lat, lon ),
+	new ezpwd::ezcod<1, 6>( lat, lon ),
+	new ezpwd::ezcod<1, 7>( lat, lon ),
+	new ezpwd::ezcod<1, 8>( lat, lon ),
+	new ezpwd::ezcod<1, 9>( lat, lon ),
+	new ezpwd::ezcod<1,10>( lat, lon ),
+	new ezpwd::ezcod<1,11>( lat, lon ),
+	new ezpwd::ezcod<1,11>( lat, lon ),
+	new ezpwd::ezcod<1,12>( lat, lon )
+    };
+
     // Try all the practical variants of Location and Parity
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 3>( lat, lon ).encode(), std::string( "R3U.9" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 4>( lat, lon ).encode(), std::string( "R3U0.J" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 5>( lat, lon ).encode(), std::string( "R3U08.H" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 6>( lat, lon ).encode(), std::string( "R3U 08M.8" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 7>( lat, lon ).encode(), std::string( "R3U 08MP.U" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 8>( lat, lon ).encode(), std::string( "R3U 08MPV.E" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 9>( lat, lon ).encode(), std::string( "R3U 08M PVT.D" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,10>( lat, lon ).encode(), std::string( "R3U 08M PVTQ.F" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,11>( lat, lon ).encode(), std::string( "R3U 08M PVTQJ.Y" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,12>( lat, lon ).encode(), std::string( "R3U 08M PVT QJQ.E" )))
-	std::cout << assert << std::endl;
+    for ( auto &e : ezc ) {
+	if ( assert.ISEQUAL( e->encode(), str[e->symbols()] ))
+	    std::cout << "On " << *e << ": " << assert;
+	try {
+	   e->decode( str[e->symbols()] );
+	   if ( assert.ISNEAR( e->accuracy, acc[e->symbols()], 1e-4 ))
+	       std::cout << "On " << *e << ": " << assert;
+	} catch ( std::exception &exc ) {
+	    assert.ISTRUE( false, exc.what() );
+	    std::cout << "On " << *e << ": " << assert;
+	}
+
+    }
 
     ezpwd::ezcod<1>		edm1( lat, lon );
     ezcod_exercise( edm1 );
@@ -226,10 +267,10 @@ int				main( int argc, char **argv )
 	// Reduce the number of symbols to the specified amount.
 	int			sizmax	= 0;
 	for ( int syms = 0; syms < symbols && sizmax < siz; ++sizmax )
-	    if ( ! ::isspace( cod[sizmax] ))
+	    if ( ! ::isspace( cod[sizmax] ) && cod[sizmax] != '!' && cod[sizmax] != '.' )
 		 ++syms;
-
 	cod.resize( sizmax );
+
 #if defined( DEBUG ) && DEBUG > 0
 	std::cout
 	    << "encode " << std::setw( 16 ) << lat << ", " << std::setw( 16 ) << lon

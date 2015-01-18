@@ -3,6 +3,7 @@
 
 #include <math.h> // M_PI
 #include <cmath>
+#include <cctype>
 
 #include <cstdint>
 #include <ezpwd/rs>
@@ -227,8 +228,7 @@ namespace ezpwd {
 
     } // namespace ezpwd::base32
 
-    template < size_t P=1, size_t L=9 >			// 1 parity + 9 location symbols
-    class ezcod {
+    class ezcod_base {
     public:
 	double			latitude;		// [-90,+90] angle, degrees
 	double			latitude_error;		// total error bar, in meters
@@ -236,6 +236,51 @@ namespace ezpwd {
 	double			longitude_error;	// total error bar, in meters
 	double			accuracy;		// linear accuracy radius, in meters
 
+				ezcod_base(
+				    double	_lat	= 0,
+				    double	_lon	= 0 )
+				    : latitude( _lat )
+				    , latitude_error( 0 )
+				    , longitude( _lon )
+				    , longitude_error( 0 )
+				    , accuracy( 0 )
+	{
+	    ;
+	}
+	virtual		       ~ezcod_base()
+	{
+	    ;
+	}
+	
+	typedef std::pair<size_t, size_t>
+				symbols_t;
+	virtual symbols_t	symbols()
+	    const
+	= 0;
+	virtual std::ostream   &output( std::ostream &lhs )
+	    const
+	= 0;
+	virtual std::string	encode()
+	    const
+	= 0;
+	virtual int		decode( const std::string &str )
+	= 0;
+    };
+} // namespace ezpwd
+
+inline std::ostream	       &operator<<(
+				    std::ostream	&lhs,
+				    const ezpwd::ezcod_base
+				    			&rhs )
+{
+    return rhs.output( lhs );
+}
+
+namespace ezpwd {
+    template < size_t P=1, size_t L=9 >			// 1 parity + 9 location symbols
+    class ezcod
+	: public ezcod_base {
+    public:
 	typedef enum {
 	    SEP_NONE,
 	    SEP_SPACE,
@@ -249,8 +294,8 @@ namespace ezpwd {
 	uint32_t		lat_parts;		// [ -90,90 ] / 4,194,304 parts in 9 symbols
 	uint32_t		lon_parts;		// [-180,180] / 8,388,608 parts ''
 
-	
-	typedef ezpwd::array< std::pair<size_t, size_t>, 12>
+
+	typedef ezpwd::array<symbols_t, 12>
 				bits_t;
 	static const bits_t	bits;
 
@@ -262,11 +307,7 @@ namespace ezpwd {
 				    double	_lon	= 0,
 				    seper_t	_seper	= SEP_DOT,
 				    size_t	_chunk	= 3 )
-				    : latitude( _lat )
-				    , latitude_error( 0 )
-				    , longitude( _lon )
-				    , longitude_error( 0 )
-				    , accuracy( 0 )
+				    : ezcod_base( _lat, _lon )
 				    , seper( _seper )
 				    , chunk( _chunk )
 				    , lat_parts( 1 )
@@ -275,10 +316,12 @@ namespace ezpwd {
 	    if ( P < 1 )
 		throw std::runtime_error( "ezpwd::ezcod:: At least one parity symbol must be specified" );
 	    if ( L < 1 || L > bits.max_size() )
-		throw std::runtime_error( std::string( "ezpwd::ezcod:: Only 1-" ) + std::to_string( bits.max_size() ) + " location symbol may be specified" );
-	    for ( auto &b : bits ) {
-		lat_parts	      <<= b.first;
-		lon_parts	      <<= b.second;
+		throw std::runtime_error( std::string( "ezpwd::ezcod:: Only 1-" )
+					  + std::to_string( bits.max_size() )
+					  + " location symbol may be specified" );
+	    for ( size_t l = 0; l < L; ++l ) {
+		lat_parts	      <<= bits[l].first;
+		lon_parts	      <<= bits[l].second;
 	    }
 	}
 				ezcod(
@@ -292,7 +335,14 @@ namespace ezpwd {
 	    ;
 	}
 
-	std::ostream	       &output( std::ostream &lhs )
+	virtual ezcod_base::symbols_t
+				symbols()
+	    const
+	{
+	    return ezcod_base::symbols_t( P, L );
+	}
+
+	virtual std::ostream   &output( std::ostream &lhs )
 	    const
 	{
 	    std::streamsize	prec	= lhs.precision();
@@ -310,7 +360,7 @@ namespace ezpwd {
 	    return lhs;
 	}
 
-	std::string		encode()
+	virtual std::string	encode()
 	    const
 	{
 	    // Convert lat/lon into a fraction of number of parts assigned to each
@@ -332,7 +382,7 @@ namespace ezpwd {
 	    unsigned int	lon_mult= lon_parts;
 
 	    std::string		res;
-	    res.reserve( L + L/3 + 1 + P );
+	    res.reserve( L + ( chunk ? L/chunk-1 : 0 ) + 1 + P ); // approximate result length
 	    for ( auto b = bits.begin(); b != bits.begin() + L; ++b ) {
 		size_t		lat_bits= b->first;
 		size_t		lon_bits= b->second;
@@ -351,19 +401,19 @@ namespace ezpwd {
 		lon_mult       	      >>= lon_bits;
 		uint32_t	lon_val	= lon_rem / lon_mult;
 		lon_rem		       -= lon_val * lon_mult;
-		char		c	= char( ( lat_val << lon_bits ) | lon_val );
-		res		       += c;
+
+		res		       += char( ( lat_val << lon_bits ) | lon_val );
 	    }
 
-	    // Add the R-S parity symbols and base-32 encode
+	    // Add the R-S parity symbols and base-32 encode, add parity seperator and chunk
 	    rscodec.encode( res );
 	    ezpwd::base32::encode( res );
-	    if ( seper != SEP_NONE )
-		res.insert( L, 1, ( seper == SEP_SPACE
-				    ? ' '
-				    : ( seper == SEP_DOT
-					? '.'
-					: '!' )));
+	    switch( seper ) {
+	    case SEP_NONE:					break;
+	    case SEP_SPACE:	res.insert( L, 1, ' ' );	break;
+	    case SEP_DOT:	res.insert( L, 1, '.' );	break;
+	    case SEP_BANG:	res.insert( L, 1, '!' );	break;
+	    }
 	    if ( chunk )
 		for ( size_t c = L / chunk - 1; c > 0; --c )
 		    res.insert( c * chunk, 1, ' ' );
@@ -392,13 +442,21 @@ namespace ezpwd {
 	//     Thus, an EZCOD like "R3U 1JU QUY!0" may only be decoded by an ezcod<L=9,P=1>.
 	// Without the "!" or ".", it could be an ezcod<L=8,P=2> -- there's no way to know for sure.
 	// 
+    private:
 	int			validate( std::string &dec )
+	    const
 	{
 	    int			confidence = 0; // if no R-S parity provided
 
+#if defined( DEBUG ) && DEBUG >= 1
+	    std::cout << *this << " validate( " << dec << " ) ";
+#endif
 	    // Extract base-32, skipping whitespace, and marking invalid symbols as erasures.
-	    // However, the special symbol '!' indicates the end of the EZCOD location symbols and
-	    // the beginning of parity: ensure the symbol counts are consistent with the encoding.
+	    // However, the special symbol '!' or '.' indicates the end of the EZCOD location
+	    // symbols and the beginning of parity: ensure the symbol counts are consistent with the
+	    // encoding.  By default the parity symbols begin at offset L.  If we see more than L
+	    // symbols, we assume that the Lth and subsequent symbols are parity.  If a
+	    // location/parity separator is provided, it must be at position L!
 	    std::vector<int>	erasure;
 	    std::vector<char>	invalid;
 	    base32::decode( dec, &erasure, &invalid );
@@ -408,9 +466,10 @@ namespace ezpwd {
 		switch ( invalid[i] ) {
 		case '!': case '.':
 		    // Remember the offset of the first parity symbol (it'll be in the position of
-		    // the '!' erasure we're about to erase), and adjust the indices of any erasures
-		    // following.
+		    // the last '!' or '.' symbol we're about to erase), and adjust the indices of
+		    // any erasures following.
 		    parbeg		= erasure[i];
+		    dec.erase( parbeg, 1 );
 		    invalid.erase( invalid.begin() + i );
 		    erasure.erase( erasure.begin() + i );
 		    for ( size_t j = i; j < erasure.size(); ++j )
@@ -423,7 +482,12 @@ namespace ezpwd {
 					      + invalid[i] + "'" );
 		}
 	    }
-
+#if defined( DEBUG ) && DEBUG >= 1
+	    std::cout << " --> 0x" << std::vector<uint8_t>( dec.begin(), dec.begin() + std::min( L, dec.length()) )
+		      << " + 0x" << std::vector<uint8_t>( dec.begin() + std::min( L, dec.length()),
+							  dec.begin() + dec.length() )
+		      << " parity" << std::endl;
+#endif
 	    if ( parbeg != int( L ))
 		throw std::runtime_error( std::string( "ezpwd::ezcod::decode: Error correction failed; expected " )
 					  + std::to_string( L ) + " location characters; found " + std::to_string( parbeg ));
@@ -480,13 +544,14 @@ namespace ezpwd {
 	    return confidence;
 	}
 
-	int			decode( const std::string &str )
+    public:
+	virtual int		decode( const std::string &str )
 	{
 	    std::string		dec	= str;
 	    int			confidence = validate( dec );
 
-	    // Unpack the supplied location data; we'll take as much as we are given (up to the
-	    // maximum 9 symbols supported, yielding <5m resolution).
+	    // Unpack the supplied location data; we'll take as much as we are given, up to the
+	    // maximum L symbols supported (9 symbols yielding ~3m resolution).
 	    uint32_t		lat_tot	= 0;
 	    uint32_t		lon_tot	= 0;
 
@@ -593,12 +658,4 @@ namespace ezpwd {
     };
 } // namespace ezpwd
 
-template < size_t P, size_t L >
-std::ostream		       &operator<<(
-				    std::ostream	&lhs,
-				    const ezpwd::ezcod<P,L>
-				    			&rhs )
-{
-    return rhs.output( lhs );
-}
 #endif // _EZPWD_EZCOD

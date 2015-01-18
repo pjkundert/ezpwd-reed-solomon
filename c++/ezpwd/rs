@@ -9,9 +9,16 @@
  * Adaption to the kernel by Thomas Gleixner (tglx@linutronix.de)
  * Converted to C++ by Perry Kundert (perry@hardconsulting.com)
  * 
- *     The Linux 3.15.1 version of lib/reed_solomon was used, which (in turn) is basically verbatim
- * copied from Phil Karn's implementation.  I've personally been using Phil's implementation for
- * years in a heavy industrial use, and it is rock-solid.
+ *     The Linux 3.15.1 version of lib/reed_solomon was also consulted as a cross-reference, which
+ * (in turn) is basically verbatim copied from Phil Karn's implementation.  I've personally been
+ * using Phil's implementation for years in a heavy industrial use, and it is rock-solid.
+ * 
+ *     However, both Phil's and the Linux kernel's (copy of Phil's) implementation does return a
+ * "corrected" decoding with impossible error positions, in some cases where the error load
+ * completely overwhelms the R-S encoding.  These cases, when detected, are rejected in this
+ * implementation.  This could be considered a defect in Phil's (and hence the Linux kernel's)
+ * implementations, which results in them accepting clearly incorrect R-S decoded values as valid
+ * (corrected) R-S codewords.  We chose the report failure on these attempts.
  * 
  */
 #ifndef _EZPWD_RS
@@ -778,7 +785,7 @@ namespace ezpwd {
 	    } else {
 		// Either erasure location info specified, or resultant error position info wanted;
 		// Prepare pos (a temporary, if no position vector provided), and copy any provided
-		// erasure positions.  After number of corrections is know, resize the position
+		// erasure positions.  After number of corrections is known, resize the position
 		// vector.  Thus, we use any supplied erasure info, and optionally return any
 		// correction position info separately.
 		std::vector<int>       _pos;
@@ -841,8 +848,7 @@ namespace ezpwd {
 	void			encode(
 				    const TYP	       *data,
 				    int			len,
-				    TYP		       *parity, // at least nroots
-				    TYP			invmsk	= 0 )
+				    TYP		       *parity ) // at least nroots
 	    const
 	{
 	    // Check length parameter for validity
@@ -852,12 +858,11 @@ namespace ezpwd {
 	    for ( int i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
 	    for ( int i = 0; i < len; i++ ) {
-		TYP		feedback= index_of[data[i] ^ invmsk ^ parity[0]];
+		TYP		feedback= index_of[data[i] ^ parity[0]];
 		if ( feedback != A0 )
 		    for ( int j = 1; j < NROOTS; j++ )
-			parity[j]       ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
+			parity[j]      ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
 
-		// Shift; was: memmove( &par[0], &par[1], ( sizeof par[0] ) * ( NROOTS - 1 ));
 		std::rotate( parity, parity + 1, parity + NROOTS );
 		if ( feedback != A0 )
 		    parity[NROOTS - 1]	= alpha_to[modnn(feedback + genpoly[0])];
@@ -876,8 +881,7 @@ namespace ezpwd {
 				    TYP		       *parity,		// Requires: at least NROOTS
 				    int		       *eras_pos= 0,	// Capacity: at least NROOTS
 				    int			no_eras	= 0,	// Maximum:  at most  NROOTS
-				    TYP		       *corr	= 0,	// Capacity: at least NROOTS
-				    TYP			invmsk	= 0 )
+				    TYP		       *corr	= 0 )	// Capacity: at least NROOTS
 	    const
 	{
 	    typedef ezpwd::array< TYP, NROOTS >
@@ -911,14 +915,14 @@ namespace ezpwd {
 
 	    // form the syndromes; i.e., evaluate data(x) at roots of g(x)
 	    for ( int i = 0; i < NROOTS; i++ )
-		syn[i]			= data[0] ^ invmsk;
+		syn[i]			= data[0];
 
 	    for ( int j = 1; j < len; j++ ) {
 		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
-			syn[i]		= data[j] ^ invmsk;
+			syn[i]		= data[j];
 		    } else {
-			syn[i]		= data[j] ^ invmsk
+			syn[i]		= data[j]
 			    ^ alpha_to[modnn(index_of[syn[i]] + ( FCR + i ) * PRM)];
 		    }
 		}
@@ -1345,8 +1349,10 @@ namespace ezpwd {
     // 
     //         100 - ( errors * 2 + erasures ) * 100 / parity
     // 
-    // which is proportional to the number of parity symbols unused by the reported number
-    // of corrected symbols.
+    // which is proportional to the number of parity symbols unused by the reported number of
+    // corrected symbols.  If 0, then all parity resources were consumed to recover the R-S
+    // codeword, and we can have no confidence in the result.  If -'ve, indicates more parity
+    // resources were consumed than available, indicating that the result is likely incorrect.
     // 
     //     Accounts for the fact that a signalled erasure may not be reported in the corrected
     // position vector, if it happens to contain the computed value.
@@ -1371,12 +1377,18 @@ namespace ezpwd {
 		++erased;
 	    }
 	}
+	int			errors	= corrects - erased;
+	int			consume	= errors * 2 + erased;
+	int			confid	= 100 - consume * 100 / N;
 #if defined( DEBUG ) && DEBUG > 2
 	std::cout << corrects << " corrections, " << erased << " erasures (vs. " 
-		  << erasure.size() << " reported: " << erasure << ")" << std::endl;
+		  << erasure.size() << " reported: " << erasure << ")"
+		  << " ==> " << errors <<  " error, and " << consume
+		  << " / " << N << " parity used == " << confid
+		  << "% confidence"
+		  << std::endl;
 #endif
-	int			errors	= corrects - erased;
-	return 100 - ( errors * 2 + erased ) * 100 / N;
+	return confid;
     }
 
     // 
@@ -1429,6 +1441,7 @@ namespace ezpwd {
 	}
 
 	// 
+	// best_avg -- collect <password>,<confidence> guesses, and return the unambiguous best one
 	// decode(<string>) -- Applies R-S error correction on the encoded string, removing parity
 	// 
 	//     Up to 'N' Reed-Solomon parity symbols are examined, to determine if the supplied
@@ -1462,7 +1475,7 @@ namespace ezpwd {
 	//     If none of the error/erasure forms succeed, the password is returned unmodified.
 	// 
 	//
-	typedef std::map<std::string, std::pair<int, int>>
+	typedef std::map<std::string, std::pair<int, int>> // (<password>, (<count>, <avgsum>))
 	    			best_avg_base_t;
 	class best_avg
 	    : public best_avg_base_t
@@ -1486,14 +1499,13 @@ namespace ezpwd {
 		iterator	i	= find( str );
 		if ( i == end() )
 		    i 			= insert( i, value_type( str, mapped_type() ));
-		i->second.second       *= i->second.first++;
+		i->second.first	       += 1;
 		i->second.second       += pct;
-		i->second.second       /= i->second.first;
 		return i;
 	    }
 
 	    // 
-	    // best -- return the unambiguously best value (>, or == but longer), or end()
+	    // best -- return the unambiguously best value (average is >, or == but longer), or end()
 	    // 
 	    const_iterator	best()
 		const
@@ -1502,12 +1514,12 @@ namespace ezpwd {
 		bool		uni	= false;
 		for ( const_iterator i = begin(); i != end(); ++i ) {
 		    if ( top == end()
-			 or i->second > top->second
-			 or ( i->second == top->second
+			 or i->second.second/i->second.first > top->second.second/top->second.first
+			 or ( i->second.second/i->second.first == top->second.second/top->second.first
 			      and i->first.size() > top->first.size())) {
 			top		= i;
 			uni		= true;
-		    } else if ( i->second == top->second
+		    } else if ( i->second.second/i->second.first == top->second.second/top->second.first
 				and i->first.size() == top->first.size()) {
 			uni		= false;
 		    }
@@ -1516,14 +1528,14 @@ namespace ezpwd {
 	    }
 
 	    // 
-	    // sort -- return a multimap indexed by avg --> <string>
-	    // flip -- invert a (<string>,(<samples>,<average>)) to (<average>,<string>)
-	    // output -- output the <string>: <avg>, sorted by average
+	    // sort -- return a multimap indexed by <average> --> <string>
+	    // flip -- invert a (<password>,(<count>,<avgsum>)) to (<average>,<password>)
+	    // output -- output the <string>: <average>, sorted by average
 	    // 
 	    static std::pair<const int,const std::string &>
 				flip( const value_type &val )
 	    {
-		return std::pair<const int,const std::string &>( val.second.second, val.first );
+		return std::pair<const int,const std::string &>( val.second.second/val.second.first, val.first );
 	    }
 	    typedef std::multimap<const int,const std::string &>
 	    			sorted_t;
@@ -1601,7 +1613,7 @@ namespace ezpwd {
 #endif
 		    }
 		} catch ( std::exception &exc ) {
-#if defined( DEBUG ) && DEBUG >= 2 // should see only when base64::decode fails
+#if defined( DEBUG ) && DEBUG >= 2 // should see only when ezpwd::reed_solomon<...>::decode fails
 		    std::cout << "invalid part parity password: " << exc.what() << std::endl;
 #endif
 		}
@@ -1649,7 +1661,8 @@ namespace ezpwd {
 		
 	    }
 
-	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidicen > 0.
+	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidence > 0.
+	    // Otherwise, select the best guess and return its confidence.
 	    confidence			= 0;
 	    typename best_avg::const_iterator
 				bi	= best.best();
