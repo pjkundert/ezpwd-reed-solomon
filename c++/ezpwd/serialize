@@ -1,0 +1,368 @@
+/*
+ * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
+ * 
+ * Copyright (c) 2014, Hard Consulting Corporation.
+ *
+ * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
+ * the GNU General Public License as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.  See the LICENSE file at the top of the
+ * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The c++/ezpwd/rs
+ * file is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
+ * 
+ * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+ * the GNU General Public License for more details.
+ */
+#ifndef _EZPWD_SERIALIZE
+#define _EZPWD_SERIALIZE
+
+#include "array_safe"
+
+// 
+// encode -- binary data to ASCII
+// decode -- ASCII to binary data
+// 
+//     Transform iterable containers of char between ASCII symbols and binary data, always in-place.
+// The decode may alter the size of the result (by ignoring whitespace).
+// 
+namespace ezpwd {
+    namespace serialize {
+	// 
+	// encode -- iterate over range, encoding binary data to ASCII symbols using the table
+	// 
+	//     Items from iterator must be convertible to a table index (ie. not -'ve, and within
+	// the table size N).  If the table contains 'ws' entries, they may optionally be ignored.
+	// If the input symbol indexes outside the provided table (or an 'nv' entry), then an
+	// exception will be thrown.
+	// 
+	enum chr_t {
+	    nv		= -1,  // invalid
+	    ws		= -2,  // whitespace
+	};
+
+	template < typename iter_t, size_t N >
+	iter_t			encode(
+				    iter_t		begin,
+				    iter_t		end,
+				    const ezpwd::array<char,N>
+						       &table )
+	{
+	    for ( iter_t i = begin; i != end; ++i ) {
+		size_t		ti( *i );
+		if ( ti < table.size() )
+		    *i			= table[ti];
+		else
+		    throw std::runtime_error( "ezpwd::serialize::encode: invalid binary symbol presented" );
+	    }
+	    return end;
+	}
+
+	// 
+	// decode -- iterate over range, encoding ASCII symbols to binary data using the table
+	// 
+	//     Items from iterator must be convertible to a table index (ie. not -'ve, and within
+	// the table size, which is always 127).
+	// 
+	enum ws_use_t {
+	    ws_invalid	= 0,
+	    ws_ignore	= 1,
+	};
+
+	template < typename iter_t >
+	iter_t			decode(
+				    iter_t		begin,
+				    iter_t		end,
+				    std::vector<int>   *erasure,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid,	//   and return the symbols
+				    ws_use_t		ws_use,
+				    const ezpwd::array<char,127>
+						       &table )
+	{
+	    if ( erasure )
+		erasure->clear();
+	    if ( invalid )
+		invalid->clear();
+	    iter_t		i, o;
+	    for ( i = o = begin; i != end; ++i ) {
+		size_t		ti( *i );
+		char		c	= ti < table.size() ? table[ti] : char( nv );
+		if ( ws == c and ws_ignore == ws_use )
+		    continue;
+		if ( c < 0 ) {
+		    // Invalid symbol (or whitespace); optionally remember them.  Mark as erasure?  Or throw.
+		    if ( invalid )
+			invalid->push_back( *i );
+		    if ( erasure ) {
+			erasure->push_back( o - begin );// index of offending symbol in output
+			c		= 0;		//   will be output w/ 0 value
+		    } else {
+			throw std::runtime_error( "ezpwd::serialize::decode: invalid ASCII symbol presented" );
+		    }
+		}
+		*o++			= c;
+	    }
+	    return o;
+	}
+
+    } // namespace serialize
+
+    // 
+    // ezpwd::base32 -- transform individual characters between 5-bit binary and a base-32 encoding
+    // 
+    //     The char values [0,32) are mapped by base32::encode onto:
+    // 
+    //         0123456789ABCDEFGHJKLMNPQRTUVWXY
+    // 
+    // and base32::decode performs the inverse.  In addition to folding lower-case to upper-case,
+    // the following mappings occur on decode:
+    // 
+    //    O -> 0
+    //    Z -> 2
+    //    S -> 5
+    //    I -> 1
+    // 
+    //    Any characters encountered outside [0,32) by encode and outsside the above set by decode
+    // raise an exception, unless an erasure vector is provided, in which case we supply a 0 value
+    // and store the index of the invalid symbol in the vector.
+    // 
+    namespace base32 {
+	using serialize::ws;
+	using serialize::nv;
+	using serialize::ws_use_t;
+	using serialize::ws_ignore;
+	using serialize::ws_invalid;
+
+	static const ezpwd::array<char,32> encoder_standard = { {  // RFC 4648 Standard
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+		'Y', 'Z', '2', '3', '4', '5', '6', '7', 
+	    } };
+	static const ezpwd::array<char,32> encoder_crockford = { {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+		'G', 'H', 'J', 'K', 'M', 'N', 'P', 'Q',
+		'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z',
+	    } };
+	static const ezpwd::array<char,32> encoder_ezpwd = { {
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+		'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P',
+		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y',
+	    } };
+	static const ezpwd::array<char,127> decoder_ezpwd = { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19, 20, 21, 22,  0, // @ABCDEFGHIJKLMNO
+		23, 24, 25,  5, 26, 27, 28, 29, 30, 31,  2, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19, 20, 21, 22,  0, // `abcdefghijklmno
+		23, 24, 25,  5, 26, 27, 28, 29, 30, 31,  2, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+
+	// 
+	// base32::encode(<string>)	-- encode the supplied sequence of data in the domain (0,32] to base-32 
+	// base32::encode(<iter>,<iter>)-- encode the supplied std::string of (0,32] symbols in-place to base-32
+	// 
+	template < typename iter_t >
+        iter_t			encode(
+				    iter_t		begin,
+				    iter_t		end,
+				    const ezpwd::array<char,32>
+						       &table	= base32::encoder_ezpwd )
+	{
+	    return serialize::encode( begin, end, table );
+	}
+
+	inline
+	std::string	       &encode(
+				    std::string	       &symbols,
+				    const ezpwd::array<char,32>
+						       &table	= base32::encoder_ezpwd )
+	{
+	    base32::encode( symbols.begin(), symbols.end(), table );
+	    return symbols;
+	}
+
+	// 
+	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
+	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
+	// 
+	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws
+	// exception.  Ignores whitespace.  Will return an iterator to just after the last output
+	// symbol used in the provided range (eg. to shorten the ), leaving any remaining symbols
+	// unchanged.  The <string> version returns the same string reference passed in.
+	// 
+	//     If an invalid vector is supplied, we'll also return the offending input symbol(s); if
+	// an exception is raised (no erasure vector supplied), only one symbol will be in invalid.
+	// 
+	// NOTE: will quite likely return an iterator before the supplied 'end', indicating
+	// that the output has been truncated (shortened), due to collapsing spaces!
+	// 
+	template < typename iter_t >
+	iter_t			decode(
+				    iter_t		begin,
+				    iter_t		end,
+				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0,	//   and return the symbols
+				    ws_use_t		ws_use	= ws_ignore,
+				    const ezpwd::array<char,127>
+						       &table	= base32::decoder_ezpwd )
+	{
+	    return serialize::decode( begin, end, erasure, invalid, ws_use, table );
+	}
+
+	inline
+	std::string	       &decode(
+				    std::string	       &symbols,
+				    std::vector<int>   *erasure = 0,
+				    std::vector<char>  *invalid	= 0,
+				    ws_use_t		ws_use	= ws_ignore,
+				    const ezpwd::array<char,127>
+						       &table	= base32::decoder_ezpwd )
+	{
+	    auto		last	= base32::decode( symbols.begin(), symbols.end(), erasure, invalid,
+						  ws_use, table );
+	    if ( last != symbols.end() )
+		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
+	    return symbols;
+	}
+
+    } // namespace ezpwd::base32
+
+    // 
+    // ezpwd::base64 -- transform individual characters between 6-bit binary and base64
+    // 
+    //     The char values [0,64) are mapped by base64::encode onto either the
+    // standard or ezpwd (url-safe) tables:
+    // 
+    //         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/
+    //         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_
+    // 
+    // and base64::decode performs the inverse (handles both standard and url-safe encodings).
+    // 
+    //    Any characters encountered outside [0,64) by encode and outside the above set
+    // by decode raise an exception.
+    // 
+    namespace base64 {
+	using serialize::ws;
+	using serialize::nv;
+	using serialize::ws_use_t;
+	using serialize::ws_ignore;
+	using serialize::ws_invalid;
+
+	static ezpwd::array<char,64> encoder_standard = { {
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+		'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+		'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+		'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+		'w', 'x', 'y', 'z', '0', '1', '2', '3',
+		'4', '5', '6', '7', '8', '9', '+', '/',
+	} };
+	static ezpwd::array<char,64> encoder_url = { {
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+		'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+		'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+		'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+		'w', 'x', 'y', 'z', '0', '1', '2', '3',
+		'4', '5', '6', '7', '8', '9', '-', '_', 
+	} };
+	static ezpwd::array<char,127> decoder_standard = { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, nv, nv, 63, //  !"#$%&`()*+,-./
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+	static ezpwd::array<char,127> decoder_url = { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, nv, //  !"#$%&`()*+,-./
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, 63, // PQRSTUVWXYZ[\]^_
+		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+	static ezpwd::array<char,127> decoder_either = { { // will accept either standard or ezpwd encoding
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, 62, nv, 63, //  !"#$%&`()*+,-./
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, 63, // PQRSTUVWXYZ[\]^_
+		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
+		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+	static ezpwd::array<char,64>  &encoder_ezpwd = encoder_standard;
+	static ezpwd::array<char,127> &decoder_ezpwd = decoder_standard;
+
+	// 
+	// base64::encode(<string>)	-- encode the supplied sequence of data in the domain (0,64] to base-64
+	// base32::encode(<iter>,<iter>)-- encode the supplied std::string of (0,64] symbols in-place to base-64
+	// 
+	template < typename iter_t >
+        iter_t			encode(
+				    iter_t		begin,
+				    iter_t		end,
+				    const ezpwd::array<char,64>
+						       &table	= base64::encoder_ezpwd )
+	{
+	    return serialize::encode( begin, end, table );
+	}
+
+	inline
+	std::string	       &encode(
+				    std::string	       &symbols,
+				    const ezpwd::array<char,64>
+						       &table	= base64::encoder_ezpwd )
+	{
+	    base64::encode( symbols.begin(), symbols.end(), table );
+	    return symbols;
+	}
+
+	// 
+	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
+	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
+	// 
+	template < typename iter_t >
+	iter_t			decode(
+				    iter_t		begin,
+				    iter_t		end,
+				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0,	//   and return the symbols
+				    ws_use_t		ws_use	= ws_ignore,
+				    const ezpwd::array<char,127>
+						       &table	= base64::decoder_ezpwd )
+	{
+	    return serialize::decode( begin, end, erasure, invalid, ws_use, table );
+	}
+
+	inline
+	std::string	       &decode(
+				    std::string	       &symbols,
+				    std::vector<int>   *erasure = 0,
+				    std::vector<char>  *invalid	= 0,
+				    ws_use_t		ws_use	= ws_ignore,
+				    const ezpwd::array<char,127>
+						       &table	= base64::decoder_ezpwd )
+	{
+	    auto		last	= base64::decode( symbols.begin(), symbols.end(), erasure, invalid,
+						  ws_use, table );
+	    if ( last != symbols.end() )
+		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
+	    return symbols;
+	}
+
+    } // namespace ezpwd::base64
+} // namespace ezpwd
+
+#endif // _EZPWD_SERIALIZE

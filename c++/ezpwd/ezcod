@@ -1,3 +1,18 @@
+/*
+ * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
+ * 
+ * Copyright (c) 2014, Hard Consulting Corporation.
+ *
+ * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
+ * the GNU General Public License as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.  See the LICENSE file at the top of the
+ * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The c++/ezpwd/rs
+ * file is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
+ * 
+ * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+ * the GNU General Public License for more details.
+ */
 #ifndef _EZPWD_EZCOD
 #define _EZPWD_EZCOD
 
@@ -8,6 +23,7 @@
 #include <cstdint>
 #include <ezpwd/rs>
 #include <ezpwd/output>
+#include <ezpwd/serialize>
 
 // 
 // EZCOD 3:10 location code w/ Reed-Solomon Error Correction, and average 3m accuracy
@@ -105,128 +121,6 @@
 
 
 namespace ezpwd {
-    // 
-    // ezpwd::base32 -- transform individual characters between 5-bit binary and a base-32 encoding
-    // 
-    //     The char values [0,32) are mapped by base32::encode onto:
-    // 
-    //         ABCDEFGHJKLMNPQRTUVWXY0123456789
-    // 
-    // and base32::decode performs the inverse.  In addition to folding lower-case to upper-case,
-    // the following mappings occur on decode:
-    // 
-    //    O -> 0
-    //    Z -> 2
-    //    S -> 5
-    //    I -> 1
-    // 
-    //    Any characters encountered outside [0,32) by encode and outsside the above set by decode
-    // raise an exception, unless an erasure vector is provided, in which case we supply a 0 value
-    // and store the index of the invalid symbol in the vector.
-    // 
-    namespace base32 {
-
-	static const ezpwd::array<int,32> chrs = { { // Must be in sorted order
-		'0', '1', '2', '3', '4', '5', '6', '7',
-		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-		'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P',
-		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y'
-	    } };
-
-	// 
-	// encode(<string>)	-- encode the supplied sequence of data in the domain (0,32] to base-32 
-	// encode(<iter>,<iter>)-- encode the supplied std::string of (0,32] symbols in-place to base-32
-	// 
-	template < typename iter>
-        iter			encode(
-				    iter	begin,
-				    iter	end )
-	{
-	    for ( iter i = begin; i != end; ++i ) {
-		if ( *i >= 0 && size_t( *i ) < chrs.size() )
-		    *i			= chrs[*i];
-		else
-		    throw std::runtime_error( "ezpwd::base32::encode: invalid symbol presented" );
-	    }
-	    return end;
-	}
-
-	inline
-	std::string	       &encode(
-				    std::string	       &symbols )
-	{
-	    encode( symbols.begin(), symbols.end() );
-	    return symbols;
-	}
-
-	// 
-	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
-	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
-	// 
-	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws
-	// exception.  Ignores whitespace.  Will return an iterator to just after the last output
-	// symbol used in the provided range (eg. to shorten the ), leaving any remaining symbols
-	// unchanged.  The <string> version returns the same string reference passed in.
-	// 
-	//     If an invalid vector is supplied, we'll also return the offending input symbol(s); if
-	// an exception is raised (no erasure vector supplied), only one symbol will be in invalid.
-	// 
-	// NOTE: will quite likely return an iterator before the supplied 'end', indicating
-	// that the output has been truncated (shortened), due to collapsing spaces!
-	// 
-	template < typename iter >
-	iter			decode(
-				    iter		begin,
-				    iter		end,
-				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
-				    std::vector<char>  *invalid	= 0 )	//   and return the symbols
-	{
-	    if ( erasure )
-		erasure->clear();
-	    if ( invalid )
-		invalid->clear();
-	    iter		i, o;
-	    for ( i = begin, o = begin; i != end; ++i ) {
-		if ( ::isspace( *i ))
-		    continue;
-		if ( ::islower( *i ))
-		    *i	        = ::toupper( *i );
-		switch ( *i ) {
-		case 'Z': *i = '2'; break;
-		case 'O': *i = '0'; break;
-		case 'S': *i = '5'; break;
-		case 'I': *i = '1'; break;
-		}
-		auto 		chri	= std::search( chrs.begin(), chrs.end(), i, i+1 );
-		if ( chri == chrs.end() ) {
-		    // Invalid symbol; optionally remember them.  Mark as erasure?  Or throw.
-		    if ( invalid )
-			invalid->push_back( *i );
-		    if ( erasure ) {
-			erasure->push_back( o - begin );// index of offending symbol in output
-			chri		= chrs.begin();	//   will be output w/ 0 value
-		    } else {
-			throw std::runtime_error( "ezpwd::base32::decode: invalid symbol presented" );
-		    }
-		}
-		*o++			= chri - chrs.begin();
-	    }
-	    return o;
-	}
-
-	inline
-	std::string	       &decode(
-				    std::string	       &symbols,
-				    std::vector<int>   *erasure = 0,
-				    std::vector<char>  *invalid	= 0 )
-	{
-	    auto		last	= decode( symbols.begin(), symbols.end(), erasure, invalid );
-	    if ( last != symbols.end() )
-		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
-	    return symbols;
-	}
-
-    } // namespace ezpwd::base32
 
     class ezcod_base {
     public:
@@ -598,9 +492,9 @@ namespace ezpwd {
 	    //                     |   longitude error bar
 	    //                     |   /
 	    //                  |--x--| 
-	    //                     |\
-	    //                     |  \
-	    //                     -   computed
+	    //                    /|
+	    //                   / |
+	    //           computed  -
 	    // 
 	    // The maximum distance is the length of the diagonal of the error rectangle defined by
 	    // 1/2 the latitude/longitude error bars.

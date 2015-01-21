@@ -1,7 +1,8 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11 # -DDEBUG=1 -DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DDEBUG=2
-CXX		= clang++ # g++ 4.9.0 fails rspwd-test at all optimization levels!
+CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11
+CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+CXX		= clang++
 #CXX		= g++
 
 EMSDK		= ./emscripten/emsdk_portable
@@ -74,11 +75,13 @@ testbin:	bintest
 testjs:		jstest
 	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./ezcod_test.js
 
-rspwd-test.js:	rspwd-test.C rspwd.C c++/ezpwd/rs		\
+rspwd-test.js:	rspwd-test.C rspwd.C				\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-js/ezpwd/rspwd.js: rspwd.C c++/ezpwd/rs				\
+js/ezpwd/rspwd.js: rspwd.C					\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@ 
 
@@ -86,7 +89,9 @@ js/ezpwd/rspwd.js: rspwd.C c++/ezpwd/rs				\
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
 ezcod:		ezcod.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-js/ezpwd/ezcod.js:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
+js/ezpwd/ezcod.js: ezcod.C ezcod.h c++/ezpwd/ezcod		\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@ 
 
 clean:
@@ -100,7 +105,7 @@ clean:
 	      ezcod_test	ezcod_test.o	ezcod_test.js
 	make -C phil-karn clean
 
-rsexample.o:	rsexample.C c++/ezpwd/rs
+rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rsexample.js:	rsexample.C c++/ezpwd/rs
@@ -128,7 +133,7 @@ rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs
+rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rspwd-test:	rspwd-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 

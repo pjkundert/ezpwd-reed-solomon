@@ -1,0 +1,378 @@
+/*
+ * Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
+ * 
+ * Copyright (c) 2014, Hard Consulting Corporation.
+ *
+ * Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
+ * the GNU General Public License as published by the Free Software Foundation, either version 3 of
+ * the License, or (at your option) any later version.  See the LICENSE file at the top of the
+ * source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The c++/ezpwd/rs
+ * file is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
+ * 
+ * Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+ * without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+ * the GNU General Public License for more details.
+ */
+#ifndef _EZPWD_CORRECTOR
+#define _EZPWD_CORRECTOR
+
+#include "rs"
+#include "serialize"
+
+namespace ezpwd {
+
+    // 
+    // best_avg -- collect <password>,<confidence> guesses, and return the unambiguous best one
+    //
+    typedef std::map<std::string, std::pair<int, int>> // (<password>, (<count>, <avgsum>))
+        			best_avg_base_t;
+    class best_avg
+        : public best_avg_base_t
+    {
+    public:
+        using best_avg_base_t::begin;
+        using best_avg_base_t::end;
+        using best_avg_base_t::insert;
+        using best_avg_base_t::find;
+        using best_avg_base_t::iterator;
+        using best_avg_base_t::const_iterator;
+        using best_avg_base_t::value_type;
+        using best_avg_base_t::mapped_type;
+        // 
+        // add -- add the given pct to the current average for <string> str
+        // 
+        iterator		add(
+	    			    const std::string  &str,
+	    			    int			pct )
+        {
+	    iterator		i	= find( str );
+	    if ( i == end() )
+		i 			= insert( i, value_type( str, mapped_type() ));
+	    i->second.first	       += 1;
+	    i->second.second           += pct;
+	    return i;
+        }
+
+        // 
+        // best -- return the unambiguously best value (average is >, or == but longer), or end()
+        // 
+        const_iterator		best()
+	    const
+        {
+	    const_iterator	top	= end();
+	    bool		uni	= false;
+	    for ( const_iterator i = begin(); i != end(); ++i ) {
+		if ( top == end()
+		     or i->second.second/i->second.first > top->second.second/top->second.first
+		     or ( i->second.second/i->second.first == top->second.second/top->second.first
+			  and i->first.size() > top->first.size())) {
+		    top			= i;
+		    uni			= true;
+		} else if ( i->second.second/i->second.first == top->second.second/top->second.first
+			    and i->first.size() == top->first.size()) {
+		    uni			= false;
+		}
+	    }
+	    return uni ? top : end();
+        }
+
+        // 
+        // evaluation -- process a (<password>,(<count>,<avgsum>)) into (<average>,<password>)
+        // sort -- return a multimap indexed by <average> --> <string>
+        // output -- output the <string>: <average>, sorted by average
+        // 
+        static std::pair<const int,const std::string &>
+				evaluation( const value_type &val )
+        {
+	    return std::pair<const int,const std::string &>( val.second.second/val.second.first, val.first );
+        }
+        typedef std::multimap<const int,const std::string &>
+        			sorted_t;
+        sorted_t		sort()
+	    const
+        {
+	    sorted_t		dst;
+	    std::transform( begin(), end(), std::inserter( dst, dst.begin() ), evaluation );
+	    return dst;
+        }
+        std::ostream           &output(
+				    std::ostream       &lhs )
+	    const
+        {
+	    for ( auto i : sort() )
+		lhs	<< std::setw( 16 ) << i.second
+			<< ": " << std::setw( 3 ) << i.first
+			<< std::endl;
+	    return lhs;
+        }
+    };
+} // namespace ezpwd
+
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const ezpwd::best_avg &rhs )
+{
+    return rhs.output( lhs );
+}
+
+namespace ezpwd {
+    // 
+    // ezpwd::corrector -- Apply statistical corrections to a string, returning the confidence
+    // 
+    //     All methods are static; no instance is required, as this is primarily used to create
+    // external language APIs.
+    // 
+    template < size_t N >
+    class corrector {
+    public:
+	// 
+	// parity(<string>) -- Returns 'N' base-64 symbols of R-S parity to the supplied password
+	// 
+	static std::string	parity(
+				    const std::string  &password )
+	{
+	    std::string		parity;
+	    rscodec.encode( password, parity );
+	    base64::encode( parity );
+	    return parity;
+	}
+
+	// 
+	// encode(<string>) -- append N base-64 parity symbols to password
+	// 
+	//     The supplied password buffer size must be sufficient to contain N additional symbols, plus
+	// the terminating NUL.  Returns the resultant encoded password size (excluding the NUL).
+	// 
+	static size_t		encode(
+				    std::string        &password )
+	{
+	    password		       += parity( password );
+	    return password.size();
+	}
+
+	static size_t		encode(
+				    char       	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    size_t		len	= ::strlen( password );	// length w/o terminating NUL
+	    if ( len + N + 1 > size )
+		throw std::runtime_error( "ezpwd::rspwd::encode password buffer has insufficient capacity" );
+	    std::string		par	= parity( std::string( password, password + len ));
+	    if ( par.size() != N )
+		throw std::runtime_error( "ezpwd::rspwd::encode computed parity with incorrect size" );
+	    std::copy( par.begin(), par.end(), password + len );
+	    len			       += N;
+	    password[len]		= 0;
+	    return len;
+	}
+
+	// 
+	// decode(<string>) -- Applies R-S error correction on the encoded string, removing parity
+	// 
+	//     Up to 'N' Reed-Solomon parity symbols are examined, to determine if the supplied
+	// string is a valid R-S codeword and hence very likely to be correct.
+	// 
+	//     Returns a confidence strength rating, which is the ratio:
+	// 
+	//         100 - ( errors * 2 + erasures ) * 100 / parity
+	// 
+	// if an R-S codeword was solved, and 0.0 otherwise.  If a codeword is solved, but the
+	// number of errors and erasures corrected indicates that all parity was consumed, we do not
+	// use the corrected string, because there is a chance that our R-S polynomial was
+	// overwhelmed with errors and actually returned an incorrect codeword.  Therefore,
+	// a solving a codeword using all parity results in 100 - N * 100 / N == 0, which matches
+	// the strength of the final 
+	// 
+	//     Supports the following forms of error/erasure:
+	// 
+	// 0) Full parity.  All data and parity supplied, and an R-S codeword is solved.
+	// 
+	// 1) Partial parity.  All data and some parity supplied; remainder are deemed erasures.
+	// 
+	//     If N > 2, then up to N/2-1 trailing parity terms are marked as erasures.  If the R-S
+	// codeword is solved and a safe number of errors are found, then we can have reasonable
+	// confidence that the string is correct.
+	// 
+	//   1a) Erase errors.  Permute the combinations of up to N-1 erasures.
+	// 
+	// o) Raw password.  No parity terms supplied; not an R-S codeword
+	// 
+	//     If none of the error/erasure forms succeed, the password is returned unmodified.
+	// 
+	static
+	int			decode(
+				    std::string	       &password )
+	{
+	    int			confidence;
+	    best_avg		best;
+
+	    // Full/Partial parity.  Apply some parity erasure if we have some erasure/correction
+	    // capability while maintaining at least one excess parity symbol for verification.
+	    // This can potentially result in longer password being returned, if the R-S decoder
+	    // accidentally solves a codeword.
+	    // 
+	    // For example, if N=3 (or 4) then (N+1)/2 == 2, and we would only attempt up to 1
+	    // parity erasure.  This would leave 1 parity symbol to replace the 1 erasure, and 1
+	    // remaining to validate the integrity of the password.
+	    // 
+	    // The password must be long enough to contain at least 1 non-parity symbol, and the
+	    // designated number of non-erased parity symbols!  However, by convention we'll demand
+	    // that the password contain at least N symbols -- any less, and we can accidentally
+	    // correct the few remaining password symbols.
+	    // 
+	    // Also, if any parity symbols won't decode (eg. were entered in error), we must deem
+	    // them to be erasures, too, and if the number of erasures exceeds the capacity of the
+	    // R-S codec, it'll fail (throw an exception, or at best solve with 0 confidence).
+	    for ( size_t era = 0 // how many parity symbols to deem erased
+		      ; era < (N+1)/2
+		      ; ++era ) {
+		if ( password.size() < N + N - era )
+		    continue; // too few password symbols to start checking parity
+		// Copy password, adding 'era' additional NULs
+		std::string		fixed( password.size() + era, 0 );
+		std::copy( password.begin(), password.end(), fixed.begin() );
+
+		// Decode the base64 parity, denoting any invalid (mistyped) symbols as erasures
+		// (adjust erasure offsets to be from start of password, not start of parity).  All
+		// newly added 'era' symbols will be NUL, and will be invalid.  After decoding
+		// parity, if we've slipped below our minimum R-S capacity threshold (ie. because of
+		// mistyped parity symbols), don't attempt
+		std::vector<int>	erasure;
+		base64::decode( fixed.begin() + fixed.size() - N,
+				fixed.begin() + fixed.size(), &erasure, 0, base64::ws_invalid );
+		if ( erasure.size() >= (N+1)/2 )
+		    continue;
+		for ( auto &o : erasure )
+		    o			       += fixed.size() - N;
+
+		// Enough parity to try to decode.  A successful R-S decode with 0 (remaining)
+		// confidence indicates a successfully validated R-S codeword!  Use it.
+		try {
+		    std::vector<int>	position;
+		    int			corrects= rscodec.decode( fixed, erasure, &position );
+		    confidence			= strength<N>( corrects, erasure, position );
+		    if ( confidence >= 0 ) {
+			std::string	candidate( fixed, 0, fixed.size() - N );
+			best.add( candidate, confidence  );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << "Reed-Solomon w/ "	<< era << " of " << N
+			    << " parity erasures "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< candidate
+			    << "\" (corrects: "		<< corrects 
+			    << ", erasure at "		<< erasure
+			    << ", fixed at "		<< position << "): "
+			    << std::endl
+			    << best;
+#endif
+		    }
+		} catch ( std::exception &exc ) {
+#if defined( DEBUG ) && DEBUG >= 2 // should see only when ezpwd::reed_solomon<...>::decode fails
+		    std::cout << "invalid part parity password: " << exc.what() << std::endl;
+#endif
+		}
+	    }
+
+	    // Partial parity, but below threshold for usable error detection.  For the first 1 to
+	    // (N+1)/2 parity symbols (eg. for N == 3, (N+1)/2 == 1 ), we cannot perform meaningful
+	    // error or erasure detection.  However, if we see that the terminal symbols match the
+	    // R-S symbols we expect from a correct password, we'll ascribe a partial confidence due
+	    // to the matching parity symbols.
+	    //
+	    // password:    sock1t
+	    // w/ 3 parity: sock1tkeB
+	    // password ----^^^^^^
+	    //                    ^^^--- parity
+	    // 
+	    for ( size_t era = (N+1)/2 // how many parity symbols are not present
+		      ; era < N
+		      ; ++era ) {
+		if ( password.size() < N + N - era )
+		    continue; // too few password symbols to start checking parity
+		std::string	fixed	= password;
+		size_t		len	= password.size() - ( N - era );
+		fixed.resize( len );
+		encode( fixed );
+		auto		differs	= std::mismatch( fixed.begin(), fixed.end(), password.begin() );
+	        size_t		par_equ	= differs.second - password.begin();
+		if ( par_equ < len || par_equ > len + N )
+		    throw std::runtime_error( "miscomputed R-S parity matching length" );
+		par_equ		       -= len;
+		if ( par_equ > 0 ) {
+		    std::string	basic( fixed.begin(), fixed.begin() + len );
+		    confidence		=  par_equ * 100 / N; // each worth a normal parity symbol
+		    best.add( basic, confidence );
+#if defined( DEBUG ) && DEBUG >= 1
+			std::cout
+			    << "Check Chars. w/ "	<< era << " of " << N
+			    << " parity missing  "	<< std::setw( 3 ) << confidence
+			    << "% confidence: \"" 	<< password
+			    << "\" ==> \""		<< basic
+			    << " (from computed: \""	<< fixed << "\")"
+			    << ": "
+			    << std::endl
+			    << best;
+#endif
+		}
+	    }
+
+	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidence > 0.
+	    // Otherwise, select the best guess and return its confidence.
+	    confidence			= 0;
+	    typename best_avg::const_iterator
+				bi	= best.best();
+#if defined( DEBUG )
+	    std::cout
+		<< "Selected " 		<< ( bi != best.end() ? "corrected" : "unmodified" )
+		<< " password \""	<< ( bi != best.end() ? bi->first : password )
+		<< "\" (vs. \""		<< password
+		<< "\") w/ confidence "	<< (bi != best.end() ? bi->second.second : confidence )
+		<< "%, from: "
+		<< std::endl
+		<< best;
+#endif
+	    if ( bi != best.end() ) {
+		auto		better	= best.evaluation( *bi ); // --> (<average>,<password>)
+		password		= better.second;
+		confidence		= better.first;
+	    }
+	    return confidence;
+	}
+
+	// 
+	// decode(<char*>,<size_t>) -- C interface to decode(<string>)
+	// 
+	static int		decode(
+				    char	       *password,
+				    size_t		size )	// maximum available size
+	{
+	    std::string		corrected( password );
+	    int			confidence;
+	    try {
+		confidence			= decode( corrected );
+		if ( corrected.size() + 1 > size )
+		    throw std::runtime_error( "password buffer has insufficient capacity" );
+		std::copy( corrected.begin(), corrected.end(), password );
+		password[corrected.size()]	= 0;
+	    } catch ( std::exception &exc ) {
+		confidence 			= 0;
+	    }
+	    return confidence;
+	}
+	// 
+	// rscodec -- A 6-bit RS(63,63-N) Reed-Solomon codec
+	// 
+	//     Encodes and decodes R-S symbols over the lower 6 bits of the supplied data.  Requires
+	// that the last N (parity) symbols of the data are in the range [0,63].  The excess bits on
+	// the data symbols are masked and restored during decoding.
+	// 
+	static RS_63(63-N)	rscodec;
+    };
+
+    template < size_t N >
+    RS_63(63-N)			corrector<N>::rscodec;
+
+} // namespace ezpwd
+
+#endif // _EZPWD_CORRECTOR

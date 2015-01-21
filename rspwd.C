@@ -1,5 +1,5 @@
 
-#include <ezpwd/rs>
+#include <ezpwd/corrector>
 #include "rspwd.h"
 
 // 

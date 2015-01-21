@@ -1,6 +1,7 @@
 
 #include <iostream>
 #include <ezpwd/rs>
+#include <ezpwd/corrector>
 #include <time.h>
 
 #ifndef NROOTS

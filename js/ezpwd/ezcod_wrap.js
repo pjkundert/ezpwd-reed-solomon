@@ -1,3 +1,19 @@
+//
+// Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
+// 
+// Copyright (c) 2014, Hard Consulting Corporation.
+//
+// Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
+// the GNU General Public License as published by the Free Software Foundation, either version 3 of
+// the License, or (at your option) any later version.  See the LICENSE file at the top of the
+// source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The c++/ezpwd/rs
+// file is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
+// 
+// Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+// the GNU General Public License for more details.
+//
+
 // 
 // string_to_heapi8	-- allocate buffer of (at least) len of type (eg. i8), initializing from str
 // heapi8_to_string	-- decode a JS string from the buffer, til NUL
@@ -28,8 +44,6 @@ function array_to_heap( typ, arr, len ) {
 function index_in_heap( typ, ptr, idx ) {
     return ptr + idx * Runtime.getNativeTypeSize( typ );
 }
-
-
 
 // 
 // ezcod_3_<N>_encode -- encodes the lat/lon as an ezcod 3:<N> code, returning the encoded string
