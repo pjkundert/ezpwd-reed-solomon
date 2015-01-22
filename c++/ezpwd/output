@@ -1,6 +1,7 @@
-#ifndef _EZPWD_HEX
-#define _EZPWD_HEX
+#ifndef _EZPWD_OUTPUT
+#define _EZPWD_OUTPUT
 
+#include <streambuf>
 #include <iostream>
 #include <iomanip>
 
@@ -18,6 +19,8 @@
 //     Output unprintable unsigned char data in hex, escape printable/space data.
 //
 namespace ezpwd {
+
+
     struct hexify {
 	unsigned char		c;
 	std::streamsize		w;
@@ -41,7 +44,9 @@ namespace ezpwd {
 				    : s( _s )
 	{ ; }
     };
+
 } // namespace ezpwd
+
 
 inline
 std::ostream		       &operator<<(
@@ -210,4 +215,86 @@ std::ostream		       &operator<<(
     return lhs;
 }
 
-#endif // _EZPWD_HEX
+
+// 
+// ezpwd::buf_t		-- describe a C string buffer, to allow C++ output operations
+// ezpwd::streambuf_to_buf_t -- output charcters, always NUL terminated
+// 
+// <buf_t> << ... -- Copy the <string> into the C <char*,size_t> buffer, always NUL terminating
+// 
+//     Copies <string> contents into buffer, and always NUL-terminates.  Returns advanced buf_t (NOT
+// including the terminating NUL, suitable for repeating ... << <string> operations.
+// 
+// std::ostream( &<streambuf_to_buf_t> ) << ...
+// 
+//     Use standard ostream operations to send output to a C buffer, always NUL
+// terminating, and never exceeding capacity.
+// 
+namespace ezpwd {
+
+    typedef std::pair<char *,size_t>
+				buf_t;
+
+    class streambuf_to_buffer
+	: public std::streambuf {
+    private:
+	char	       	       *_buf;
+	size_t			_siz;
+    public:
+	//
+	//  streambuf_to_buf_t -- remember buf_t details
+	// ~streambuf_to_buf_t -- no virtual destructor required; nothing to clean up
+	// 
+    			streambuf_to_buffer(
+			    char	       *buf,
+			    size_t		siz )
+			    : _buf( buf )
+			    , _siz( siz )
+	{
+	    if ( _siz > 0 )
+		*_buf		= 0;
+	}
+    			streambuf_to_buffer(
+			    const buf_t	       &buf )
+			    : streambuf_to_buffer( buf.first, buf.second )
+	{
+	    ;
+	}
+			      
+	// 
+	// overflow -- Append c, always NUL terminating
+	// 
+	virtual int	overflow(
+			    int			c )
+	{
+	    if ( _siz <= 1 )
+		return EOF; 			// No room for c and NUL; EOF
+	    if ( EOF == c )
+		return 0;			// EOF provided; do nothing
+	    --_siz;
+	    *_buf++		= char( c );
+	    *_buf		= 0;
+	    return c;
+	}
+    }; // class streambuf_to_buffer
+} // namespace ezpwd
+
+inline
+ezpwd::buf_t		operator<<(
+			    const ezpwd::buf_t &buf,
+			    const std::string  &str )
+{
+    if ( buf.first && str.size() + 1 <= buf.second ) {
+	std::copy( str.begin(), str.end(), buf.first );
+	buf.first[str.size()]		= 0;
+	return ezpwd::buf_t( buf.first + str.size(), buf.second - str.size() );
+    } else if ( buf.first && buf.second ) {
+	std::copy( str.begin(), str.begin() + buf.second - 1, buf.first );
+	buf.first[buf.second-1]		= 0;
+	return ezpwd::buf_t( buf.first + buf.second - 1, 1 );
+    }
+    return buf; // NULL pointer or 0 size.
+}
+
+
+#endif // _EZPWD_OUTPUT

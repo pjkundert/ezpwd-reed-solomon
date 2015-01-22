@@ -85,6 +85,18 @@ int				main( int argc, char **argv )
     if ( argc > 1 )
 	std::istringstream( argv[1] ) >> symbols;
 
+    // Tests of basic facilities
+    char			buf[16]	= { 0 };
+    ezpwd::streambuf_to_buffer	sbf( buf, sizeof buf );
+    std::ostream 		obf( &sbf );
+
+    obf << "String" << ' ' << 123 << std::endl;
+    assert.ISEQUAL( strlen( buf ), size_t( 11 ));
+    assert.ISEQUAL( strcmp( buf, "String 123\n" ), 0 );
+    obf << "Too Long!";
+    assert.ISEQUAL( strcmp( buf, "String 123\nToo " ), 0 );
+
+
     std::string			abc	= "0123abcz";
     std::string			dec	= abc;
     ezpwd::base32::decode( dec );
@@ -155,7 +167,7 @@ int				main( int argc, char **argv )
 	    assert.ISTRUE( false, exc.what() );
 	    std::cout << "On " << *e << ": " << assert;
 	}
-
+	std::cout << *e << std::endl;
     }
 
     ezpwd::ezcod<1>		edm1( lat, lon );

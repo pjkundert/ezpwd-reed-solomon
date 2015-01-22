@@ -9,29 +9,6 @@
 #endif
 
 // 
-// <buf_t> << <string> -- Copy the <string> into the C <char*,size_t> buffer, always NUL terminating
-// 
-//     Copies <string> contents into buffer, and always NUL-terminates.  Returns advanced buf_t (NOT
-// including the terminating NUL, suitable for repeating ... << <string> operations.
-// 
-typedef std::pair<char *,size_t> buf_t;
-buf_t			operator<<(
-			    const buf_t	       &buf,
-			    const std::string  &str )
-{
-    if ( buf.first && str.size() + 1 <= buf.second ) {
-	std::copy( str.begin(), str.end(), buf.first );
-	buf.first[str.size()]		= 0;
-	return buf_t( buf.first + str.size(), buf.second - str.size() );
-    } else if ( buf.first && buf.second ) {
-	std::copy( str.begin(), str.begin() + buf.second - 1, buf.first );
-	buf.first[buf.second-1]		= 0;
-	return buf_t( buf.first + buf.second - 1, 1 );
-    }
-    return buf; // NULL pointer or 0 size.
-}
-
-// 
 // Encode lat/lon with default worst-case 3m. accuracy: 1 part in 2^22 Latitude, 2^23 Longitude.
 // 
 template < size_t P=1, size_t L=9 >
@@ -52,19 +29,20 @@ int				ezcod_3_encode(
 	<< std::endl;
 #endif
     int				res;
-    std::string			str;
     try {
-	ezpwd::ezcod<P,L>	loc( lat, lon );
-	str				= loc.encode();
-	res				= str.size();
+	const std::string      &str( ezpwd::ezcod<P,L>( lat, lon ).encode() );
 	if ( str.size() + 1 > siz )
-	    throw std::runtime_error( "ezcod_3_encode: insufficient buffer provided" );
+	    throw std::runtime_error( "insufficient buffer provided" );
+	std::copy( str.begin(), str.end(), enc );
 	res				= str.size();
+	enc[res]			= 0;
     } catch ( std::exception &exc ) {
-	str				= exc.what();
+	ezpwd::streambuf_to_buffer sbf( enc, siz );
+	std::ostream( &sbf )
+	    << "ezcod_3_encode<" << P << "," << L << ">(" << lat << ", " << lon << ") failed: "
+	    << exc.what();
 	res				= -1;
     }
-    buf_t( enc, siz ) << str;
     return res;
 }
 
@@ -73,39 +51,41 @@ int				ezcod_3_encode(
 // 
 template < size_t P=1, size_t L=9 >
 int				ezcod_3_decode(
-				    char	       *dec,
+				    char	       *buf,
 				    size_t		siz,
 				    double	       *lat	= 0,
 				    double	       *lon	= 0,
 				    double	       *acc	= 0 )
 {
-    int				res;
-    std::string			str;
+    int				confidence;
+    std::string			location( buf );
+    ezpwd::ezcod<P,L>		decoder( location );
     try {
-	ezpwd::ezcod<P,L>	loc;
-	res				= loc.decode( dec );
+	confidence			= decoder.confidence;
 #if defined( DEBUG ) && DEBUG > 1
-    std::cout
-	<< "ezcod_3_decode<" << P << "," << L << ">("
-	<< " lat (" << (void *)lat << ") == " << loc.latitude
-	<< ", lon (" << (void *)lon << ") == " << loc.longitude
-	<< ", acc (" << (void *)acc << ") == " << loc.accuracy
-	<< std::endl;
+	std::cout
+	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location
+	    << "\") == " << confidence << "% confidence: "
+	    << " lat (" << (void *)lat << ") == " << decoder.latitude
+	    << ", lon (" << (void *)lon << ") == " << decoder.longitude
+	    << ", acc (" << (void *)acc << ") == " << decoder.accuracy
+	    << std::endl;
 #endif
 	if ( lat )
-	    *lat			= loc.latitude;
+	    *lat			= decoder.latitude;
 	if ( lon )
-	    *lon			= loc.longitude;
+	    *lon			= decoder.longitude;
 	if ( acc )
-	    *acc			= loc.accuracy;
+	    *acc			= decoder.accuracy;
     } catch ( std::exception &exc ) {
-	str				= exc.what();
-	res				= -1;
+	ezpwd::streambuf_to_buffer	sbf( buf, siz );
+	std::ostream( &sbf )
+	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location << "\") failed: "
+	    << exc.what();
+	confidence			= -1;
     }
-    buf_t( dec, siz ) << str;
-    return res;
+    return confidence;
 }
-
 
 extern "C" {
 

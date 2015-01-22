@@ -201,7 +201,8 @@ namespace ezpwd {
 	// 
 	static
 	int			decode(
-				    std::string	       &password )
+				    std::string	       &password,
+				    size_t		minimum = N )
 	{
 	    int			confidence;
 	    best_avg		best;
@@ -226,7 +227,7 @@ namespace ezpwd {
 	    for ( size_t era = 0 // how many parity symbols to deem erased
 		      ; era < (N+1)/2
 		      ; ++era ) {
-		if ( password.size() < N + N - era )
+		if ( password.size() < ( minimum ? minimum : 1 ) + N - era )
 		    continue; // too few password symbols to start checking parity
 		// Copy password, adding 'era' additional NULs
 		std::string		fixed( password.size() + era, 0 );
@@ -288,7 +289,7 @@ namespace ezpwd {
 	    for ( size_t era = (N+1)/2 // how many parity symbols are not present
 		      ; era < N
 		      ; ++era ) {
-		if ( password.size() < N + N - era )
+		if ( password.size() < ( minimum ? minimum : 1 ) + N - era )
 		    continue; // too few password symbols to start checking parity
 		std::string	fixed	= password;
 		size_t		len	= password.size() - ( N - era );
@@ -341,22 +342,36 @@ namespace ezpwd {
 	}
 
 	// 
-	// decode(<char*>,<size_t>) -- C interface to decode(<string>)
+	// decode(<char*>,<size_t>,size_t) -- C interface to decode(<string>)
+	// 
+	//     Traditional C interface.  The provided NUL-terminated password+parity is decoded, and
+	// the confidence % is returned.
+	// 
+	//     An optional 'minimum' final password length may be provided; no R-S parity is assumed
+	// to exist in the first 'minimum' password characters (default: N).  This prevents
+	// accidentally finding valid R-S codewords in passwords of known minimum length; validation
+	// codes, for example.
+	// 
+	//     If any failure occurs, a -'ve value will be returned, and the supplied password
+	// buffer will be used to contain an error description.
 	// 
 	static int		decode(
 				    char	       *password,
-				    size_t		size )	// maximum available size
+				    size_t		maximum,	// maximum available size
+				    size_t		minimum	= N )	// minimum resultant password length
 	{
 	    std::string		corrected( password );
 	    int			confidence;
 	    try {
-		confidence			= decode( corrected );
-		if ( corrected.size() + 1 > size )
+		confidence			= decode( corrected, minimum );
+		if ( corrected.size() + 1 > maximum )
 		    throw std::runtime_error( "password buffer has insufficient capacity" );
 		std::copy( corrected.begin(), corrected.end(), password );
 		password[corrected.size()]	= 0;
 	    } catch ( std::exception &exc ) {
-		confidence 			= 0;
+		confidence 			= -1;
+		ezpwd::streambuf_to_buffer sbf( password, maximum );
+		std::ostream( &sbf ) << "corrector<" << N << "> failed: " << exc.what();
 	    }
 	    return confidence;
 	}
