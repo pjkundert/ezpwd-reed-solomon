@@ -58,7 +58,7 @@ jsprod:		js/ezpwd/rspwd.js				\
 jstest:		rsexample.js					\
 		rssimple.js					\
 		rsexercise.js					\
-		rspwd-test.js					\
+		rspwd_test.js					\
 		ezcod_test.js
 
 bintest:	rsexample					\
@@ -66,16 +66,16 @@ bintest:	rsexample					\
 		rsexercise					\
 		rscompare					\
 		rsvalidate					\
-		rspwd-test					\
+		rspwd_test					\
 		ezcod_test
 
 testbin:	bintest
-	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd-test; ./ezcod_test
+	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test
 
 testjs:		jstest
-	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd-test.js; node ./ezcod_test.js
+	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd_test.js; node ./ezcod_test.js
 
-rspwd-test.js:	rspwd-test.C rspwd.C				\
+rspwd_test.js:	rspwd_test.C rspwd.C				\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
@@ -95,14 +95,14 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h c++/ezpwd/ezcod		\
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@ 
 
 clean:
-	rm -f rsexample		rsexample.o	rsexample.js	\
-	      rssimple		rssimple.o	rssimple.js	\
-	      rsexercise	rsexercise.o	rsexercise.js	\
-	      rspwd-test	rspwd-test.o	rspwd-test.js	\
-	      rscompare		rscompare.o			\
-	      rsvalidate	rsvalidate.o			\
-	      ezcod		ezcod.o		ezcod.js	\
-	      ezcod_test	ezcod_test.o	ezcod_test.js
+	rm -f rsexample		rsexample.o	rsexample.js	rsexample.js.mem	\
+	      rssimple		rssimple.o	rssimple.js	rssimple.js.mem		\
+	      rsexercise	rsexercise.o	rsexercise.js	rsexercise.js.mem	\
+	      rspwd_test	rspwd_test.o	rspwd_test.js	rspwd_test.js.mem	\
+	      rscompare		rscompare.o						\
+	      rsvalidate	rsvalidate.o						\
+	      ezcod		ezcod.o		ezcod.js	ezcod.js.mem		\
+	      ezcod_test	ezcod_test.o	ezcod_test.js	ezcod_test.js.mem
 	make -C phil-karn clean
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
@@ -133,8 +133,8 @@ rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rspwd-test.o:	rspwd-test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
-rspwd-test:	rspwd-test.o
+rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rspwd_test:	rspwd_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
