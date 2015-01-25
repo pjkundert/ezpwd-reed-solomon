@@ -70,7 +70,7 @@ bintest:	rsexample					\
 		ezcod_test
 
 testbin:	bintest
-	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test
+	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test; ./rskey_test
 
 testjs:		jstest
 	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd_test.js; node ./ezcod_test.js
@@ -99,6 +99,7 @@ clean:
 	      rssimple		rssimple.o	rssimple.js	rssimple.js.mem		\
 	      rsexercise	rsexercise.o	rsexercise.js	rsexercise.js.mem	\
 	      rspwd_test	rspwd_test.o	rspwd_test.js	rspwd_test.js.mem	\
+	      rskey_test	rskey_test.o	rskey_test.js	rskey_test.js.mem	\
 	      rscompare		rscompare.o						\
 	      rsvalidate	rsvalidate.o						\
 	      ezcod		ezcod.o		ezcod.js	ezcod.js.mem		\
@@ -145,6 +146,9 @@ ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil
 ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
+rskey_test.o:	rskey_test.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rskey_test:	rskey_test.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 

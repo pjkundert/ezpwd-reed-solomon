@@ -20,3 +20,4 @@
 /phil-karn/gen_ccsds_tal
 /phil-karn/librs.a
 *.js.map
+/rskey_test

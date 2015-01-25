@@ -16,18 +16,32 @@
 #ifndef _EZPWD_SERIALIZE
 #define _EZPWD_SERIALIZE
 
+#include <iterator>
+
 #include "array_safe"
 
+
 // 
-// encode -- binary data to ASCII
-// decode -- ASCII to binary data
+// scatter -- 8-bit binary data into 5-bit (base32) and 6-bit (base64) chunks (optionally w/pad)
+// gather -- collect up 5/6-bit binary data back into 8-bit characters (optionally w/pad)
 // 
-//     Transform iterable containers of char between ASCII symbols and binary data, always in-place.
+//     Scatters or gathers 8-bit binary character data to 5/6-bit symbols, suitable for base32/64
+// encoding.
+// 
+// encode -- convert binary data to ASCII base32/64, in-place
+// decode -- convert ASCII base32/64 to binary data, in-place
+// 
+//     Transforms iterable containers of char between ASCII symbols and binary data, always in-place.
 // The decode may alter the size of the result (by ignoring whitespace).
+// 
+//     In general the ezpwd::base32/64 en/decoders are designed to produce easily human-usable
+// encodings, and can ignore common whitespace characters and '-' to allow human-readable
+// formatting.  The RFC4648 Standard base 32/64 and Crockford base32 encodings are also supported.
 // 
 namespace ezpwd {
     namespace serialize {
-	// 
+
+ 	// 
 	// encode -- iterate over range, encoding binary data to ASCII symbols using the table
 	// 
 	//     Items from iterator must be convertible to a table index (ie. not -'ve, and within
@@ -36,14 +50,16 @@ namespace ezpwd {
 	// exception will be thrown.
 	// 
 	enum chr_t {
-	    nv		= -1,  // invalid
-	    ws		= -2,  // whitespace
+	    pd		= -1,	// padding
+	    nv		= -2,	// invalid
+	    ws		= -3,	// whitespace
 	};
 
 	template < typename iter_t, size_t N >
 	iter_t			encode(
 				    iter_t		begin,
 				    iter_t		end,
+				    char		pad,		// optional pad char (for EOF)
 				    const ezpwd::array<char,N>
 						       &table )
 	{
@@ -51,6 +67,8 @@ namespace ezpwd {
 		size_t		ti( *i );
 		if ( ti < table.size() )
 		    *i			= table[ti];
+		else if ( *i == EOF and pad )
+		    *i			= pad;
 		else
 		    throw std::runtime_error( "ezpwd::serialize::encode: invalid binary symbol presented" );
 	    }
@@ -68,6 +86,12 @@ namespace ezpwd {
 	    ws_ignore	= 1,
 	};
 
+	enum pd_use_t {
+	    pd_invalid	= 0,
+	    pd_ignore	= 1,
+	    pd_keep	= 2,
+	};
+
 	template < typename iter_t >
 	iter_t			decode(
 				    iter_t		begin,
@@ -75,6 +99,7 @@ namespace ezpwd {
 				    std::vector<int>   *erasure,	// Deem invalid symbols as erasures
 				    std::vector<char>  *invalid,	//   and return the symbols
 				    ws_use_t		ws_use,
+				    pd_use_t		pd_use,
 				    const ezpwd::array<char,127>
 						       &table )
 	{
@@ -86,24 +111,37 @@ namespace ezpwd {
 	    for ( i = o = begin; i != end; ++i ) {
 		size_t		ti( *i );
 		char		c	= ti < table.size() ? table[ti] : char( nv );
-		if ( ws == c and ws_ignore == ws_use )
-		    continue;
-		if ( c < 0 ) {
-		    // Invalid symbol (or whitespace); optionally remember them.  Mark as erasure?  Or throw.
+		if ( ws == c ) {
+		    if ( ws_ignore == ws_use ) {
+			continue;
+		    } else if ( ws_invalid == ws_use ) {
+			c		= nv;
+		    }
+		}
+		if ( pd == c ) {
+		    if ( pd_ignore == pd_use ) {
+			continue;
+		    } else if ( pd_invalid == pd_use ) {
+			c		= nv;
+		    } else {
+			c		= EOF;
+		    }
+		}
+		if ( nv == c ) {
+		    // Invalid symbol; optionally remember them.  Mark as erasure?  Or throw.
 		    if ( invalid )
 			invalid->push_back( *i );
 		    if ( erasure ) {
 			erasure->push_back( o - begin );// index of offending symbol in output
 			c		= 0;		//   will be output w/ 0 value
 		    } else {
-			throw std::runtime_error( "ezpwd::serialize::decode: invalid ASCII symbol presented" );
+			throw std::runtime_error( std::string( "ezpwd::serialize::decode: invalid ASCII symbol presented: " ) << int( *i ) << " '" << *i << "'") ;
 		    }
 		}
 		*o++			= c;
 	    }
 	    return o;
 	}
-
     } // namespace serialize
 
     // 
@@ -126,13 +164,19 @@ namespace ezpwd {
     // and store the index of the invalid symbol in the vector.
     // 
     namespace base32 {
+	using serialize::pd;
 	using serialize::ws;
 	using serialize::nv;
 	using serialize::ws_use_t;
 	using serialize::ws_ignore;
 	using serialize::ws_invalid;
+	using serialize::pd_use_t;
+	using serialize::pd_ignore;
+	using serialize::pd_invalid;
+	using serialize::pd_keep;
+	
 
-	static const ezpwd::array<char,32> encoder_standard = { {  // RFC 4648 Standard
+	static const ezpwd::array<char,32> encoder_standard = { {  // RFC4648 Standard
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -150,11 +194,31 @@ namespace ezpwd {
 		'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P',
 		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y',
 	    } };
-	static const ezpwd::array<char,127> decoder_ezpwd = { {
+	static const ezpwd::array<char,127> decoder_standard = { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
 		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
-		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		nv, nv, 26, 27, 28, 29, 30, 31, nv, nv, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?
+		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO  '=' is pad
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // `abcdefghijklmno
+		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+	static const ezpwd::array<char,127> decoder_crockford = { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, nv, nv, //  !"#$%&`()*+,-./  '-' is whitespace
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?  '=' is pad
+		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19,  1, 20, 21,  0, // @ABCDEFGHIJKLMNO
+		22, 23, 24, 25, 26, nv, 27, 28, 29, 30, 31, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19,  1, 20, 21,  0, // `abcdefghijklmno
+		22, 23, 24, 25, 26, nv, 27, 28, 29, 30, 31, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	} };
+	static const ezpwd::array<char,127> decoder_ezpwd = { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, nv, nv, //  !"#$%&`()*+,-./  '-' is whitespace
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?  '=' is pad
 		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19, 20, 21, 22,  0, // @ABCDEFGHIJKLMNO
 		23, 24, 25,  5, 26, 27, 28, 29, 30, 31,  2, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
 		nv, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19, 20, 21, 22,  0, // `abcdefghijklmno
@@ -165,52 +229,72 @@ namespace ezpwd {
 	// base32::encode(<string>)	-- encode the supplied sequence of data in the domain (0,32] to base-32 
 	// base32::encode(<iter>,<iter>)-- encode the supplied std::string of (0,32] symbols in-place to base-32
 	// 
+	//     If a non-zero 'pad' character is supplied, then the -1 (EOF) character value will be
+	// allowed (normally occurring only at the end of the input range), and a 'pad' will be
+	// emitted for each one.
+	// 
 	template < typename iter_t >
         iter_t			encode(
 				    iter_t		begin,
 				    iter_t		end,
+				    char		pad	= 0, // '=' for standards-compliance
 				    const ezpwd::array<char,32>
 						       &table	= base32::encoder_ezpwd )
 	{
-	    return serialize::encode( begin, end, table );
+	    return serialize::encode( begin, end, pad, table );
 	}
 
 	inline
 	std::string	       &encode(
 				    std::string	       &symbols,
+				    char		pad	= 0, // '=' for standards-compliance
 				    const ezpwd::array<char,32>
 						       &table	= base32::encoder_ezpwd )
 	{
-	    base32::encode( symbols.begin(), symbols.end(), table );
+	    base32::encode( symbols.begin(), symbols.end(), pad, table );
 	    return symbols;
 	}
 
 	// 
-	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
-	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
+	// base32::decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
+	// base32::decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
 	// 
 	//     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws
 	// exception.  Ignores whitespace.  Will return an iterator to just after the last output
-	// symbol used in the provided range (eg. to shorten the ), leaving any remaining symbols
-	// unchanged.  The <string> version returns the same string reference passed in.
+	// symbol used in the provided range (eg. to shorten the container, if desired), leaving any
+	// remaining symbols unchanged.  The <string> version returns the same string reference
+	// passed in (shortened, if spaces/padding ignored).
 	// 
 	//     If an invalid vector is supplied, we'll also return the offending input symbol(s); if
 	// an exception is raised (no erasure vector supplied), only one symbol will be in invalid.
 	// 
-	// NOTE: will quite likely return an iterator before the supplied 'end', indicating
-	// that the output has been truncated (shortened), due to collapsing spaces!
+	// NOTE: will quite likely return an iterator before the supplied 'end', indicating that the
+	// output has been truncated (shortened), due to collapsing spaces!
 	// 
 	template < typename iter_t >
 	iter_t			decode(
 				    iter_t		begin,
 				    iter_t		end,
-				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
-				    std::vector<char>  *invalid	= 0,	//   and return the symbols
 				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
 				    const ezpwd::array<char,127>
 						       &table	= base32::decoder_ezpwd )
 	{
-	    return serialize::decode( begin, end, erasure, invalid, ws_use, table );
+	    return serialize::decode( begin, end, 0, 0, ws_use, pd_use, table );
+	}
+
+	template < typename iter_t >
+	iter_t			decode(
+				    iter_t		begin,
+				    iter_t		end,
+				    std::vector<int>   *erasure,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0,	//   and return the symbols
+				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
+				    const ezpwd::array<char,127>
+						       &table	= base32::decoder_ezpwd )
+	{
+	    return serialize::decode( begin, end, erasure, invalid, ws_use, pd_use, table );
 	}
 
 	inline
@@ -219,16 +303,274 @@ namespace ezpwd {
 				    std::vector<int>   *erasure = 0,
 				    std::vector<char>  *invalid	= 0,
 				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
 				    const ezpwd::array<char,127>
 						       &table	= base32::decoder_ezpwd )
 	{
 	    auto		last	= base32::decode( symbols.begin(), symbols.end(), erasure, invalid,
-						  ws_use, table );
+						  ws_use, pd_use, table );
 	    if ( last != symbols.end() )
 		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 	    return symbols;
 	}
 
+	// 
+	// base32::scatter -- distribute a range of input bytes to an output iterator in 5-bit chunks
+	// 
+	//     Separate implementation are provided, for random-access iterators (with fewer
+	// comparisons necessary) and for all other forward iterators.
+	// 
+	template < typename I, typename O, typename iterator_tag >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad,
+					iterator_tag )
+        {
+#if defined( DEBUG ) && DEBUG >= 2
+	    std::cout << "scatter -- generic" << std::endl;
+#endif
+            while ( beg != end ) {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 3);
+
+                if ( beg == end ) {
+                    *out++			= char((c0 & 0x07) << 2);
+		    if ( pad ) {
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
+                *out++				= char((c1 & 0x3f) >> 1);
+
+                if ( beg == end ) {
+                    *out++			= char((c1 & 0x01) << 4);
+		    if ( pad ) {
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x01) << 4 | (c2 & 0xff) >> 4);
+
+                if ( beg == end ) {
+                    *out++			= char((c2 & 0x0f) << 1);
+		    if ( pad ) {
+			*out++			= EOF;
+			*out++			= EOF;
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			c3	= *beg++;
+                *out++				= char((c2 & 0x0f) << 1 | (c3 & 0xff) >> 7);
+                *out++				= char((c3 & 0x7f) >> 2);
+
+                if ( beg == end ) {
+                    *out++			= char((c3 & 0x03) << 3);
+		    if ( pad ) {
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			 c4	= *beg++;
+                *out++				= char((c3 & 0x03) << 3 | (c4 & 0xff) >> 5);
+                *out++				= char((c4 & 0x1f));
+            }
+
+            return out;
+        }
+
+	template < typename I, typename O >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad,
+					std::random_access_iterator_tag )
+	{
+#if defined( DEBUG ) && DEBUG >= 2
+	    std::cout << "scatter -- random" << std::endl;
+#endif
+	    while ( end - beg >= 5 ) {
+                int 			c0 	= *beg++;
+                *out++ 				= char((c0 & 0xff) >> 3);
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
+                *out++				= char((c1 & 0x3f) >> 1);
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x01) << 4 | (c2 & 0xff) >> 4);
+                int			c3	= *beg++;
+                *out++				= char((c2 & 0x0f) << 1 | (c3 & 0xff) >> 7);
+                *out++				= char((c3 & 0x7f) >> 2);
+                int			c4	= *beg++;
+                *out++				= char((c3 & 0x03) << 3 | (c4 & 0xff) >> 5);
+                *out++				= char((c4 & 0x1f));
+            }
+
+            switch ( end - beg ) {
+            case 4: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 3);
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
+                *out++				= char((c1 & 0x3f) >> 1);
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x01) << 4 | (c2 & 0xff) >> 4);
+                int			c3	= *beg++;
+                *out++				= char((c2 & 0x0f) << 1 | (c3 & 0xff) >> 7);
+                *out++				= char((c3 & 0x7f) >> 2);
+                *out++				= char((c3 & 0x03) << 3);
+		if ( pad ) {
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            case 3: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 3);
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
+                *out++				= char((c1 & 0x3f) >> 1);
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x01) << 4 | (c2 & 0xff) >> 4);
+                *out++				= char((c2 & 0x0f) << 1);
+		if ( pad ) {
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            case 2: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 3);
+		int			c1	= *beg++;
+                *out++				= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
+                *out++				= char((c1 & 0x3f) >> 1);
+                *out++				= char((c1 & 0x01) << 4);
+		if ( pad ) {
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            case 1: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 3);
+                *out++				= char((c0 & 0x07) << 2);
+		if ( pad ) {
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            default:
+		return out;
+            }
+        }
+
+	template < typename I, typename O >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad )
+	{
+	    return scatter( beg, end, out, pad, typename std::iterator_traits<I>::iterator_category() );
+	}
+	
+
+	// 
+	// base32::gather -- collect 5-bit chunks into 8-bit characters
+	// 
+	//     If underflow occurs (not enough data collected to output complete last char), then an
+	// exception will be raised.  However, if 'pad' is set, then the input will be automatically
+	// padded with 0 values, sufficient to output all remaining non-pad data.
+	// 
+	// NOTE: using with 'pad==false' can cause the output of 'gather' to not match the original
+	// input from 'scatter'; an extra NUL symbol may end up appended.  It is better to run
+	// 'scatter' with pad==true, which fills the input with an appropriate number of EOF pad
+	// symbols to cause 'gather' to exactly reproduce the original input (by producing exactly
+	// 40-bit output units, as per RFC4648).  However, if you are processing blocks of data that
+	// are not multiples of 40 bits, then ensure that you know and maintain the expected output
+	// size!
+	// 
+	template < typename I >
+	int				gather_next( I &beg, I end, bool pad, bool unemitted )
+	{
+	    if ( beg == end ) {
+		if ( not pad )
+		    throw std::logic_error("base32 gather error; insufficient data");
+		// automatically pad; return 0 on underflow iff unemitted data, otherwise EOF
+		return unemitted ? 0 : EOF;
+	    }
+	    int				c	= *beg++;
+	    if ( c >= 32 or c < -1 )
+		throw std::logic_error( "base32 gather error; symbol value beyond 5 bits" );
+	    return c;
+	}
+
+	template < typename I, typename O >
+	O				gather(
+					    I			beg,
+					    I			end,
+					    O			out,
+					    bool		pad	= false )
+	{
+	    while ( beg != end ) {
+                int			c0	= gather_next( beg, end, pad, false );
+		if ( c0 == EOF ) break;
+		int			c1	= gather_next( beg, end, pad, true );
+		if ( c1 == EOF ) break;
+                *out++				= ( ((c0 << 3))
+						   | (c1 == EOF ? 0 : c1 ) >> 2 );
+                int			c2	= gather_next( beg, end, pad, c1 != EOF );
+		if ( c2 == EOF ) break;
+                int			c3 	= gather_next( beg, end, pad, c1 != EOF or c2 != EOF );
+		if ( c3 == EOF ) break;
+                *out++ 				= ( ((c1 == EOF ? 0 : c1) & 0x03) << 6 
+						   | (c2 == EOF ? 0 : c2) << 1
+						   | (c3 == EOF ? 0 : c3) >> 4 );
+                int			c4	= gather_next( beg, end, pad, c3 != EOF );
+		if ( c4 == EOF ) break;
+                *out++				= ( ((c3 == EOF ? 0 : c3) & 0x0f) << 4
+						   | (c4 == EOF ? 0 : c4) >> 1 );
+                int			c5	= gather_next( beg, end, pad, c4 != EOF );
+		if ( c5 == EOF ) break;
+                int			c6	= gather_next( beg, end, pad, c4 != EOF or c5 != EOF );
+		if ( c6 == EOF ) break;
+                *out++				= ( ((c4 == EOF ? 0 : c4) & 0x01) << 7 
+						   | (c5 == EOF ? 0 : c5) << 2
+						   | (c6 == EOF ? 0 : c6) >> 3 );
+                int			c7	= gather_next( beg, end, pad, c6 != EOF );
+		if ( c7 == EOF ) break;
+                *out++				= ( ((c6 == EOF ? 0 : c6 ) & 0x07) << 5 
+						   | (c7 == EOF ? 0 : c7 ));
+	    }
+	    return out;
+	}
     } // namespace ezpwd::base32
 
     // 
@@ -246,13 +588,18 @@ namespace ezpwd {
     // by decode raise an exception.
     // 
     namespace base64 {
+	using serialize::pd;
 	using serialize::ws;
 	using serialize::nv;
 	using serialize::ws_use_t;
 	using serialize::ws_ignore;
 	using serialize::ws_invalid;
+	using serialize::pd_use_t;
+	using serialize::pd_ignore;
+	using serialize::pd_invalid;
+	using serialize::pd_keep;
 
-	static ezpwd::array<char,64> encoder_standard = { {
+	static ezpwd::array<char,64> encoder_standard = { { // RFC4846 Standard
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -262,7 +609,7 @@ namespace ezpwd {
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '+', '/',
 	} };
-	static ezpwd::array<char,64> encoder_url = { {
+	static ezpwd::array<char,64> encoder_standard_url = { { // RFC4846 Standard (URL safe)
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
@@ -272,60 +619,70 @@ namespace ezpwd {
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '-', '_', 
 	} };
+	static ezpwd::array<char,64> encoder_ezpwd = { { // '+' and '.' are URL safe, and we treat '-' as whitespace
+		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
+		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
+		'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
+		'Y', 'Z', 'a', 'b', 'c', 'd', 'e', 'f',
+		'g', 'h', 'i', 'j', 'k', 'l', 'm', 'n',
+		'o', 'p', 'q', 'r', 's', 't', 'u', 'v',
+		'w', 'x', 'y', 'z', '0', '1', '2', '3',
+		'4', '5', '6', '7', '8', '9', '+', '.', 
+	} };
 	static ezpwd::array<char,127> decoder_standard = { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
 		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, nv, nv, 63, //  !"#$%&`()*+,-./
-		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?  '=' is pad
 		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
 		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
 		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
 		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
 	} };
-	static ezpwd::array<char,127> decoder_url = { {
+	static ezpwd::array<char,127> decoder_standard_url = { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
 		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, nv, //  !"#$%&`()*+,-./
-		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?  '=' is pad
 		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
 		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, 63, // PQRSTUVWXYZ[\]^_
 		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
 		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
 	} };
-	static ezpwd::array<char,127> decoder_either = { { // will accept either standard or ezpwd encoding
+	static ezpwd::array<char,127> decoder_ezpwd = { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
-		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, 62, nv, 63, //  !"#$%&`()*+,-./
-		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?
+		ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, 62, nv, ws, 63, nv, //  !"#$%&`()*+,-./  '-' is whitespace
+		52, 53, 54, 55, 56, 57, 58, 59, 60, 61, nv, nv, nv, pd, nv, nv, // 0123456789:;<=>?  '=' is pad
 		nv,  0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, // @ABCDEFGHIJKLMNO
 		15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, nv, nv, nv, nv, 63, // PQRSTUVWXYZ[\]^_
 		nv, 26, 27, 28, 29, 30, 31, 32, 33, 34, 35, 36, 37, 38, 39, 40, // `abcdefghijklmno
 		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
 	} };
-	static ezpwd::array<char,64>  &encoder_ezpwd = encoder_standard;
-	static ezpwd::array<char,127> &decoder_ezpwd = decoder_standard;
 
 	// 
 	// base64::encode(<string>)	-- encode the supplied sequence of data in the domain (0,64] to base-64
-	// base32::encode(<iter>,<iter>)-- encode the supplied std::string of (0,64] symbols in-place to base-64
+	// base64::encode(<iter>,<iter>)-- encode the supplied std::string of (0,64] symbols in-place to base-64
 	// 
 	template < typename iter_t >
         iter_t			encode(
 				    iter_t		begin,
 				    iter_t		end,
+				    char		pad	= 0, // '=' for standards-compliance
 				    const ezpwd::array<char,64>
 						       &table	= base64::encoder_ezpwd )
 	{
-	    return serialize::encode( begin, end, table );
+	    return serialize::encode( begin, end, pad, table );
 	}
 
 	inline
 	std::string	       &encode(
 				    std::string	       &symbols,
+				    char		pad	= 0, // '=' for standards-compliance
 				    const ezpwd::array<char,64>
 						       &table	= base64::encoder_ezpwd )
 	{
-	    base64::encode( symbols.begin(), symbols.end(), table );
+	    base64::encode( symbols.begin(), symbols.end(), pad, table );
 	    return symbols;
 	}
 
@@ -337,13 +694,26 @@ namespace ezpwd {
 	iter_t			decode(
 				    iter_t		begin,
 				    iter_t		end,
-				    std::vector<int>   *erasure = 0,	// Deem invalid symbols as erasures
-				    std::vector<char>  *invalid	= 0,	//   and return the symbols
 				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
 				    const ezpwd::array<char,127>
 						       &table	= base64::decoder_ezpwd )
 	{
-	    return serialize::decode( begin, end, erasure, invalid, ws_use, table );
+	    return serialize::decode( begin, end, 0, 0, ws_use, pd_use, table );
+	}
+
+	template < typename iter_t >
+	iter_t			decode(
+				    iter_t		begin,
+				    iter_t		end,
+				    std::vector<int>   *erasure,	// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0,	//   and return the symbols
+				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
+				    const ezpwd::array<char,127>
+						       &table	= base64::decoder_ezpwd )
+	{
+	    return serialize::decode( begin, end, erasure, invalid, ws_use, pd_use, table );
 	}
 
 	inline
@@ -352,11 +722,12 @@ namespace ezpwd {
 				    std::vector<int>   *erasure = 0,
 				    std::vector<char>  *invalid	= 0,
 				    ws_use_t		ws_use	= ws_ignore,
+				    pd_use_t		pd_use	= pd_keep,
 				    const ezpwd::array<char,127>
 						       &table	= base64::decoder_ezpwd )
 	{
 	    auto		last	= base64::decode( symbols.begin(), symbols.end(), erasure, invalid,
-						  ws_use, table );
+						  ws_use, pd_use, table );
 	    if ( last != symbols.end() )
 		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 	    return symbols;

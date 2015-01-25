@@ -4,6 +4,7 @@
 #include <streambuf>
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 // 
 // ezpwd::hexify	-- hexify something that can be converted to an unsigned char
@@ -296,5 +297,21 @@ ezpwd::buf_t		operator<<(
     return buf; // NULL pointer or 0 size.
 }
 
+// 
+// <std::string> << ...
+// 
+//     Useful (but inefficient) standard output formatting directly to a std::string.  Use only for
+// testing code, for efficiency reasons...
+// 
+template < typename T >
+inline
+std::string			operator<<(
+				    const std::string  &lhs,
+				    const T 	       &rhs )
+{
+    std::ostringstream oss;
+    oss << rhs;
+    return std::string( lhs ).append( oss.str() );
+}
 
 #endif // _EZPWD_OUTPUT
