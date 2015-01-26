@@ -21,17 +21,28 @@ int				main( int argc, char **argv )
     ezpwd::asserter		assert;
 
     for ( auto &t : std::list<std::tuple<std::string, std::string, std::string, std::string>> {
-	    // original scatter to 5-bit chunks				standard	      ezcod
-	    { "a",	R"""(\f04FFFFFFFFFFFF)""",			"ME======",	      "C4" },
-	    { "ab",	R"""(\f051100FFFFFFFF)""",			"MFRA====",	      "C5H0" },
-	    { "abc",	R"""(\f05110606FFFFFF)""",			"MFRGG===",	      "C5H66" },
-	    { "abcd",	R"""(\f051106061900FF)""",			"MFRGGZA=",	      "C5H66R0" },
-	    { "abcde",	R"""(\f05110606190305)""",			"MFRGGZDF",	      "C5H66R35" },
-	    { "abcde0",	R"""(\f051106061903050600FFFFFFFFFFFF)""",	"MFRGGZDFGA======",   "C5H66R3560" },
+	    // original scatter to 5-bit chunks				standard		ezcod
+	    { "a",	R"""(\f04FFFFFFFFFFFF)""",			"ME======",		"C4" },
+	    { "ab",	R"""(\f051100FFFFFFFF)""",			"MFRA====",		"C5H0" },
+	    { "abc",	R"""(\f05110606FFFFFF)""",			"MFRGG===",		"C5H66" },
+	    { "abcd",	R"""(\f051106061900FF)""",			"MFRGGZA=",		"C5H66R0" },
+	    { "abcde",	R"""(\f05110606190305)""",			"MFRGGZDF",		"C5H66R35" },
+	    { "abcde0",	R"""(\f051106061903050600FFFFFFFFFFFF)""",	"MFRGGZDFGA======",	"C5H66R3560" },
 	    // RFC4648 test vectors
-	    { "foo",	R"""(\f1917161EFFFFFF)""",			"MZXW6===",	      "CRPNX" },
-	    { "foobar",	R"""(\f1917161E1813010E08FFFFFFFFFFFF)""",	"MZXW6YTBOI======",   "CRPNXQK1E8" },
-	    { std::string( 1, '\0' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+	    { "foo",	R"""(\f1917161EFFFFFF)""",			"MZXW6===",		"CRPNX" },
+	    { "foobar",	R"""(\f1917161E1813010E08FFFFFFFFFFFF)""",	"MZXW6YTBOI======",	"CRPNXQK1E8" },
+	    { "\xff",	R"""(1F1CFFFFFFFFFFFF)""",			"74======",		"YV" },
+	    { "\xff\xff",
+			R"""(1F1F1F10FFFFFFFF)""",			"777Q====",		"YYYG" },
+	    { "\xff\xff\xff",
+			R"""(1F1F1F1F1EFFFFFF)""",			"77776===",		"YYYYX" },
+	    { "\xff\xff\xff\xff",
+			R"""(1F1F1F1F1F1F18FF)""",			"777777Y=",		"YYYYYYQ" },
+	    { "\xff\xff\xff\xff\xff",
+			R"""(1F1F1F1F1F1F1F1F)""",			"77777777",		"YYYYYYYY" },
+	    { "\xff\xff\xff\xff\xff\xff",
+			R"""(1F1F1F1F1F1F1F1F1F1CFFFFFFFFFFFF)""",	"7777777774======",	"YYYYYYYYYV" },
+	    { std::string( 1, '\x00' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
 	      "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
 	      " !\"#$%&`()*+,-./"
 	      "0123456789:;<=>?"
@@ -156,6 +167,11 @@ int				main( int argc, char **argv )
 	u8vec_t			d1_vec_s;
 	ezpwd::base32::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
 	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
+	    std::cout << assert << std::endl;
+
+	u8vec_t			d1_vec_e;
+	ezpwd::base32::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ), true );
+	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
 	    std::cout << assert << std::endl;
     }
 
