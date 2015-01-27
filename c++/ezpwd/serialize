@@ -142,6 +142,26 @@ namespace ezpwd {
 	    }
 	    return o;
 	}
+
+	template < int BASE, typename I >
+	static
+	int				gather_next( I &beg, I end, bool pad, int previous )
+	{
+	    if ( beg == end ) {
+		if ( not pad )
+		    throw std::logic_error( "base" " gather error; insufficient data");
+		// automatically pad; return nv on underflow while unemitted data remains, finally pd
+		return previous >= 0 ? nv : pd;
+	    }
+	    int				c	= *beg++;
+	    if ( previous < 0 and c >= 0 )
+		throw std::logic_error( std::string( "base" ) + std::to_string( BASE ) + std::string( "gather error; data following padding" ));
+	    if ( c >= BASE or c < pd )
+		throw std::logic_error( std::string( "base" ) + std::to_string( BASE ) + std::string( "gather error; symbol value beyond capacity" ));
+	    return c;
+	}
+
+
     } // namespace serialize
 
     // 
@@ -328,9 +348,6 @@ namespace ezpwd {
 					bool		pad,
 					iterator_tag )
         {
-#if defined( DEBUG ) && DEBUG >= 2
-	    std::cout << "scatter -- generic" << std::endl;
-#endif
             while ( beg != end ) {
                 int			c0	= *beg++;
                 *out++				= char((c0 & 0xff) >> 3);
@@ -404,9 +421,6 @@ namespace ezpwd {
 					bool		pad,
 					std::random_access_iterator_tag )
 	{
-#if defined( DEBUG ) && DEBUG >= 2
-	    std::cout << "scatter -- random" << std::endl;
-#endif
 	    while ( end - beg >= 5 ) {
                 int 			c0 	= *beg++;
                 *out++ 				= char((c0 & 0xff) >> 3);
@@ -500,7 +514,6 @@ namespace ezpwd {
 	{
 	    return scatter( beg, end, out, pad, typename std::iterator_traits<I>::iterator_category() );
 	}
-	
 
 	// 
 	// base32::gather -- collect 5-bit chunks into 8-bit characters
@@ -515,24 +528,6 @@ namespace ezpwd {
 	// base32 group), then the final 8-bit symbol from the original data will be missing.
 	// 
 	// 
-	template < typename I >
-	static
-	int				gather_next( I &beg, I end, bool pad, int previous )
-	{
-	    if ( beg == end ) {
-		if ( not pad )
-		    throw std::logic_error("base32 gather error; insufficient data");
-		// automatically pad; return nv on underflow while unemitted data remains, finally pd
-		return previous >= 0 ? nv : pd;
-	    }
-	    int				c	= *beg++;
-	    if ( previous < 0 and c >= 0 )
-		throw std::logic_error( "base32 gather error; data following padding" );
-	    if ( c >= 32 or c < pd )
-		throw std::logic_error( "base32 gather error; symbol value beyond 5 bits" );
-	    return c;
-	}
-
 	template < typename I, typename O >
 	O				gather(
 					    I			beg,
@@ -541,28 +536,28 @@ namespace ezpwd {
 					    bool		pad	= false )
 	{
 	    while ( beg != end ) {
-                int			c0	= gather_next( beg, end, pad, 0 );
-		int			c1	= gather_next( beg, end, pad, c0 );
+                int			c0	= serialize::gather_next<32>( beg, end, pad, 0 );
+		int			c1	= serialize::gather_next<32>( beg, end, pad, c0 );
 		if ( c0 >= 0 and c1 >= 0 )
 		    *out++			= ( ((c0 < 0 ? 0 : c0 ) << 3)
 						   | (c1 < 0 ? 0 : c1 ) >> 2 );
-                int			c2	= gather_next( beg, end, pad, c1 );
-                int			c3 	= gather_next( beg, end, pad, c2 );
+                int			c2	= serialize::gather_next<32>( beg, end, pad, c1 );
+                int			c3 	= serialize::gather_next<32>( beg, end, pad, c2 );
 		if ( c1 >= 0 and c2 >= 0 and c3 >= 0 )
 		    *out++ 			= ( ((c1 < 0 ? 0 : c1) & 0x03) << 6 
 						   | (c2 < 0 ? 0 : c2) << 1
 						   | (c3 < 0 ? 0 : c3) >> 4 );
-                int			c4	= gather_next( beg, end, pad, c3 );
+                int			c4	= serialize::gather_next<32>( beg, end, pad, c3 );
 		if ( c3 >= 0 and c4 >= 0 )
 		    *out++			= ( ((c3 < 0 ? 0 : c3) & 0x0f) << 4
 						   | (c4 < 0 ? 0 : c4) >> 1 );
-                int			c5	= gather_next( beg, end, pad, c4 );
-                int			c6	= gather_next( beg, end, pad, c5 );
+                int			c5	= serialize::gather_next<32>( beg, end, pad, c4 );
+                int			c6	= serialize::gather_next<32>( beg, end, pad, c5 );
 		if ( c4 >=0 and c5 >= 0 and c6 >= 0 )
 		    *out++			= ( ((c4 < 0 ? 0 : c4) & 0x01) << 7 
 						   | (c5 < 0 ? 0 : c5) << 2
 						   | (c6 < 0 ? 0 : c6) >> 3 );
-                int			c7	= gather_next( beg, end, pad, c6 );
+                int			c7	= serialize::gather_next<32>( beg, end, pad, c6 );
 		if ( c6 >= 0 and c7 >= 0 )
 		    *out++			= ( ((c6 < 0 ? 0 : c6 ) & 0x07) << 5 
 						   | (c7 < 0 ? 0 : c7 ));
@@ -685,8 +680,8 @@ namespace ezpwd {
 	}
 
 	// 
-	// decode(<iter>,<iter>)-- decode base-32 symbols in-place, collapsing spaces.
-	// decode(<string>)	-- decode base-32 symbols in supplied std::string, collapsing spaces, in-place.
+	// decode(<iter>,<iter>)-- decode base-64 symbols in-place, collapsing spaces.
+	// decode(<string>)	-- decode base-64 symbols in supplied std::string, collapsing spaces, in-place.
 	// 
 	template < typename iter_t >
 	iter_t			decode(
@@ -729,6 +724,132 @@ namespace ezpwd {
 	    if ( last != symbols.end() )
 		symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 	    return symbols;
+	}
+
+	// 
+	// base64::scatter -- distribute a range of input bytes to an output iterator in 6-bit chunks
+	// 
+	template < typename I, typename O, typename iterator_tag >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad,
+					iterator_tag )
+        {
+            while ( beg != end ) {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 2);
+
+                if ( beg == end ) {
+                    *out++			= char((c0 & 0x03) << 4);
+		    if ( pad ) {
+			*out++			= EOF;
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x03) << 4 | (c1 & 0xff) >> 4);
+
+                if ( beg == end ) {
+                    *out++			= char((c1 & 0x0f) << 2);
+		    if ( pad ) {
+			*out++			= EOF;
+		    }
+		    return out;
+                }
+
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x0f) << 2 | (c2 & 0xff) >> 6);
+                *out++				= char((c2 & 0x3f));
+            }
+
+            return out;
+	}
+
+	template < typename I, typename O >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad,
+					std::random_access_iterator_tag )
+	{
+	    while ( end - beg >= 3 ) {
+                int 			c0 	= *beg++;
+                *out++ 				= char((c0 & 0xff) >> 2);
+                int			c1	= *beg++;
+                *out++				= char((c0 & 0x03) << 4 | (c1 & 0xff) >> 4);
+                int			c2	= *beg++;
+                *out++				= char((c1 & 0x0f) << 2 | (c2 & 0xff) >> 6);
+                *out++				= char((c2 & 0x3f));
+            }
+
+            switch ( end - beg ) {
+            case 2: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 2);
+		int			c1	= *beg++;
+                *out++				= char((c0 & 0x03) << 4 | (c1 & 0xff) >> 4);
+                *out++				= char((c1 & 0x0f) << 2);
+		if ( pad ) {
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            case 1: {
+                int			c0	= *beg++;
+                *out++				= char((c0 & 0xff) >> 2);
+                *out++				= char((c0 & 0x03) << 4);
+		if ( pad ) {
+		    *out++			= EOF;
+		    *out++			= EOF;
+		}
+		return out;
+            }
+            default:
+		return out;
+            }
+        }
+
+	template < typename I, typename O >
+	O			scatter(
+					I		beg,
+					I		end,
+					O 		out,
+					bool		pad )
+	{
+	    return scatter( beg, end, out, pad, typename std::iterator_traits<I>::iterator_category() );
+	}
+
+	// 
+	// base64::gather -- collect 6-bit chunks into 8-bit characters
+	// 
+	template < typename I, typename O >
+	O				gather(
+					    I			beg,
+					    I			end,
+					    O			out,
+					    bool		pad	= false )
+	{
+	    while ( beg != end ) {
+                int			c0	= serialize::gather_next<64>( beg, end, pad, 0 );
+		int			c1	= serialize::gather_next<64>( beg, end, pad, c0 );
+		if ( c0 >= 0 and c1 >= 0 )
+		    *out++			= ( ((c0 < 0 ? 0 : c0 ) << 2 )
+						   | (c1 < 0 ? 0 : c1 ) >> 4 );
+                int			c2	= serialize::gather_next<64>( beg, end, pad, c1 );
+		if ( c1 >= 0 and c2 >= 0 )
+		    *out++ 			= ( ((c1 < 0 ? 0 : c1) & 0x0f) << 4 
+						   | (c2 < 0 ? 0 : c2) >> 2 );
+                int			c3	= serialize::gather_next<64>( beg, end, pad, c2 );
+		if ( c2 >= 0 and c3 >= 0 )
+		    *out++			= ( ((c2 < 0 ? 0 : c2) & 0x03) << 6
+						   | (c3 < 0 ? 0 : c3));
+	    }
+	    return out;
 	}
 
     } // namespace ezpwd::base64

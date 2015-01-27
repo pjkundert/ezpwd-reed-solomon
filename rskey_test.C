@@ -19,6 +19,9 @@ int				main( int argc, char **argv )
 	<< std::endl;
 
     ezpwd::asserter		assert;
+    typedef std::vector<uint8_t>u8vec_t;
+    typedef std::vector<int8_t>	s8vec_t;
+
 
     for ( auto &t : std::list<std::tuple<std::string, std::string, std::string, std::string>> {
 	    // original scatter to 5-bit chunks				standard		ezcod
@@ -90,10 +93,7 @@ int				main( int argc, char **argv )
 	} ) {
 
 	std::string			e1( std::get<0>( t ));
-	typedef std::vector<unsigned char>
-	    u8vec_t;
-	typedef std::vector<char>
-	    s8vec_t;
+
 
 	// An instance of a std::random_access_iterator, to force optimal algorithm
 	u8vec_t				e1_vec_1;
@@ -110,15 +110,6 @@ int				main( int argc, char **argv )
 	    std::istreambuf_iterator<char>	e1_iss_end;
 	    ezpwd::base32::scatter( e1_iss_beg, e1_iss_end, std::back_insert_iterator<u8vec_t>( e1_vec_2 ), true );
 	}
-#if defined( DEBUG )
-	{
-	    std::istringstream		e1_iss( e1 );
-	    std::istreambuf_iterator<char>	e1_iss_beg( e1_iss );
-	    std::istreambuf_iterator<char>	e1_iss_end;
-	    std::cout << "scatter (fwd.): " <<  u8vec_t( e1_iss_beg, e1_iss_end )
-		      << " --> " << e1_vec_2 << std::endl;
-	}
-#endif
 	if ( assert.ISEQUAL( e1_vec_1, e1_vec_2 ))
 	    std::cout << assert << std::endl;	    
 
@@ -160,10 +151,8 @@ int				main( int argc, char **argv )
 	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
 	    std::cout << assert << std::endl;
 
-	// Finally, gather up the 5-bit chunks back into the original 8-bit data.  With standard
-	// encoding, this should always be identical.  With ezcod encoding (which doesn't emit pad
-	// symbols by default), if there should have been padding, then there may be extra symbols
-	// emitted.  This is expected; 
+	// Finally, gather up the 5-bit chunks back into the original 8-bit data.  Must specify
+	// automatic pad, if no padding supplied.
 	u8vec_t			d1_vec_s;
 	ezpwd::base32::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
 	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
@@ -175,6 +164,136 @@ int				main( int argc, char **argv )
 	    std::cout << assert << std::endl;
     }
 
+    // Some base64 tests
+    for ( auto &t : std::list<std::tuple<std::string, std::string, std::string, std::string>> {
+	    // original scatter to 6-bit chunks				standard		ezcod
+	    { "",       R"""()""",					"",			"" },
+	    { "a",	R"""(1810FFFF)""",				"YQ==",			"YQ" },
+	    { "ab",	R"""(181608FF)""",				"YWI=",			"YWI" },
+	    { "f",	R"""(19  FFFF)""",				"Zg==", 		"Zg" },
+	    { "fo", 	R"""(19 & <FF)""", 				"Zm8=",			"Zm8" },
+	    { "foo",	R"""(19 & = /)""",				"Zm9v",			"Zm9v" },
+	    { "foob",	R"""(19 & = /18  FFFF)""",			"Zm9vYg==",		"Zm9vYg" },
+	    { "fooba",	R"""(19 & = /18 &04FF)""",			"Zm9vYmE=",		"Zm9vYmE" },
+	    { "foobar",	R"""(19 & = /18 &05 2)""",			"Zm9vYmFy",		"Zm9vYmFy" },
+	    { "\x14\xfb\x9c\x03\xd9\x7e",
+		        R"""(050F .1C00 = % >)""",			"FPucA9l+",		"FPucA9l+" },
+	    { "\xff\xff\xff\xff\xff\xff",
+			R"""( ? ? ? ? ? ? ? ?)""",			"////////",		"........" },
+	    { std::string( 1, '\x00' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+	      "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+	      " !\"#$%&`()*+,-./"
+	      "0123456789:;<=>?"
+	      "@ABCDEFGHIJKLMNO"
+	      "PQRSTUVWXYZ[\\]^_"
+	      "`abcdefghijklmno"
+	      "pqrstuvwxyz{|}~\x7f"
+	      "\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
+	      "\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
+	      "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
+	      "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
+	      "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
+	      "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
+	      "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
+	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
+
+	  R"""(0000040200 0100501  1C080210 (\v0300 40E03 1001104 !\f1405111817)"""
+	  R"""(0601 $1A06 1 01D07 ! <  081208 #\t0214 &1802   )\n " , ,\v12 8 /)"""
+	  R"""(\f0304 2\f 310 5\r #1C 80E13 ( ;0F03 4 >0F 4010110 $\r0411141907)"""
+	  R"""(1204 %\n12 4 1\r13 $ =101415\t131505151615 5 !1916 % -1C1715 91F)"""
+	  R"""(180605 "18 611 %19 &1D (1A16 ) +1B06 5 .1B 701 11C '\r 41D1719 7)"""
+	  R"""(1E07 % :1E 7 1 =1F ' >00  18\n03 !081606 ! 8 "\t " ( .\f #18 :0F)"""
+	  R"""( $\t0612 $ 91215 % )1E18 &19 *1B '\t 61E ' :02 ! ( *0E $ )1A1A ')"""
+	  R"""( *\n & * * : 2 - + * > 0 ,1B\n 3 -\v16 6 - ; " 9 . + . < /1B : ?)"""
+	  R"""( 0\f0702 0 <1305 1 ,1F08 21C +\v 3\f 70E 3 =0311 4 -0F14 51D1B17)"""
+	  R"""( 6\r '1A 6 = 31D 7 - ?   81E\v # 90E17 & 9 > # ) : . / , ;1E ; /)"""
+	  R"""( <0F07 2 < ?13 5 = /1F 8 >1F + ; ?0F 7 > ? 0FFFF)""",
+
+	      "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmYCgpKissLS4v"
+	      "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f"
+	      "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"
+	      "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6/"
+	      "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t/g4eLj5OXm5+jp6uvs7e7v"
+	      "8PHy8/T19vf4+fr7/P3+/w==",
+
+	      "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmYCgpKissLS4v"
+	      "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f"
+	      "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"
+	      "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6."
+	      "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t.g4eLj5OXm5+jp6uvs7e7v"
+	      "8PHy8.T19vf4+fr7.P3+.w" },
+	} ) {
+	
+	std::string			e1( std::get<0>( t ));
+	// An instance of a std::random_access_iterator, to force optimal algorithm
+	u8vec_t				e1_vec_1;
+	ezpwd::base64::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ), true );
+#if defined( DEBUG )
+	std::cout << "scatter (rnd.): " << u8vec_t( e1.begin(), e1.end() ) << " --> " << e1_vec_1 << std::endl;
+#endif
+	// An instance of a std::forward_iterator, to force use of algorithm with more iterator
+	// comparisons
+	u8vec_t				e1_vec_2;
+	{
+	    std::istringstream		e1_iss( e1 );
+	    std::istreambuf_iterator<char>	e1_iss_beg( e1_iss );
+	    std::istreambuf_iterator<char>	e1_iss_end;
+	    ezpwd::base64::scatter( e1_iss_beg, e1_iss_end, std::back_insert_iterator<u8vec_t>( e1_vec_2 ), true );
+	}
+	if ( assert.ISEQUAL( e1_vec_1, e1_vec_2 ))
+	    std::cout << assert << std::endl;	    
+
+	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_1 ))
+	    std::cout << assert << std::endl;
+	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_2 ))
+	    std::cout << assert << std::endl;
+
+	// Now, convert the raw scattered 5-bit data to base64, in-place
+	std::string		e1_s( e1_vec_1.begin(), e1_vec_1.end() );
+	ezpwd::base64::encode( e1_s.begin(), e1_s.end(), '=', ezpwd::base64::encoder_standard );
+#if defined( DEBUG )
+	std::cout << "base64::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
+#endif
+	if ( assert.ISEQUAL( e1_s, std::get<2>( t )))
+	    std::cout << assert << std::endl;
+
+	// Now get rid of the pad symbols for the base64 ezpwd encoding test
+	std::string		e1_e( e1_vec_1.begin(), e1_vec_1.end() );
+	while ( e1_e.size() and e1_e.back() == EOF )
+	    e1_e.pop_back();
+	ezpwd::base64::encode( e1_e.begin(), e1_e.end() );
+#if defined( DEBUG )
+	std::cout << "base64::encode (ezcod):    " << e1_vec_1  << " --> " << e1_e << std::endl;
+#endif
+	if ( assert.ISEQUAL( e1_e, std::get<3>( t )))
+	    std::cout << assert << std::endl;
+	
+	// Now, decode back to the original 5-bit binary data in-place, from both the
+	// standard (with pad) and ezcod (not padded) base64 encoded data.
+	std::string		d1_s( e1_s );
+	ezpwd::base64::decode( d1_s, 0, 0, ezpwd::base64::ws_ignore, ezpwd::base64::pd_keep, ezpwd::base64::decoder_standard );
+	if ( assert.ISEQUAL( std::get<1>( t ), std::string() << u8vec_t( d1_s.begin(), d1_s.end() )))
+	    std::cout << assert << std::endl;
+
+	std::string		d1_e( e1_e );
+	ezpwd::base64::decode( d1_e );
+	// It will match the decoding, but not including the trailing padding (FF) chars
+	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
+	    std::cout << assert << std::endl;
+
+	// Finally, gather up the 5-bit chunks back into the original 8-bit data.  Must specify
+	// automatic pad, if no padding supplied.
+	u8vec_t			d1_vec_s;
+	ezpwd::base64::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
+	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
+	    std::cout << assert << std::endl;
+
+	u8vec_t			d1_vec_e;
+	ezpwd::base64::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ), true );
+	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
+	    std::cout << assert << std::endl;
+    }
+    
     if ( assert.failures )
 	std::cout
 	    << __FILE__ << " fails " << assert.failures << " tests"
