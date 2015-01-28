@@ -1,7 +1,7 @@
 
 SHELL		= /bin/bash
 CXXFLAGS       += -I./c++ -std=c++11 -O3							\
-		    -Wall -Wextra -Wpedantic -Wno-missing-braces -Wwrite-strings -Wcast-align	\
+		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings -Wcast-align	\
 		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
@@ -70,7 +70,8 @@ bintest:	rsexample					\
 		rscompare					\
 		rsvalidate					\
 		rspwd_test					\
-		ezcod_test
+		ezcod_test					\
+		rskey_test
 
 testbin:	bintest
 	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test; ./rskey_test

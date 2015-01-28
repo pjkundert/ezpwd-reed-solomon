@@ -138,7 +138,7 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    parity.resize( nroots() );
-	    encode( cuTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+	    encode( cuTpair( (const uT *)&data.front(), (const uT *)&data.front() + data.size() ),
 		    uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
 	}
 
