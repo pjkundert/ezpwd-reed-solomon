@@ -1,6 +1,9 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I./c++ -Wall -Wextra -Wpedantic -Wno-missing-braces -O3 -std=c++11
+CXXFLAGS       += -I./c++ -std=c++11 -O3							\
+		    -Wall -Wextra -Wpedantic -Wno-missing-braces -Wwrite-strings -Wcast-align	\
+		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
+		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 CXX		= clang++
 #CXX		= g++

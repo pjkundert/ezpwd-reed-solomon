@@ -664,31 +664,31 @@ namespace ezpwd {
 	    TYP			       *pariptr;
 	    const size_t		INPUT	= 8 * sizeof ( INP );
 
-	    ezpwd::array<TYP,SIZE>	tmp;
-	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
-	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
-	    if ( cpy ) {
+	    if ( DATUM != SYMBOL || DATUM != INPUT ) {
 		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
-		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
-		// The INP data must fit at least the SYMBOL size!
+		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must mask and
+		// copy.  The INP data must fit at least the SYMBOL size!
 		if ( SYMBOL > INPUT )
 		    throw std::runtime_error( "reed-solomon: output data type too small to contain symbols" );
+		ezpwd::array<TYP,SIZE>	tmp;
+		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
 		for ( int i = 0; i < len; ++i )
 		    tmp[LOAD - len + i]		= data[i] & ~msk;
 		dataptr				= &tmp[LOAD - len];
 		pariptr				= &tmp[LOAD];
-	    } else {
-		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches
-		dataptr				= (const TYP *)( data );
-		pariptr				= (TYP *)( parity );
-	    }
 
-	    encode( dataptr, len, pariptr );
+		encode( dataptr, len, pariptr );
 
-	    // If we copied/masked data, copy the parity symbols back (may be different sizes)
-	    if ( cpy )
+		// we copied/masked data; copy the parity symbols back (may be different sizes)
 		for ( int i = 0; i < NROOTS; ++i )
 		    parity[i]			= pariptr[i];
+	    } else {
+		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches; use in-place.
+		dataptr				= reinterpret_cast<const TYP *>( data );
+		pariptr				= reinterpret_cast<TYP *>( parity );
+
+		encode( dataptr, len, pariptr );
+	    }
 	}
 	    
 	using reed_solomon_base::decode;
