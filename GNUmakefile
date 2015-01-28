@@ -5,8 +5,8 @@ CXXFLAGS       += -I./c++ -std=c++11 -O3							\
 		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
-CXX		= clang++
-#CXX		= g++
+#CXX		= clang++
+CXX		= g++
 
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
