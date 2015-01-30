@@ -122,7 +122,7 @@ namespace ezpwd {
     //     All methods are static; no instance is required, as this is primarily used to create
     // external language APIs.
     // 
-    template < size_t N >
+    template < size_t N, typename PARITY = serialize::base64 >
     class corrector {
     public:
 	// 
@@ -133,12 +133,12 @@ namespace ezpwd {
 	{
 	    std::string		parity;
 	    rscodec.encode( password, parity );
-	    base64::encode( parity );
+	    PARITY::encode( parity );
 	    return parity;
 	}
 
 	// 
-	// encode(<string>) -- append N base-64 parity symbols to password
+	// encode(<string>) -- append N base-N parity symbols to password
 	// 
 	//     The supplied password buffer size must be sufficient to contain N additional symbols, plus
 	// the terminating NUL.  Returns the resultant encoded password size (excluding the NUL).
@@ -233,14 +233,14 @@ namespace ezpwd {
 		std::string		fixed( password.size() + era, 0 );
 		std::copy( password.begin(), password.end(), fixed.begin() );
 
-		// Decode the base64 parity, denoting any invalid (mistyped) symbols as erasures
+		// Decode the base-N parity, denoting any invalid (mistyped) symbols as erasures
 		// (adjust erasure offsets to be from start of password, not start of parity).  All
 		// newly added 'era' symbols will be NUL, and will be invalid.  After decoding
 		// parity, if we've slipped below our minimum R-S capacity threshold (ie. because of
 		// mistyped parity symbols), don't attempt
 		std::vector<int>	erasure;
-		base64::decode( fixed.begin() + fixed.size() - N,
-				fixed.begin() + fixed.size(), &erasure, 0, base64::ws_invalid );
+		PARITY::decode( fixed.begin() + fixed.size() - N,
+				fixed.begin() + fixed.size(), &erasure, 0, serialize::ws_invalid );
 		if ( erasure.size() >= (N+1)/2 )
 		    continue;
 		for ( auto &o : erasure )
@@ -300,6 +300,8 @@ namespace ezpwd {
 		if ( par_equ < len || par_equ > len + N )
 		    throw std::runtime_error( "miscomputed R-S parity matching length" );
 		par_equ		       -= len;
+
+		// At least one parity symbol is requires to give any confidence
 		if ( par_equ > 0 ) {
 		    std::string	basic( fixed.begin(), fixed.begin() + len );
 		    confidence		=  par_equ * 100 / N; // each worth a normal parity symbol
@@ -318,7 +320,7 @@ namespace ezpwd {
 		}
 	    }
 
-	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidence > 0.
+	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidence >= 0.
 	    // Otherwise, select the best guess and return its confidence.
 	    confidence			= 0;
 	    typename best_avg::const_iterator
@@ -385,8 +387,8 @@ namespace ezpwd {
 	static RS_63(63-N)	rscodec;
     };
 
-    template < size_t N >
-    RS_63(63-N)			corrector<N>::rscodec;
+    template < size_t N, typename PARITY >
+    RS_63(63-N)			corrector<N,PARITY>::rscodec;
 
 } // namespace ezpwd
 

@@ -3,10 +3,13 @@
 #include <utility>
 
 #include <ezpwd/ezcod>		// C++ implementation
-#include "ezcod.h"		// C API declarations
 #if defined( DEBUG )
-#include <ezpwd/output>
-#endif
+#  include <ezpwd/output>
+#endif // DEBUG
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
+
+#include "ezcod.h"		// C API declarations
 
 // 
 // Encode lat/lon with default worst-case 3m. accuracy: 1 part in 2^22 Latitude, 2^23 Longitude.

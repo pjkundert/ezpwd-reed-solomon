@@ -5,6 +5,9 @@
 
 #include <ezpwd/rs>
 #include <ezpwd/timeofday>
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
+
 extern "C" {
 #include <rs.h> // Phil Karn's implementation
 }

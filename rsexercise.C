@@ -7,6 +7,9 @@
 #include <vector>
 
 #include <ezpwd/rs>
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
+
 #include "exercise.H"
 
 int main() 

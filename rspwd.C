@@ -1,6 +1,9 @@
 
 #include <ezpwd/corrector>
-#include "rspwd.h"
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
+
+#include "rspwd.h"		// C API declarations
 
 // 
 // Implementation of "C" rspwd_encode_<N> API, as described by rspwd.h

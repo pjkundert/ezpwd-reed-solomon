@@ -12,8 +12,9 @@
 #include <ezpwd/output>
 #include <ezpwd/asserter>
 #include <ezpwd/ezcod>
+#include <ezpwd/serialize>
 
-#include "ezcod.h"
+#include "ezcod.h"		// C API declarations
 
 #if defined( DEBUG )
 extern "C" {
@@ -99,10 +100,10 @@ int				main( int argc, char **argv )
 
     std::string			abc	= "0123abcz";
     std::string			dec	= abc;
-    ezpwd::base32::decode( dec );
+    ezpwd::serialize::base32::decode( dec );
     // std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
     std::string			enc	= dec;
-    ezpwd::base32::encode( enc );
+    ezpwd::serialize::base32::encode( enc );
     // std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
     if ( assert.ISEQUAL( enc, std::string( "0123ABC2" )))
 	std::cout << assert << std::endl;
@@ -191,11 +192,11 @@ int				main( int argc, char **argv )
     //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
     std::string			fix2	= err2;
-    ezpwd::base32::decode( fix2 );
+    ezpwd::serialize::base32::decode( fix2 );
     std::vector<int>		pos2;
     int				cor2	= edm2.rscodec.decode( fix2, std::vector<int>(), &pos2  );
     std::string			enc2	= fix2;
-    ezpwd::base32::encode( enc2 );
+    ezpwd::serialize::base32::encode( enc2 );
     std::cout
 	<< "2 errors (ezpwd::reed_solomon): " << ezpwd::hexstr( err2 )
 	<< " --> " << ezpwd::hexstr( enc2 )
@@ -208,13 +209,13 @@ int				main( int argc, char **argv )
     // May compute error positions in "pad" (unused portion), not in supplied data or parity!
     void	       	       *rs_31_29= ::init_rs_char( 5, 0x25, 1, 1, 2, 29-9 );
     std::string			fix_31_29= err2;
-    ezpwd::base32::decode( fix_31_29 );
+    ezpwd::serialize::base32::decode( fix_31_29 );
     std::vector<int>		era_31_29;
     era_31_29.resize( 2 );
     int				cor_31_29= ::decode_rs_char( rs_31_29, (unsigned char *)&fix_31_29.front(),
 							    &era_31_29.front(), 0 );
     std::string			enc_31_29= fix_31_29;
-    ezpwd::base32::encode( enc_31_29 );
+    ezpwd::serialize::base32::encode( enc_31_29 );
     era_31_29.resize( std::max( 0, cor_31_29 ));
     std::cout
 	<< "2 errors (Phil Karn R-S coded): " << ezpwd::hexstr( err2 )

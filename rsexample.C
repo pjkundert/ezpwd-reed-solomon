@@ -1,8 +1,12 @@
 
+#include <time.h>
+
 #include <iostream>
+
 #include <ezpwd/rs>
 #include <ezpwd/corrector>
-#include <time.h>
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
 
 #ifndef NROOTS
 #define NROOTS 3

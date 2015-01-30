@@ -9,21 +9,36 @@
 // 
 //     Base-32 encodes a block of data, with Reed-Solomon parity.  Each base-32
 // digit encodes 32 values (5 bits).  Therefore, 64 bits of data payload requires
-// 64/5 13 data symbols.  So, in 20 digits
+// 64/5 == ~13 data symbols.
 // 
-//                             capacity
-//     data----------  parity  errors  erase.  eg.
+//                                   capacity
+//     data----------  parity  total errors  erase.  eg.
 //     bits    base32
-//     32       7      3       1       3       ABCDE-FGH1K
-//     64      13      2       1       2       ABCDE-FGH1K-LMN0P
-//     64      13      7       3       7       ABCDE-FGH1K-LMN0P-01234
-//     96      20      5       2       5       ABCDE-FGH1K-LMN0P-01234-56789
+//     32       7      3       10    1       3       ABCDE-FGH1K
+//     64      13      2       15    1       2       ABCDE-FGH1K-LMN0P
+//     64      13      7       20    3       7       ABCDE-FGH1K-LMN0P-01234
+//     96      20      5       25    2       5       ABCDE-FGH1K-LMN0P-01234-56789
 // 
+//     It is recommended that you put a record ID and a MAC (Message
+// Authentication Code) in the data payload, and encrypt it.  On recovering an
+// RSKEY code, decrypt the data payload to recover the ID and MAC.  Confirm the
+// ID, by re-generating the MAC for that ID, and comparing with the MAC
+// recovered from the decoded RSKEY.  If they match, the ID is valid.
+// 
+//     If you have a 32-bit ID (eg. a customer ID), and a 32-bit MAC (say, the
+// HMAC-SHA1 of some immutable customer data, such as a record index, XOR-folded
+// to 32 bits), you have a very sparse 64-bit space.  Even if your 32-bit (~4
+// billion) ID space is completely full, the MAC will ensure that the
+// probability of any one valid RSKEY guess coming up with a valid ID+MAC combo
+// will be less then 1 in 4 billion.  This would constitute a quite strong
+// validation of the legitimacy of the entered RSKEY.
 // 
 template < size_t B=64, size_t P=10 > // B=<bits>, P=<percent>
 int				rskey_encode(
-				    char      	       *enc,
-				    size_t		siz )
+				    unsigned char      *enc,
+				    size_t		siz,		// data supplied
+				    size_t		maximum )	// maximum
+									// space availalbe
 {
 #if defined( DEBUG ) && DEBUG >= 1
     std::cout
@@ -31,10 +46,11 @@ int				rskey_encode(
 	<< ", buf[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
 	<< std::endl;
 #endif
-    static const size_t		DATA	= (B/5+(B%5?1:0));
-    static const size_t		PARI	= DATA*P/100+1;
-    static const size_t		PARITY	= DATA*P/100+1;
-    ezpwd::corrector<DATA+PARI>	correct;
+    static const size_t		DATA	= ((B+4)/5);
+    static const size_t		PARI	= (DATA*P+99)/100;
+    static const size_t		SIZE	= DATA+PARI;
+
+    ezpwd::corrector<SIZE>	correct;
 
     int				res;
     try {

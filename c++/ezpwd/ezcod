@@ -315,7 +315,7 @@ namespace ezpwd {
 
 	    // Add the R-S parity symbols and base-32 encode, add parity seperator and chunk
 	    rscodec.encode( res );
-	    ezpwd::base32::encode( res );
+	    serialize::base32::encode( res );
 	    if ( seper != SEP_NONE ) {
 		char		sep;
 		switch( seper ) {
@@ -373,7 +373,7 @@ namespace ezpwd {
 	    // location/parity separator is provided, it must be at position L!
 	    std::vector<int>	erasure;
 	    std::vector<char>	invalid;
-	    base32::decode( dec, &erasure, &invalid );
+	    serialize::base32::decode( dec, &erasure, &invalid );
 
 	    int			parbeg	= L;		// Parity begins after Location, by default
 	    for ( size_t i = 0; i < invalid.size(); ++i ) {

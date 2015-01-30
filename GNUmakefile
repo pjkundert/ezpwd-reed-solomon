@@ -62,7 +62,8 @@ jstest:		rsexample.js					\
 		rssimple.js					\
 		rsexercise.js					\
 		rspwd_test.js					\
-		ezcod_test.js
+		ezcod_test.js					\
+		rskey_test.js
 
 bintest:	rsexample					\
 		rssimple					\
@@ -77,7 +78,12 @@ testbin:	bintest
 	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test; ./rskey_test
 
 testjs:		jstest
-	node ./rsexample.js; node ./rssimple.js; node ./rsexercise.js; node ./rspwd_test.js; node ./ezcod_test.js
+	node ./rsexample.js
+	node ./rssimple.js
+	node ./rsexercise.js
+	node ./rspwd_test.js
+	node ./ezcod_test.js
+	node ./rskey_test.js
 
 rspwd_test.js:	rspwd_test.C rspwd.C				\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
@@ -113,19 +119,22 @@ clean:
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexample.js:	rsexample.C c++/ezpwd/rs
+rsexample.js:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector\
+		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rssimple.o:	rssimple.C c++/ezpwd/rs
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rssimple.js:	rssimple.C c++/ezpwd/rs
+rssimple.js:	rssimple.C c++/ezpwd/rs						\
+		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs
+rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
+		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h
@@ -144,15 +153,19 @@ rspwd_test:	rspwd_test.o
 
 ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
 ezcod_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
-ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
-ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs
+ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs				\
+		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
 rskey_test.o:	rskey_test.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rskey_test:	rskey_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+rskey_test.js:	rskey_test.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+		emscripten
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 

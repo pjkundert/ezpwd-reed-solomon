@@ -7,7 +7,8 @@
 /rscompare
 /rsexample
 /rsexercise
-/rspwd-test
+/rspwd_test
+/rskey_test
 /rssimple
 /rsvalidate
 /README.tex
@@ -20,4 +21,3 @@
 /phil-karn/gen_ccsds_tal
 /phil-karn/librs.a
 *.js.map
-/rskey_test
