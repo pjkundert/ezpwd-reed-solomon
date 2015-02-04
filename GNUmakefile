@@ -5,8 +5,7 @@ CXXFLAGS       += -I./c++ -std=c++11 -O3							\
 		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
-#CXX		= clang++
-CXX		= g++
+CXX		= g++ # clang++
 
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
@@ -160,10 +159,10 @@ ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
-rskey_test.o:	rskey_test.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rskey_test.o:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rskey_test:	rskey_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rskey_test.js:	rskey_test.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 # 

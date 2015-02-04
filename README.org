@@ -1,11 +1,39 @@
 #+TITLE: ezpwd-reed-solomon.js
 #+STYLE: <link rel="stylesheet" type="text/css" href="org.css" />
 
-* Reed-Solomon
+* Reed-Solomon Loss/Error Correction Coding
 
   Error and erasure detection and correction for C++ and Javascript programs.
   Based on Phil Karn's excellent implementation (as used by the Linux kernel),
   converted to C++.
+
+  Performs about 40% faster than Phil's general case code, about 20% faster than
+  his optimized code for 8-bit/CCSDS symbols.
+
+  Available both under GPLv3 and Commercial licenses (Phil's original code)
+
+** c++/ezpwd/rs
+
+   C++ implementation of Reed-Solomon codec.  Fully implemented as inline code,
+   in C++ header files.
+
+   #+BEGIN_SRC C++
+   #include <ezpwd/rs>
+
+   ezpwd::RS<255,251> rs;	// Reed Solomon w/ 255 8-bit symbols, up to 251 data
+   std::vector<uint8_t> data;	// fill data with  up to 251 bytes ...
+   rs.encode( data );		// Add 4 Reed-Solomon parity symbols (255-251 == 4)
+
+   // ... later, after data is possibly corrupted ...
+
+   int fix = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
+
+   #+END_SRC
+
+** js/ezpwd/rspwd.js
+
+   Javascript implementation of Reed-Solomon codec based password error
+   detection and correction.  Produced from the C++ implementation using =emscripten=.
 
 ** Enhancements
 
@@ -42,12 +70,3 @@
     Guard object.  These default to 'int' (NO-OP), but if a threading mutex and
     guard are provided, the shared initialization is thread-safe.
 
-** c++/ezpwd/rs
-
-   C++ implementation of Reed-Solomon codec.  Fully implemented as inline code,
-   in C++ header files.
-
-** js/ezpwd/rspwd.js
-
-   Javascript implementation of Reed-Solomon codec based password error
-   detection and correction.  Produced from the C++ implementation using =emscripten=.

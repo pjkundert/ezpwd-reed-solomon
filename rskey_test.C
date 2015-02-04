@@ -9,6 +9,8 @@
 
 #include <ezpwd/definitions>	// must be included in one C++ compilation unit
 
+#include "rskey.C"
+
 // 
 // Test RSKEY Reed-Solomon corrected data encoding in the specified number of data symbols
 // 
@@ -18,7 +20,36 @@ typedef std::vector<int8_t>	s8vec_t;
 
 void				test_rskey( ezpwd::asserter &assert )
 {
-    
+    char			enc[1024] = "\x00\x01\x02\x03\xFF\xFE\xFD\xFC";
+
+    int				encres	= rskey_64_10_encode( enc, 8, sizeof enc );
+    if ( assert.ISEQUAL( std::string( "000G4-0YYYU-XYQWE" ), std::string( enc )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( encres, 17 ))
+	std::cout << assert << std::endl;
+
+    char			dec[1024];
+    int				decres;
+    // Decode, no errors
+    std::copy( enc, enc+encres+1, dec );
+    decres				= rskey_64_10_decode( dec, encres, sizeof dec );
+    if ( decres < 0 )
+	std::cout << dec << std::endl;
+    if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( decres, 100 ))
+	std::cout << assert << std::endl;
+
+    // Decode, 1 erasure
+    std::copy( enc, enc+encres+1, dec );
+    dec[1] = '_';
+    decres				= rskey_64_10_decode( dec, encres, sizeof dec );
+    if ( decres < 0 )
+	std::cout << dec << std::endl;
+    if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( decres, 50 ))
+	std::cout << assert << std::endl;
 }
 
 // 
@@ -356,7 +387,8 @@ int				main( int argc, char **argv )
     test_base32( assert );
     test_base64( assert );
     test_baseN( assert );
-    
+    test_rskey( assert );
+
     if ( assert.failures )
 	std::cout
 	    << __FILE__ << " fails " << assert.failures << " tests"

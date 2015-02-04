@@ -47,7 +47,7 @@ main()
         << "Phil's CCSDS parity: " << std::vector<uint8_t>( cdata.data() + (TOTAL-ROOTS), cdata.data() + TOTAL ) 
         << std::endl;
     
-    RS_255_CCSDS( (TOTAL-ROOTS) )	nrs;
+    ezpwd::RS_CCSDS<255,TOTAL-ROOTS>	nrs;
     std::array<uint8_t,TOTAL>	ndata( orig );
     nrs.encode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD );
     std::cout

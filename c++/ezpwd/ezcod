@@ -194,9 +194,7 @@ namespace ezpwd {
 	typedef ezpwd::array<std::pair<uint32_t, uint32_t>, 12>
 				parts_t;
 	static const parts_t	parts;
-
-	typedef RS_31( 31-P ) 	rscodec_t;
-	static const rscodec_t	rscodec;
+	static const ezpwd::RS<31,31-P> rscodec;
 
 				ezcod(
 				    double	_lat	= 0,
@@ -546,13 +544,12 @@ namespace ezpwd {
     // future precision between lat/lon, always maintaining extra precision for Longitude.
     // 
     template < size_t P, size_t L >
-    const typename
-    ezcod<P,L>::rscodec_t	ezcod<P,L>::rscodec;
+    const ezpwd::RS<31,31-P>	ezcod<P,L>::rscodec;
 
     // Number of lat/lon bits represented for each location symbol
     template < size_t P, size_t L >
-    const typename 
-    ezcod<P,L>::bits_t		ezcod<P,L>::bits = {
+    const typename ezcod<P,L>::bits_t
+    				ezcod<P,L>::bits = {
 	{
 	    //  bits per symbol            lat lon           
 	    ezcod<P,L>::bits_t::value_type( 2,  3 ),
@@ -580,8 +577,8 @@ namespace ezpwd {
 
     // Total number of parts that lat/lon is subdivided into, for that number of location symbols.
     template < size_t P, size_t L >
-    const typename 
-    ezcod<P,L>::parts_t		ezcod<P,L>::parts = {
+    const typename ezcod<P,L>::parts_t
+				ezcod<P,L>::parts = {
 	{
 	    //  parts per symbol            lat parts    lon parts     lat lon bits
 	    ezcod<P,L>::parts_t::value_type( 1UL <<  2,  1UL <<  3 ), // 2,  3

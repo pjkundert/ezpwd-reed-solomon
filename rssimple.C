@@ -12,7 +12,7 @@
 
 int main() 
 {
-    RS_255( 253 )		rs;
+    ezpwd::RS<255,253>		rs;
     std::string			orig	= "Hello, world!";
     std::vector<int>		erasure;
 

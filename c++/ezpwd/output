@@ -5,6 +5,8 @@
 #include <iostream>
 #include <iomanip>
 #include <sstream>
+#include <set>
+#include <map>
 
 // 
 // ezpwd::hexify	-- hexify something that can be converted to an unsigned char
