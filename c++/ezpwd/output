@@ -70,6 +70,8 @@ std::ostream		       &operator<<(
 	case 0x0B: lhs << "\\v";  break;		// VT
 	case 0x0C: lhs << "\\f";  break;		// FF
 	case 0x0D: lhs << "\\r";  break;		// CR
+	case '\"': lhs << "\\\""; break;		// "
+	case '\'': lhs << "\\\'"; break;		// '
 	case ' ':  lhs << "  ";   break;		// space
 	case '\\': lhs << "\\\\"; break;		// '\'
 	default:   lhs << char( rhs.c );		// any other printable character

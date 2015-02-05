@@ -18,11 +18,54 @@ typedef std::vector<uint8_t>	u8vec_t;
 typedef std::vector<int8_t>	s8vec_t;
 
 
-void				test_rskey( ezpwd::asserter &assert )
+template <size_t BITS, size_t PCT, size_t SEP>
+void				test_rskey(
+				    ezpwd::asserter    &assert,
+				    const u8vec_t      &raw,
+				    const std::string  &key )
 {
-    char			enc[1024] = "\x00\x01\x02\x03\xFF\xFE\xFD\xFC";
+    char			enc[1024];
+    std::copy( raw.begin(), raw.end(), enc );
+    int				encres	= ezpwd::rskey_encode<BITS,PCT>( enc, raw.size(), sizeof enc, SEP );
+    if ( assert.ISEQUAL( key, std::string( enc )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( encres, int( key.size() )))
+	std::cout << assert << std::endl;
 
-    int				encres	= rskey_64_10_encode( enc, 8, sizeof enc );
+    // Got the encoded key.  Increase the loss/error load 'til failure
+    size_t			load;
+    for ( load = 0; load < key.size() - key.size() / SEP; ++load ) {
+	char			dec[1024];
+	std::copy( key.begin(), key.end(), dec );
+	// convert a "random" non-space non-erasure symbol to an erasure
+	for ( size_t e = 0, c = 0; e < load; ++c ) {
+	    for ( size_t j = 0; j < key.size(); ++j ) {
+		if ( dec[j] != '_' and dec[j] != '-' ) {
+		    if ((( c * 997 + j ) % 17 ) == 13 ) {
+			++e;
+			dec[j] = '_';
+			break;
+		    }
+		}
+	    }
+	}
+
+	int			decres	= ezpwd::rskey_decode<BITS,PCT>( dec, key.size(), sizeof dec );
+	if ( assert.ISTRUE( decres >= 0 or load * 8 > BITS * PCT / 100 )) {
+		std::cout
+		    << assert << ": Unexpected failure at " << load * 8 << "-bit erasure load; should handle "
+		    << PCT << "% of " << BITS << " bits == " << BITS * PCT / 100  << " bits erasure"
+		    << std::endl;
+	    break;
+	}
+    }
+}
+
+void				test_rskey_simple( ezpwd::asserter &assert )
+{
+    char			enc[1024] = "\x00\x01\x02\x03\xFF\xFE\xFD\xFC\x7e\x7f\x08\x81";
+
+    int				encres	= rskey_64_15_encode( enc, 8, sizeof enc );
     if ( assert.ISEQUAL( std::string( "000G4-0YYYU-XYQWE" ), std::string( enc )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( encres, 17 ))
@@ -32,7 +75,7 @@ void				test_rskey( ezpwd::asserter &assert )
     int				decres;
     // Decode, no errors
     std::copy( enc, enc+encres+1, dec );
-    decres				= rskey_64_10_decode( dec, encres, sizeof dec );
+    decres				= rskey_64_15_decode( dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
     if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
@@ -43,7 +86,7 @@ void				test_rskey( ezpwd::asserter &assert )
     // Decode, 1 erasure
     std::copy( enc, enc+encres+1, dec );
     dec[1] = '_';
-    decres				= rskey_64_10_decode( dec, encres, sizeof dec );
+    decres				= rskey_64_15_decode( dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
     if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
@@ -80,7 +123,7 @@ const ezpwd::array<char,127>	ezpwd::serialize::standard<16>::decoder;
 typedef ezpwd::serialize::base<16,ezpwd::serialize::standard<16>>
 				base16;
 
-void				test_baseN( ezpwd::asserter &assert )
+void				test_base16( ezpwd::asserter &assert )
 {
 
     std::string			deadbeef( "deadbeef" );
@@ -94,10 +137,112 @@ void				test_baseN( ezpwd::asserter &assert )
 	std::cout << assert << std::endl;
 }
 
-void				test_base32( ezpwd::asserter &assert )
+typedef std::list<std::tuple<std::string, std::string, std::string, std::string>>
+			       baseN_tests_t;
+
+template < typename SERSTD, typename SEREZC >
+void				test_baseN(
+				    ezpwd::asserter    &assert,
+				    const baseN_tests_t &tests )
 {
 
-    for ( auto &t : std::list<std::tuple<std::string, std::string, std::string, std::string>> {
+    for ( auto &t : tests ) {
+	std::string			e1( std::get<0>( t ));
+
+	// scatter, into raw (unencoded) base-N data, with padding.  An instance of a
+	// std::random_access_iterator, to force optimal algorithm
+	u8vec_t				e1_vec_1;
+	SEREZC::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ),
+					   ezpwd::serialize::pd_enforce );
+#if defined( DEBUG )
+	std::cout << "scatter (rnd.): " << u8vec_t( e1.begin(), e1.end() ) << " --> " << e1_vec_1 << std::endl;
+#endif
+	if ( assert.ISEQUAL( e1_vec_1.size(), SEREZC::encode_size( e1.size(), ezpwd::serialize::pd_enforce )))
+	    std::cout << assert << std::endl;
+
+	// An instance of a std::forward_iterator, to force use of generic algorithm with more
+	// iterator comparisons
+	u8vec_t				e1_vec_2;
+	{
+	    std::istringstream		e1_iss( e1 );
+	    std::istreambuf_iterator<char>
+					e1_iss_beg( e1_iss ),
+					e1_iss_end;
+	    SEREZC::scatter( e1_iss_beg, e1_iss_end, std::back_insert_iterator<u8vec_t>( e1_vec_2 ),
+					       ezpwd::serialize::pd_enforce );
+	}
+	if ( assert.ISEQUAL( e1_vec_1, e1_vec_2 ))
+	    std::cout << assert << std::endl;	    
+
+	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_1 ))
+	    std::cout << assert << std::endl;
+	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_2 ))
+	    std::cout << assert << std::endl;
+
+	// Now, convert the raw scattered 5/6-bit data to base-N RFC4648 Standard symbols, in-place
+	std::string		e1_s( e1_vec_1.begin(), e1_vec_1.end() );
+	SERSTD::encode( e1_s.begin(), e1_s.end() );
+#if defined( DEBUG )
+	std::cout << "base32::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
+#endif
+	if ( assert.ISEQUAL( e1_s, std::get<2>( t )))
+	    std::cout << assert << std::endl;
+
+	// Now get rid of the pad symbols for the base32 ezpwd encoding test
+	std::string		e1_e( e1_vec_1.begin(), e1_vec_1.end() );
+	while ( e1_e.size() and e1_e.back() == EOF )
+	    e1_e.pop_back();
+	SEREZC::encode( e1_e.begin(), e1_e.end() );
+#if defined( DEBUG )
+	std::cout << "base32::encode (ezpwd):    " << e1_vec_1  << " --> " << e1_e << std::endl;
+#endif
+	if ( assert.ISEQUAL( e1_e, std::get<3>( t )))
+	    std::cout << assert << std::endl;
+	
+	// Decode back to the original 5/6-bit binary data in-place, from both the standard (with
+	// pad) and ezcod (not padded) base32 encoded data.
+
+	// _s -- Standard (with padding)
+	std::string		d1_s( e1_s );
+	SERSTD::decode( d1_s, 0, 0,
+            ezpwd::serialize::ws_ignored, ezpwd::serialize::pd_enforce );
+	if ( assert.ISEQUAL( std::get<1>( t ), std::string() << u8vec_t( d1_s.begin(), d1_s.end() )))
+	    std::cout << assert << std::endl;
+
+	// _e -- Ezcod (without padding)
+	std::string		d1_e( e1_e );
+	SEREZC::decode( d1_e ); // default is ws_ignored, pd_ignored
+	// It will match the decoding, but not include the trailing padding (FF) chars
+	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
+	    std::cout << assert << std::endl;
+
+	// Finally, gather up the 5-bit chunks back into the original 8-bit data, using pd_ignored
+	// (no padding, the default) first, and then pd_enforce.  Make sure that the predicted
+	// base32::encode_size is correct.
+
+	u8vec_t			d1_vec_s; // pd_enforce
+	SEREZC::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ),
+					  ezpwd::serialize::pd_enforce );
+	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
+	    std::cout << assert << std::endl;
+	if ( assert.ISEQUAL( d1_s.size(), SEREZC::encode_size( std::get<0>( t ).size(), ezpwd::serialize::pd_enforce )))
+	    std::cout << assert << "; predicted " << std::get<0>( t ) << " --> " << u8vec_t( d1_s.begin(), d1_s.end() ) <<
+		" should be " << SEREZC::encode_size( std::get<0>( t ).size(), ezpwd::serialize::pd_enforce  ) << " bytes " << std::endl;
+
+	u8vec_t			d1_vec_e;  // pd_ignored: default
+	SEREZC::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ));
+	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
+	    std::cout << assert << std::endl;
+	if ( assert.ISEQUAL( d1_e.size(), SEREZC::encode_size( std::get<0>( t ).size() ))) // default: pd_ignored
+	    std::cout << assert << "; predicted " << std::get<0>( t ) << " --> " <<  u8vec_t( d1_e.begin(), d1_e.end() ) <<
+		" should be " << SEREZC::encode_size( std::get<0>( t ).size() ) << " bytes " << std::endl;
+    }
+}
+
+void				test_base32( ezpwd::asserter &assert )
+{
+    test_baseN< ezpwd::serialize::base32_standard, ezpwd::serialize::base32 >( assert,
+        baseN_tests_t {
 	    // original scatter to 5-bit chunks				standard		ezcod
 	    { "a",	R"""(\f04FFFFFFFFFFFF)""",			"ME======",		"C4" },
 	    { "ab",	R"""(\f051100FFFFFFFF)""",			"MFRA====",		"C5H0" },
@@ -164,88 +309,13 @@ void				test_base32( ezpwd::asserter &assert )
 	      "L2GT58W4LNKAFA59MAMTRBDEMXQB3CMKNJTUDDWQP6WBPF5WPTYV1GE2QF2CBHN7"
 	      "R34VMJXCRP7CYL6HTB9W9MENTYCDKNNUUKEWWPY0V7HE7R75VUKXHTFAWFNEUUPF"
 	      "X3QY5VYLXPUFFX7RYBWYRYFXYV" },
-	} ) {
-
-	std::string			e1( std::get<0>( t ));
-
-
-	// An instance of a std::random_access_iterator, to force optimal algorithm
-	u8vec_t				e1_vec_1;
-	ezpwd::serialize::base32::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ), true );
-#if defined( DEBUG )
-	std::cout << "scatter (rnd.): " << u8vec_t( e1.begin(), e1.end() ) << " --> " << e1_vec_1 << std::endl;
-#endif
-	// An instance of a std::forward_iterator, to force use of algorithm with more iterator
-	// comparisons
-	u8vec_t				e1_vec_2;
-	{
-	    std::istringstream		e1_iss( e1 );
-	    std::istreambuf_iterator<char>	e1_iss_beg( e1_iss );
-	    std::istreambuf_iterator<char>	e1_iss_end;
-	    ezpwd::serialize::base32::scatter( e1_iss_beg, e1_iss_end, std::back_insert_iterator<u8vec_t>( e1_vec_2 ), true );
-	}
-	if ( assert.ISEQUAL( e1_vec_1, e1_vec_2 ))
-	    std::cout << assert << std::endl;	    
-
-	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_1 ))
-	    std::cout << assert << std::endl;
-	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_2 ))
-	    std::cout << assert << std::endl;
-
-	// Now, convert the raw scattered 5-bit data to base32, in-place
-	std::string		e1_s( e1_vec_1.begin(), e1_vec_1.end() );
-	ezpwd::serialize::base<32,ezpwd::serialize::standard<32>>::encode( e1_s.begin(), e1_s.end(), '=' );
-#if defined( DEBUG )
-	std::cout << "base32::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
-#endif
-	if ( assert.ISEQUAL( e1_s, std::get<2>( t )))
-	    std::cout << assert << std::endl;
-
-	// Now get rid of the pad symbols for the base32 ezpwd encoding test
-	std::string		e1_e( e1_vec_1.begin(), e1_vec_1.end() );
-	while ( e1_e.size() and e1_e.back() == EOF )
-	    e1_e.pop_back();
-	ezpwd::serialize::base32::encode( e1_e.begin(), e1_e.end() );
-#if defined( DEBUG )
-	std::cout << "base32::encode (ezpwd):    " << e1_vec_1  << " --> " << e1_e << std::endl;
-#endif
-	if ( assert.ISEQUAL( e1_e, std::get<3>( t )))
-	    std::cout << assert << std::endl;
-	
-	// Now, decode back to the original 5-bit binary data in-place, from both the
-	// standard (with pad) and ezcod (not padded) base32 encoded data.
-	std::string		d1_s( e1_s );
-	ezpwd::serialize::base<32,ezpwd::serialize::standard<32>>::decode(
-	    d1_s, 0, 0, ezpwd::serialize::ws_ignore, ezpwd::serialize::pd_keep );
-	if ( assert.ISEQUAL( std::get<1>( t ), std::string() << u8vec_t( d1_s.begin(), d1_s.end() )))
-	    std::cout << assert << std::endl;
-
-	std::string		d1_e( e1_e );
-	ezpwd::serialize::base32::decode( d1_e );
-	// It will match the decoding, but not including the trailing padding (FF) chars
-	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
-	    std::cout << assert << std::endl;
-
-	// Finally, gather up the 5-bit chunks back into the original 8-bit data.  Must specify
-	// automatic pad, if no padding supplied.
-	u8vec_t			d1_vec_s;
-	ezpwd::serialize::base32::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
-	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
-	    std::cout << assert << std::endl;
-
-	u8vec_t			d1_vec_e;
-	ezpwd::serialize::base32::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ), true );
-	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
-	    std::cout << assert << std::endl;
-    }
-
+	} );
 }
-
 
 void				test_base64( ezpwd::asserter &assert )
 {
-    // Some base64 tests
-    for ( auto &t : std::list<std::tuple<std::string, std::string, std::string, std::string>> {
+    test_baseN< ezpwd::serialize::base64_standard, ezpwd::serialize::base64 >( assert,
+        baseN_tests_t {
 	    // original scatter to 6-bit chunks				standard		ezcod
 	    { "",       R"""()""",					"",			"" },
 	    { "a",	R"""(1810FFFF)""",				"YQ==",			"YQ" },
@@ -278,15 +348,15 @@ void				test_base64( ezpwd::asserter &assert )
 	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
 
 	  R"""(0000040200 0100501  1C080210 (\v0300 40E03 1001104 !\f1405111817)"""
-	  R"""(0601 $1A06 1 01D07 ! <  081208 #\t0214 &1802   )\n " , ,\v12 8 /)"""
+	  R"""(0601 $1A06 1 01D07 ! <  081208 #\t0214 &1802   )\n\" , ,\v12 8 /)"""
 	  R"""(\f0304 2\f 310 5\r #1C 80E13 ( ;0F03 4 >0F 4010110 $\r0411141907)"""
 	  R"""(1204 %\n12 4 1\r13 $ =101415\t131505151615 5 !1916 % -1C1715 91F)"""
-	  R"""(180605 "18 611 %19 &1D (1A16 ) +1B06 5 .1B 701 11C '\r 41D1719 7)"""
-	  R"""(1E07 % :1E 7 1 =1F ' >00  18\n03 !081606 ! 8 "\t " ( .\f #18 :0F)"""
-	  R"""( $\t0612 $ 91215 % )1E18 &19 *1B '\t 61E ' :02 ! ( *0E $ )1A1A ')"""
-	  R"""( *\n & * * : 2 - + * > 0 ,1B\n 3 -\v16 6 - ; " 9 . + . < /1B : ?)"""
+	  R"""(180605\"18 611 %19 &1D (1A16 ) +1B06 5 .1B 701 11C\'\r 41D1719 7)"""
+	  R"""(1E07 % :1E 7 1 =1F\' >00  18\n03 !081606 ! 8\"\t\" ( .\f #18 :0F)"""
+	  R"""( $\t0612 $ 91215 % )1E18 &19 *1B\'\t 61E\' :02 ! ( *0E $ )1A1A\')"""
+	  R"""( *\n & * * : 2 - + * > 0 ,1B\n 3 -\v16 6 - ;\" 9 . + . < /1B : ?)"""
 	  R"""( 0\f0702 0 <1305 1 ,1F08 21C +\v 3\f 70E 3 =0311 4 -0F14 51D1B17)"""
-	  R"""( 6\r '1A 6 = 31D 7 - ?   81E\v # 90E17 & 9 > # ) : . / , ;1E ; /)"""
+	  R"""( 6\r\'1A 6 = 31D 7 - ?   81E\v # 90E17 & 9 > # ) : . / , ;1E ; /)"""
 	  R"""( <0F07 2 < ?13 5 = /1F 8 >1F + ; ?0F 7 > ? 0FFFF)""",
 
 	      "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmYCgpKissLS4v"
@@ -302,81 +372,10 @@ void				test_base64( ezpwd::asserter &assert )
 	      "kJGSk5SVlpeYmZqbnJ2en6ChoqOkpaanqKmqq6ytrq+wsbKztLW2t7i5uru8vb6."
 	      "wMHCw8TFxsfIycrLzM3Oz9DR0tPU1dbX2Nna29zd3t.g4eLj5OXm5+jp6uvs7e7v"
 	      "8PHy8.T19vf4+fr7.P3+.w" },
-	} ) {
-	
-	std::string			e1( std::get<0>( t ));
-	// An instance of a std::random_access_iterator, to force optimal algorithm
-	u8vec_t				e1_vec_1;
-	ezpwd::serialize::base64::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ), true );
-#if defined( DEBUG )
-	std::cout << "scatter (rnd.): " << u8vec_t( e1.begin(), e1.end() ) << " --> " << e1_vec_1 << std::endl;
-#endif
-	// An instance of a std::forward_iterator, to force use of algorithm with more iterator
-	// comparisons
-	u8vec_t				e1_vec_2;
-	{
-	    std::istringstream		e1_iss( e1 );
-	    std::istreambuf_iterator<char>	e1_iss_beg( e1_iss );
-	    std::istreambuf_iterator<char>	e1_iss_end;
-	    ezpwd::serialize::base64::scatter( e1_iss_beg, e1_iss_end, std::back_insert_iterator<u8vec_t>( e1_vec_2 ), true );
-	}
-	if ( assert.ISEQUAL( e1_vec_1, e1_vec_2 ))
-	    std::cout << assert << std::endl;	    
-
-	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_1 ))
-	    std::cout << assert << std::endl;
-	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_2 ))
-	    std::cout << assert << std::endl;
-
-	// Now, convert the raw scattered 5-bit data to base64, in-place
-	std::string		e1_s( e1_vec_1.begin(), e1_vec_1.end() );
-	ezpwd::serialize::base<64,ezpwd::serialize::standard<64>>::encode( e1_s.begin(), e1_s.end(), '=' );
-#if defined( DEBUG )
-	std::cout << "base64::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
-#endif
-	if ( assert.ISEQUAL( e1_s, std::get<2>( t )))
-	    std::cout << assert << std::endl;
-
-	// Now get rid of the pad symbols for the base64 ezpwd encoding test
-	std::string		e1_e( e1_vec_1.begin(), e1_vec_1.end() );
-	while ( e1_e.size() and e1_e.back() == EOF )
-	    e1_e.pop_back();
-	ezpwd::serialize::base64::encode( e1_e.begin(), e1_e.end() );
-#if defined( DEBUG )
-	std::cout << "base64::encode (ezpwd):    " << e1_vec_1  << " --> " << e1_e << std::endl;
-#endif
-	if ( assert.ISEQUAL( e1_e, std::get<3>( t )))
-	    std::cout << assert << std::endl;
-	
-	// Now, decode back to the original 5-bit binary data in-place, from both the
-	// standard (with pad) and ezcod (not padded) base64 encoded data.
-	std::string		d1_s( e1_s );
-	ezpwd::serialize::base<64,ezpwd::serialize::standard<64>>::decode(
-            d1_s, 0, 0, ezpwd::serialize::ws_ignore, ezpwd::serialize::pd_keep );
-	if ( assert.ISEQUAL( std::get<1>( t ), std::string() << u8vec_t( d1_s.begin(), d1_s.end() )))
-	    std::cout << assert << std::endl;
-
-	std::string		d1_e( e1_e );
-	ezpwd::serialize::base64::decode( d1_e );
-	// It will match the decoding, but not including the trailing padding (FF) chars
-	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
-	    std::cout << assert << std::endl;
-
-	// Finally, gather up the 5-bit chunks back into the original 8-bit data.  Must specify
-	// automatic pad, if no padding supplied.
-	u8vec_t			d1_vec_s;
-	ezpwd::serialize::base64::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
-	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
-	    std::cout << assert << std::endl;
-
-	u8vec_t			d1_vec_e;
-	ezpwd::serialize::base64::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ), true );
-	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
-	    std::cout << assert << std::endl;
-    }
+	} );
 }
 
-int				main( int argc, char **argv )
+int				main( int, char ** )
 {
     std::cout
 	<< "rskey tests ..."
@@ -386,8 +385,14 @@ int				main( int argc, char **argv )
     
     test_base32( assert );
     test_base64( assert );
-    test_baseN( assert );
-    test_rskey( assert );
+    test_base16( assert );
+    test_rskey_simple( assert );
+    test_rskey<64,15,5>( assert,
+        u8vec_t { 0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC }, 
+        "000G4-0YYYU-XYQWE" );
+    test_rskey<96,25,5>( assert,
+        u8vec_t { 0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC, 0x7e, 0x7f, 0x08, 0x81 },
+        "000G4-0YYYU-XYQYK-Y120G-T8P84" );
 
     if ( assert.failures )
 	std::cout

@@ -49,13 +49,13 @@ namespace ezpwd {
 
 	enum ws_use_t {
 	    ws_invalid	= 0,	// Whitespace is invalid
-	    ws_ignore	= 1,	// Whitespace ignored
+	    ws_ignored	= 1,	// Whitespace ignored (the default)
 	};
 
 	enum pd_use_t {
-	    pd_invalid	= 0,	// Padding is invalid (not expected)
-	    pd_ignore	= 1,	// Padding is ignored
-	    pd_keep	= 2,	// 
+	    pd_invalid	= 0,	// Padding is not expected (invalid)
+	    pd_ignored	= 1,	// Padding is ignored, and automatically supplied if required (the default)
+	    pd_enforce	= 2,	// Padding is expected and enforced
 	};
 
 	// 
@@ -64,8 +64,6 @@ namespace ezpwd {
 	//     Every serialize::table<BASE> specialization must have an encoder table of size BASE,
 	// and a decoder table of size 127.
 	// 
-	//template < size_t N >
-	//class tables { };
 
 	// 
 	// standard<32/64>	-- RFC4648 standard tables
@@ -261,7 +259,7 @@ namespace ezpwd {
 	    // If the input symbol indexes outside the provided encoder table (or an 'nv' entry), then an
 	    // exception will be thrown.
 	    // 
-	    //     If a non-zero 'pad' character is supplied, then the -1 (EOF) character value will be
+	    //     If a non-zero 'pad' character is supplied, then the -1 (pd) character value will be
 	    // allowed (normally occurring only at the end of the input range), and a 'pad' will be
 	    // emitted for each one.
 	    // 
@@ -270,12 +268,12 @@ namespace ezpwd {
 	    I			encode(
 				    I			begin,
 				    I			end,
-				    char		pad	= 0 ) // '=' for standards-compliance
+				    char		pad	= '=' ) // '=' for standards-compliance
 	    {
 		for ( I i = begin; i != end; ++i ) {
 		    if ( *i >= 0 and size_t( *i ) < TABLES::encoder.size() )
 			*i		= TABLES::encoder[*i];
-		    else if ( *i == EOF and pad )
+		    else if ( pd == *i and pad )
 			*i		= pad;
 		    else
 			throw std::runtime_error(
@@ -288,7 +286,7 @@ namespace ezpwd {
 	    static
 	    std::string	       &encode(
 				    std::string	       &symbols,
-				    char		pad	= 0 ) // '=' for standards-compliance
+				    char		pad	= '=' ) // '=' for standards-compliance
 	    {
 		encode( symbols.begin(), symbols.end(), pad );
 		return symbols;
@@ -299,7 +297,14 @@ namespace ezpwd {
 	    // base<N>::decode(<string>)	-- decode base-N symbols in supplied std::string, collapsing spaces, in-place.
 	    // 
 	    //     Items from iterator must be convertible to a table index (ie. not -'ve, and within
-	    // the table size, which is always 127).
+	    // the table size, which is always 127).  
+	    // 
+	    //   ws_ignored -- skip whitepace/- symbols (the default)
+	    //   ws_invalid -- consider whitespace/- symbols as invalid symbols
+	    // 
+	    //   pd_invalid -- consider padding symbols as invalid
+	    //   pd_ignored -- skip padding symbols
+	    //   pd_enforce -- leave any padding symbols in place (the default)
 	    // 
 	    //     If erasure vector supplied, marks invalid symbols as erasures; otherwise, throws
 	    // exception.  Ignores whitespace.  Will return an iterator to just after the last output
@@ -318,10 +323,10 @@ namespace ezpwd {
 	    I			decode(
 				    I			begin,
 				    I			end,
-				    std::vector<int>   *erasure,	// Deem invalid symbols as erasures
-				    std::vector<char>  *invalid	= 0,	//   and return the symbols
-				    ws_use_t		ws_use	= ws_ignore,
-				    pd_use_t		pd_use	= pd_keep )
+				    std::vector<int>   *erasure,		// Deem invalid symbols as erasures
+				    std::vector<char>  *invalid	= 0,		//   and return the symbols
+				    ws_use_t		ws_use	= ws_ignored,  	// skip any whitespace
+				    pd_use_t		pd_use	= pd_ignored )	// ignore padding (works for any encode pd_use)
 	    {
 		if ( erasure )
 		    erasure->clear();
@@ -331,29 +336,31 @@ namespace ezpwd {
 		for ( i = o = begin; i != end; ++i ) {
 		    size_t	ti( *i );
 		    char	c	= ti < TABLES::decoder.size() ? TABLES::decoder[ti] : char( nv );
-		    if ( ws == c ) {
-			if ( ws_ignore == ws_use ) {
-			    continue;
-			} else if ( ws_invalid == ws_use ) {
+		    if ( ws == c )
+			switch ( ws_use ) {
+			case ws_invalid:
 			    c		= nv;
-			}
-		    }
-		    if ( pd == c ) {
-			if ( pd_ignore == pd_use ) {
+			    break;
+			case ws_ignored:
 			    continue;
-			} else if ( pd_invalid == pd_use ) {
-			    c		= nv;
-			} else { // pd_keep
-			    c		= EOF;
 			}
-		    }
+		    if ( pd == c )
+			switch ( pd_use ) {
+			case pd_invalid:
+			    c		= nv;
+			    break;
+			case pd_enforce:
+			    break;
+			case pd_ignored:
+			    continue;
+			}
 		    if ( nv == c ) {
 			// Invalid symbol; optionally remember them.  Mark as erasure?  Or throw.
 			if ( invalid )
 			    invalid->push_back( *i );
 			if ( erasure ) {
-			    erasure->push_back( o - begin );// index of offending symbol in output
-			    c		= 0;		//   will be output w/ 0 value
+			    erasure->push_back( o - begin );	// index of offending symbol in output
+			    c		= 0;			//   will be output w/ 0 value
 			} else {
 			    throw std::runtime_error(
 			        std::string( "ezpwd::serialize::decode: invalid base-" ) << N
@@ -370,8 +377,8 @@ namespace ezpwd {
 	    I			decode(
 				    I			begin,
 				    I			end,
-				    ws_use_t		ws_use	= ws_ignore,
-				    pd_use_t		pd_use	= pd_keep )
+				    ws_use_t		ws_use	= ws_ignored,
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
 		return decode( begin, end, 0, 0, ws_use, pd_use );
 	    }
@@ -381,8 +388,8 @@ namespace ezpwd {
 				    std::string	       &symbols,
 				    std::vector<int>   *erasure = 0,
 				    std::vector<char>  *invalid	= 0,
-				    ws_use_t		ws_use	= ws_ignore,
-				    pd_use_t		pd_use	= pd_keep )
+				    ws_use_t		ws_use	= ws_ignored,
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
 		auto		last	= decode( symbols.begin(), symbols.end(), erasure, invalid,
 						  ws_use, pd_use );
@@ -401,12 +408,12 @@ namespace ezpwd {
 	    // 
 	    template < typename I >
 	    static
-	    int			gather_next( I &beg, I end, bool pad, int previous )
+	    int			gather_next( I &beg, I end, pd_use_t pd_use, int previous )
 	    {
 		if ( beg == end ) {
-		    if ( not pad )
+		    if ( pd_enforce == pd_use )
 			throw std::logic_error( std::string( "base-" ) << N << " gather error; insufficient data");
-		    // automatically pad; return nv on underflow while unemitted data remains, finally pd
+		    // automatically pad; return nv on underflow while un-emitted data remains, finally pd
 		    return previous >= 0 ? nv : pd;
 		}
 		int		c	= *beg++;
@@ -415,7 +422,7 @@ namespace ezpwd {
 		        std::string( "base-" ) << N << " gather error; data following padding" );
 		if ( c >= char( N ) or c < pd )
 		    throw std::logic_error(
-		        std::string( "base-" ) << N << " gather error; symbol value beyond capacity" );
+		        std::string( "base-" ) << N << " gather error; symbol value " << int( c ) << " beyond capacity" );
 		return c;
 	    }
 	}; // class serialize::base_generic
@@ -451,18 +458,19 @@ namespace ezpwd {
 	// 
 	//     The char values [0,32) are mapped by base<32>::encode onto something like
 	// 
-	//         ABCDEFGHIJKLMNOPQRSTUVWXYZ234567 	TABLES=standard<32> (default)
-	//         0123456789ABCDEFGHJKLMNPQRTUVWXY 	TABLES=ezpwd<32>
+	//         0123456789ABCDEFGHJKLMNPQRTUVWXY 	TABLES=ezpwd<32> (default)
+	//         0123456789ABCDEFGHJKMNPQRSTVWXYZ     TABLEs=crockford<32>
+	//         ABCDEFGHIJKLMNOPQRSTUVWXYZ234567 	TABLES=standard<32>
 	// 
 	// and base<32>::decode performs the inverse.  In addition to folding lower-case to
-	// upper-case, the following mappings occur on decode:
+	// upper-case, the following mappings occurin the ezpwd<32>::decoder table:
 	// 
 	//    O -> 0
 	//    Z -> 2
 	//    S -> 5
 	//    I -> 1
 	// 
-	//    Any characters encountered outside [0,32) by encode and outsside the above set by
+	//    Any characters encountered outside [0,32) by encode and outside the above set by
 	// decode raise an exception, unless an erasure vector is provided, in which case we supply
 	// a 0 value and store the index of the invalid symbol in the vector.
 	//
@@ -476,17 +484,17 @@ namespace ezpwd {
 
 	    static constexpr size_t encode_size(
 				    size_t		len,
-				    bool		pad )
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
-		return ( pad
-			 ? ( len + 4 ) / 5 * 8 
+		return ( pd_enforce == pd_use
+			 ? ( len + 4 ) / 5 * 8
 			 : ( len * 8 + 4 ) / 5 );
 	    }
 
 	    // 
 	    // base<32>::scatter -- distribute a range of input bytes to an output iterator in 5-bit chunks
 	    // 
-	    //     Separate implementation are provided, for random-access iterators (with fewer
+	    //     Separate implementation are provided for random-access iterators (with fewer
 	    // comparisons necessary) and for all other forward iterators.
 	    // 
 	    template < typename I, typename O, typename iterator_tag >
@@ -495,7 +503,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad,
+				    pd_use_t		pd_use,
 				    iterator_tag )
 	    {
 		while ( beg != end ) {
@@ -504,7 +512,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c0 & 0x07) << 2);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			    *out++	= EOF;
 			    *out++	= EOF;
@@ -521,7 +529,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c1 & 0x01) << 4);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			    *out++	= EOF;
 			    *out++	= EOF;
@@ -535,7 +543,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c2 & 0x0f) << 1);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			    *out++	= EOF;
 			    *out++	= EOF;
@@ -549,7 +557,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c3 & 0x03) << 3);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			}
 			return out;
@@ -569,7 +577,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad,
+				    pd_use_t		pd_use,
 				    std::random_access_iterator_tag )
 	    {
 		while ( end - beg >= 5 ) {
@@ -601,7 +609,7 @@ namespace ezpwd {
 		    *out++		= char((c2 & 0x0f) << 1 | (c3 & 0xff) >> 7);
 		    *out++		= char((c3 & 0x7f) >> 2);
 		    *out++		= char((c3 & 0x03) << 3);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 		    }
 		    return out;
@@ -615,7 +623,7 @@ namespace ezpwd {
 		    int		c2	= *beg++;
 		    *out++		= char((c1 & 0x01) << 4 | (c2 & 0xff) >> 4);
 		    *out++		= char((c2 & 0x0f) << 1);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 			*out++		= EOF;
 			*out++		= EOF;
@@ -629,7 +637,7 @@ namespace ezpwd {
 		    *out++		= char((c0 & 0x07) << 2 | (c1 & 0xff) >> 6);
 		    *out++		= char((c1 & 0x3f) >> 1);
 		    *out++		= char((c1 & 0x01) << 4);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 			*out++		= EOF;
 			*out++		= EOF;
@@ -641,7 +649,7 @@ namespace ezpwd {
 		    int		c0	= *beg++;
 		    *out++		= char((c0 & 0xff) >> 3);
 		    *out++		= char((c0 & 0x07) << 2);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 			*out++		= EOF;
 			*out++		= EOF;
@@ -662,9 +670,9 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad )
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
-		return scatter( beg, end, out, pad, typename std::iterator_traits<I>::iterator_category() );
+		return scatter( beg, end, out, pd_use, typename std::iterator_traits<I>::iterator_category() );
 	    }
 
 	    // 
@@ -685,31 +693,31 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O			out,
-				    bool		pad	= false ) // auto-padding
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
 		while ( beg != end ) {
-		    int		c0	= gather_next( beg, end, pad, 0 );
-		    int		c1	= gather_next( beg, end, pad, c0 );
+		    int		c0	= gather_next( beg, end, pd_use, 0 );
+		    int		c1	= gather_next( beg, end, pd_use, c0 );
 		    if ( c0 >= 0 and c1 >= 0 )
 			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 3)
 					   | (c1 < 0 ? 0 : c1 ) >> 2 );
-		    int		c2	= gather_next( beg, end, pad, c1 );
-		    int		c3 	= gather_next( beg, end, pad, c2 );
+		    int		c2	= gather_next( beg, end, pd_use, c1 );
+		    int		c3 	= gather_next( beg, end, pd_use, c2 );
 		    if ( c1 >= 0 and c2 >= 0 and c3 >= 0 )
 			*out++ 		= ( ((c1 < 0 ? 0 : c1) & 0x03) << 6 
 					   | (c2 < 0 ? 0 : c2) << 1
 					   | (c3 < 0 ? 0 : c3) >> 4 );
-		    int		c4	= gather_next( beg, end, pad, c3 );
+		    int		c4	= gather_next( beg, end, pd_use, c3 );
 		    if ( c3 >= 0 and c4 >= 0 )
 			*out++		= ( ((c3 < 0 ? 0 : c3) & 0x0f) << 4
 					   | (c4 < 0 ? 0 : c4) >> 1 );
-		    int		c5	= gather_next( beg, end, pad, c4 );
-		    int		c6	= gather_next( beg, end, pad, c5 );
+		    int		c5	= gather_next( beg, end, pd_use, c4 );
+		    int		c6	= gather_next( beg, end, pd_use, c5 );
 		    if ( c4 >=0 and c5 >= 0 and c6 >= 0 )
 			*out++		= ( ((c4 < 0 ? 0 : c4) & 0x01) << 7 
 					   | (c5 < 0 ? 0 : c5) << 2
 					   | (c6 < 0 ? 0 : c6) >> 3 );
-		    int		c7	= gather_next( beg, end, pad, c6 );
+		    int		c7	= gather_next( beg, end, pd_use, c6 );
 		    if ( c6 >= 0 and c7 >= 0 )
 			*out++		= ( ((c6 < 0 ? 0 : c6 ) & 0x07) << 5 
 					   | (c7 < 0 ? 0 : c7 ));
@@ -756,10 +764,10 @@ namespace ezpwd {
 
 	    static constexpr size_t encode_size(
 				    size_t		len,
-				    bool		pad )
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
-		return ( pad
-			 ? ( len + 2 ) / 3 * 4 
+		return ( pd_enforce == pd_use
+			 ? ( len + 2 ) / 3 * 4
 			 : ( len * 4 + 2 ) / 3 );
 	    }
 
@@ -772,7 +780,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad,
+				    pd_use_t		pd_use,
 				    iterator_tag )
 	    {
 		while ( beg != end ) {
@@ -781,7 +789,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c0 & 0x03) << 4);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			    *out++	= EOF;
 			}
@@ -793,7 +801,7 @@ namespace ezpwd {
 
 		    if ( beg == end ) {
 			*out++		= char((c1 & 0x0f) << 2);
-			if ( pad ) {
+			if ( pd_enforce == pd_use ) {
 			    *out++	= EOF;
 			}
 			return out;
@@ -813,7 +821,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad,
+				    pd_use_t		pd_use,
 				    std::random_access_iterator_tag )
 	    {
 		while ( end - beg >= 3 ) {
@@ -833,7 +841,7 @@ namespace ezpwd {
 		    int		c1	= *beg++;
 		    *out++		= char((c0 & 0x03) << 4 | (c1 & 0xff) >> 4);
 		    *out++		= char((c1 & 0x0f) << 2);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 		    }
 		    return out;
@@ -842,7 +850,7 @@ namespace ezpwd {
 		    int		c0	= *beg++;
 		    *out++		= char((c0 & 0xff) >> 2);
 		    *out++		= char((c0 & 0x03) << 4);
-		    if ( pad ) {
+		    if ( pd_enforce == pd_use ) {
 			*out++		= EOF;
 			*out++		= EOF;
 		    }
@@ -859,9 +867,9 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    bool		pad )
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
-		return scatter( beg, end, out, pad, typename std::iterator_traits<I>::iterator_category() );
+		return scatter( beg, end, out, pd_use, typename std::iterator_traits<I>::iterator_category() );
 	    }
 
 	    // 
@@ -873,19 +881,19 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O			out,
-				    bool		pad	= false )
+				    pd_use_t		pd_use	= pd_ignored )
 	    {
 		while ( beg != end ) {
-		    int		c0	= gather_next( beg, end, pad, 0 );
-		    int		c1	= gather_next( beg, end, pad, c0 );
+		    int		c0	= gather_next( beg, end, pd_use, 0 );
+		    int		c1	= gather_next( beg, end, pd_use, c0 );
 		    if ( c0 >= 0 and c1 >= 0 )
 			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 2 )
 					   | (c1 < 0 ? 0 : c1 ) >> 4 );
-		    int		c2	= gather_next( beg, end, pad, c1 );
+		    int		c2	= gather_next( beg, end, pd_use, c1 );
 		    if ( c1 >= 0 and c2 >= 0 )
 			*out++ 		= ( ((c1 < 0 ? 0 : c1) & 0x0f) << 4 
 				           | (c2 < 0 ? 0 : c2) >> 2 );
-		    int		c3	= gather_next( beg, end, pad, c2 );
+		    int		c3	= gather_next( beg, end, pd_use, c2 );
 		    if ( c2 >= 0 and c3 >= 0 )
 			*out++		= ( ((c2 < 0 ? 0 : c2) & 0x03) << 6
 				           | (c3 < 0 ? 0 : c3));

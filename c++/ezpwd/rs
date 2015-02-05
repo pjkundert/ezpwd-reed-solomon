@@ -1191,8 +1191,24 @@ namespace ezpwd {
 		    goto finish;
 		}
 #endif
-		// Apply error to data.
-		if ( num1 != 0 && loc[j] >= pad ) {
+		// Apply error to data.  Padding ('pad' unused symbols) begin at index 0.
+		if ( num1 != 0 ) {
+		    if ( loc[j] < pad ) {
+			// If the computed error position is in the 'pad' (the unused portion of the
+			// R-S data capacity), then our solution has failed -- we've computed a
+			// correction location outside of the data and parity we've been provided!
+#if DEBUG >= 2
+			std::cout
+			    << "ERROR: RS(" << SIZE <<"," << LOAD
+			    << ") computed error location: " << loc[j]
+			    << " within " << pad << " pad symbols, not within "
+			    << LOAD - pad << " data or " << NROOTS << " parity"
+			    << std::endl;
+#endif
+			count = -1;
+			goto finish;
+		    }
+
 		    TYP		cor	= alpha_to[modnn(index_of[num1]
 							 + index_of[num2]
 							 + NN - index_of[den])];
@@ -1209,20 +1225,6 @@ namespace ezpwd {
 		        if ( parity )
 		            parity[loc[j] - ( NN - NROOTS )] ^= cor;
 		    }
-		} else {
-		    // If the computed error position is in the 'pad' (the unused portion of the R-S
-		    // data capacity), then our solution has failed -- we've computed a correction
-		    // location outside of the data and parity we've been provided!
-#if DEBUG >= 2
-		    std::cout
-			<< "ERROR: RS(" << SIZE <<"," << LOAD
-			<< ") computed error location: " << loc[j]
-			<< " within " << pad << " pad symbols, not within "
-			<< LOAD - pad << " data or " << NROOTS << " parity"
-			<< std::endl;
-#endif
-		    count = -1;
-		    goto finish;
 		}
 	    }
 

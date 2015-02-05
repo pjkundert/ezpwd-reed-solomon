@@ -211,12 +211,16 @@ namespace ezpwd {
 	// 
 	//     If none of the error/erasure forms succeed, the password is returned unmodified.
 	// 
+	//     If a non-zero 'minimum' or 'maximum' are provided, they constrain the possible
+	// resultant password sizes that will be attempted.
+	// 
 	static
 	int			decode(
 				    std::string	       &password,
-				    size_t		minimum = PARITY,
 				    const std::vector<int>
-						       &erasures= std::vector<int>() )
+						       &erasures,
+				    size_t		minimum = PARITY,//always deemed at least 1
+				    size_t		maximum	= 0 )	// if 0, no limit
 	{
 	    int			confidence;
 	    best_avg		best;
@@ -252,6 +256,17 @@ namespace ezpwd {
 		    continue; // too few password symbols to start checking parity
 		}
 
+		if ( maximum and password.size() > maximum + PARITY - era ) {
+#if defined( DEBUG ) && DEBUG >= 1
+		    output( std::cout )
+			<< " Rejected too long password \""
+			<< password << std::string( era, '_' )
+			<< "\"" << " (" << era << " parity skipped)"
+			<< std::endl;
+#endif
+		    continue; // too few parity symbols erased to start checking parity
+		}
+
 		// Copy password, adding 'era' additional NULs
 		std::string		fixed( password.size() + era, 0 );
 		std::copy( password.begin(), password.end(), fixed.begin() );
@@ -276,7 +291,7 @@ namespace ezpwd {
 #endif
 		    continue; // Too many missing parity symbols
 		}
-		if ( all_era.size() + erasures.size() >= PARITY ) {
+		if ( all_era.size() + erasures.size() > PARITY ) {
 #if defined( DEBUG ) && DEBUG >= 1
 		    output( std::cout )
 			<< " Rejected hi erasure password \""
@@ -343,6 +358,16 @@ namespace ezpwd {
 #endif
 		    continue; // too few password symbols to start checking parity
 		}
+		if ( maximum and password.size() > maximum + PARITY - era ) {
+#if defined( DEBUG ) && DEBUG >= 1
+		    output( std::cout )
+			<< " Rejected too long password \""
+			<< password << std::string( era, '_' )
+			<< "\"" << " (" << era << " parity skipped)"
+			<< std::endl;
+#endif
+		    continue; // too few parity symbols erased to start checking parity
+		}
 		std::string	fixed	= password;
 		size_t		len	= password.size() - ( PARITY - era );
 		fixed.resize( len );
@@ -372,16 +397,23 @@ namespace ezpwd {
 		}
 	    }
 
-	    // Raw password?  No error/erasure attempts succeeded, if no 'best' w/ confidence >= 0.
-	    // Otherwise, select the best guess and return its confidence.
-	    confidence			= 0;
+	    // Select the best guess and return its confidence.  Otherwise, use raw password?  If no
+	    // error/erasure attempts succeeded (if no 'best' w/ confidence >= 0), then we'll use
+	    // the raw password w/ 0 confidence, if it meets the minimum/maximum length
+	    // requirements.
+	    confidence			= -1;
+	    if ( password.size() >= ( minimum ? minimum : 1 )
+		 and ( maximum == 0 or password.size() <= maximum ))
+		confidence		= 0;
+
 	    typename best_avg::const_iterator
 				bi	= best.best();
 #if defined( DEBUG )
 	    output( std::cout )
 		<< " Selected " 	<< ( bi != best.end() ? "corrected" : "unmodified" )
 		<< " password \""	<< ( bi != best.end() ? bi->first : password )
-		<< "\" (vs. \""		<< password
+		<< "\" of length "	<< ( minimum ? minimum : 1) << "-" << maximum
+		<< " (vs. \""		<< password
 		<< "\") w/ confidence "	<< (bi != best.end() ? bi->second.second : confidence )
 		<< "%, from: "
 		<< std::endl
@@ -395,11 +427,20 @@ namespace ezpwd {
 	    return confidence;
 	}
 
+	static
+	int			decode(
+				    std::string	       &password,
+				    size_t		minimum = PARITY,
+				    size_t		maximum = 0 )
+	{
+	    return decode( password, std::vector<int>(), minimum, maximum );
+	}
+
 	// 
-	// decode(<char*>,<size_t>,size_t) -- C interface to decode(<string>)
+	// decode(<char*>,<size_t>,<size_t>,<size_t>) -- C interface to decode(<string>)
 	// 
-	//     Traditional C interface.  The provided NUL-terminated password+parity is decoded, and
-	// the confidence % is returned.
+	//     Traditional C interface.  The provided NUL-terminated password+parity is decoded
+	// (parity removed), and the confidence % is returned.
 	// 
 	//     An optional 'minimum' final password length may be provided; no R-S parity is assumed
 	// to exist in the first 'minimum' password characters (default: PARITY).  This prevents
@@ -410,21 +451,22 @@ namespace ezpwd {
 	// buffer will be used to contain an error description.
 	// 
 	static int		decode(
-				    char	       *password,
-				    size_t		maximum,	// maximum available size
-				    size_t		minimum	= PARITY )	// minimum resultant password length
+				    char	       *password,	// NUL terminated
+				    size_t		siz,		// available size
+				    size_t		minimum	= PARITY,//minimum resultant password length
+				    size_t		maximum = 0 )	// maximum  ''
 	{
 	    std::string		corrected( password );
 	    int			confidence;
 	    try {
-		confidence			= decode( corrected, minimum );
-		if ( corrected.size() + 1 > maximum )
+		confidence			= decode( corrected, minimum, maximum );
+		if ( corrected.size() + 1 > siz )
 		    throw std::runtime_error( "password buffer has insufficient capacity" );
 		std::copy( corrected.begin(), corrected.end(), password );
 		password[corrected.size()]	= 0;
 	    } catch ( std::exception &exc ) {
 		confidence 			= -1;
-		ezpwd::streambuf_to_buffer sbf( password, maximum );
+		ezpwd::streambuf_to_buffer sbf( password, siz );
 		std::ostream( &sbf ) << "corrector<" << PARITY << "> failed: " << exc.what();
 	    }
 	    return confidence;
