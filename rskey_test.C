@@ -1,5 +1,6 @@
 #include <vector>
 #include <list>
+#include <set>
 #include <tuple>
 
 #include <ezpwd/rs>
@@ -18,15 +19,16 @@ typedef std::vector<uint8_t>	u8vec_t;
 typedef std::vector<int8_t>	s8vec_t;
 
 
-template <size_t BITS, size_t PCT, size_t SEP>
+template <size_t PARITY>
 void				test_rskey(
 				    ezpwd::asserter    &assert,
 				    const u8vec_t      &raw,
-				    const std::string  &key )
+				    const std::string  &key,
+				    size_t		sep = 5 )
 {
     char			enc[1024];
     std::copy( raw.begin(), raw.end(), enc );
-    int				encres	= ezpwd::rskey_encode<BITS,PCT>( enc, raw.size(), sizeof enc, SEP );
+    int				encres	= ezpwd::rskey_encode<PARITY>( raw.size(), enc, raw.size(), sizeof enc, sep );
     if ( assert.ISEQUAL( key, std::string( enc )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( encres, int( key.size() )))
@@ -34,38 +36,50 @@ void				test_rskey(
 
     // Got the encoded key.  Increase the loss/error load 'til failure
     size_t			load;
-    for ( load = 0; load < key.size() - key.size() / SEP; ++load ) {
+    for ( load = 0; load < key.size() - ( sep ? key.size() / sep : 0 ); ++load ) {
 	char			dec[1024];
 	std::copy( key.begin(), key.end(), dec );
-	// convert a "random" non-space non-erasure symbol to an erasure
+	// convert a "random" non-space non-erasure symbol to an erasure (or error, if >= 2 load)
+	std::set<size_t>	pos; // error/erasure positions used
 	for ( size_t e = 0, c = 0; e < load; ++c ) {
 	    for ( size_t j = 0; j < key.size(); ++j ) {
-		if ( dec[j] != '_' and dec[j] != '-' ) {
-		    if ((( c * 997 + j ) % 17 ) == 13 ) {
-			++e;
-			dec[j] = '_';
+		if ( pos.find( j ) == pos.end() and dec[j] != '-' ) {
+		    if ((( c * 997 + j ) % 29 ) == 13 ) {
+			if ( e+2 <= load ) {
+			    // error.  Consumes 2 parity.  Flip low bit of decoded base-32 symbol and re-encode
+			    e	       += 2;
+			    dec[j]	= ezpwd::serialize::ezpwd<32>::encoder[
+					      ezpwd::serialize::ezpwd<32>::decoder[
+					          dec[j]] ^ 1];
+			} else {
+			    // erasure.  Consumes 1 parity
+			    e	       += 1;
+			    dec[j] = '_';
+			}
 			break;
 		    }
 		}
 	    }
 	}
 
-	int			decres	= ezpwd::rskey_decode<BITS,PCT>( dec, key.size(), sizeof dec );
-	if ( assert.ISTRUE( decres >= 0 or load * 8 > BITS * PCT / 100 )) {
+	int			decres	= ezpwd::rskey_decode<PARITY>( raw.size(), dec, key.size(), sizeof dec );
+	if ( assert.ISTRUE( decres >= 0 or load > PARITY )) {
 		std::cout
-		    << assert << ": Unexpected failure at " << load * 8 << "-bit erasure load; should handle "
-		    << PCT << "% of " << BITS << " bits == " << BITS * PCT / 100  << " bits erasure"
+		    << assert << ": Unexpected failure at " << load << "-symbol erasure load; should handle "
+		    << PARITY << " symbols of erasure"
 		    << std::endl;
-	    break;
 	}
+	if ( decres < 0 )
+	    break;
     }
 }
 
 void				test_rskey_simple( ezpwd::asserter &assert )
 {
-    char			enc[1024] = "\x00\x01\x02\x03\xFF\xFE\xFD\xFC\x7e\x7f\x08\x81";
+    // 64 bits --> 13 base-32 symbols + 2 parity
+    char			enc[1024] = "\x00\x01\x02\x03\xFF\xFE\xFD\xFC";
 
-    int				encres	= rskey_64_15_encode( enc, 8, sizeof enc );
+    int				encres	= rskey_2_encode( 8, enc, 8, sizeof enc, 5 );
     if ( assert.ISEQUAL( std::string( "000G4-0YYYU-XYQWE" ), std::string( enc )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( encres, 17 ))
@@ -75,7 +89,7 @@ void				test_rskey_simple( ezpwd::asserter &assert )
     int				decres;
     // Decode, no errors
     std::copy( enc, enc+encres+1, dec );
-    decres				= rskey_64_15_decode( dec, encres, sizeof dec );
+    decres				= rskey_2_decode( 8, dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
     if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
@@ -86,7 +100,7 @@ void				test_rskey_simple( ezpwd::asserter &assert )
     // Decode, 1 erasure
     std::copy( enc, enc+encres+1, dec );
     dec[1] = '_';
-    decres				= rskey_64_15_decode( dec, encres, sizeof dec );
+    decres				= rskey_2_decode( 8, dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
     if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
@@ -150,15 +164,22 @@ void				test_baseN(
 	std::string			e1( std::get<0>( t ));
 
 	// scatter, into raw (unencoded) base-N data, with padding.  An instance of a
-	// std::random_access_iterator, to force optimal algorithm
+	// std::random_access_iterator, to force optimal algorithm (both with and without padding)
 	u8vec_t				e1_vec_1;
-	SEREZC::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ),
-					   ezpwd::serialize::pd_enforce );
+	SEREZC::scatter_standard( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1 ));
+	u8vec_t				e1_vec_1_no_pad;
+	SEREZC::scatter( e1.begin(), e1.end(), std::back_insert_iterator<u8vec_t>( e1_vec_1_no_pad ));
 #if defined( DEBUG )
 	std::cout << "scatter (rnd.): " << u8vec_t( e1.begin(), e1.end() ) << " --> " << e1_vec_1 << std::endl;
 #endif
 	if ( assert.ISEQUAL( e1_vec_1.size(), SEREZC::encode_size( e1.size(), ezpwd::serialize::pd_enforce )))
 	    std::cout << assert << std::endl;
+	if ( assert.ISEQUAL( e1_vec_1_no_pad.size(), SEREZC::encode_size( e1.size() )))
+	    std::cout << assert << std::endl;
+	if ( assert.ISTRUE( std::search( e1_vec_1.begin(),        e1_vec_1.end(),
+					 e1_vec_1_no_pad.begin(), e1_vec_1_no_pad.begin() )
+			    == e1_vec_1.begin() ))
+	    std::cout << assert << "; failed to find no-pad scatter at front of padded scatter" << std::endl;
 
 	// An instance of a std::forward_iterator, to force use of generic algorithm with more
 	// iterator comparisons
@@ -204,8 +225,7 @@ void				test_baseN(
 
 	// _s -- Standard (with padding)
 	std::string		d1_s( e1_s );
-	SERSTD::decode( d1_s, 0, 0,
-            ezpwd::serialize::ws_ignored, ezpwd::serialize::pd_enforce );
+	SERSTD::decode_standard( d1_s );
 	if ( assert.ISEQUAL( std::get<1>( t ), std::string() << u8vec_t( d1_s.begin(), d1_s.end() )))
 	    std::cout << assert << std::endl;
 
@@ -221,15 +241,14 @@ void				test_baseN(
 	// base32::encode_size is correct.
 
 	u8vec_t			d1_vec_s; // pd_enforce
-	SEREZC::gather( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ),
-					  ezpwd::serialize::pd_enforce );
+	SEREZC::gather_standard( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
 	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_s.begin(), d1_vec_s.end() )))
 	    std::cout << assert << std::endl;
 	if ( assert.ISEQUAL( d1_s.size(), SEREZC::encode_size( std::get<0>( t ).size(), ezpwd::serialize::pd_enforce )))
 	    std::cout << assert << "; predicted " << std::get<0>( t ) << " --> " << u8vec_t( d1_s.begin(), d1_s.end() ) <<
 		" should be " << SEREZC::encode_size( std::get<0>( t ).size(), ezpwd::serialize::pd_enforce  ) << " bytes " << std::endl;
 
-	u8vec_t			d1_vec_e;  // pd_ignored: default
+	u8vec_t			d1_vec_e;  // pd_invalid: default
 	SEREZC::gather( d1_e.begin(), d1_e.end(), std::back_insert_iterator<u8vec_t>( d1_vec_e ));
 	if ( assert.ISEQUAL( std::get<0>( t ), std::string( d1_vec_e.begin(), d1_vec_e.end() )))
 	    std::cout << assert << std::endl;
@@ -387,10 +406,12 @@ int				main( int, char ** )
     test_base64( assert );
     test_base16( assert );
     test_rskey_simple( assert );
-    test_rskey<64,15,5>( assert,
+    // 8 bytes --> 13 base-32 symbols + 2 parity
+    test_rskey<2>( assert,
         u8vec_t { 0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC }, 
         "000G4-0YYYU-XYQWE" );
-    test_rskey<96,25,5>( assert,
+    // 12 bytes --> 20 base-32 symbols + 5 parity
+    test_rskey<5>( assert,
         u8vec_t { 0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC, 0x7e, 0x7f, 0x08, 0x81 },
         "000G4-0YYYU-XYQYK-Y120G-T8P84" );
 

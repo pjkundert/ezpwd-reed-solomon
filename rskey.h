@@ -5,8 +5,22 @@
 extern "C" {
 #endif
 
-    int rskey_64_15_encode( char *buf, size_t len, size_t siz );
-    int rskey_64_15_decode( char *buf, size_t len, size_t siz );
+    // ABCDE-FG
+    int rskey_2_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep );
+    int rskey_2_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz );
+
+    // ABCDE-FGH
+    int rskey_3_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep );
+    int rskey_3_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz );
+
+    // ABCDE-FGH1
+    int rskey_4_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep );
+    int rskey_4_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz );
+
+    // ABCDE-FGH1K
+    int rskey_5_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep );
+    int rskey_5_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz );
+
 
 #if defined( __cplusplus )
 } // extern "C"

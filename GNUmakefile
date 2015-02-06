@@ -33,6 +33,15 @@ EMXX_EXPORTS_RSPWD = -s EXPORTED_FUNCTIONS="[			\
 			'_rspwd_encode_3',			\
 			'_rspwd_encode_4',			\
 			'_rspwd_encode_5' ]"
+EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS="[			\
+			'_rskey_2_encode',			\
+			'_rskey_2_decode',			\
+			'_rskey_3_encode',			\
+			'_rskey_3_decode',			\
+			'_rskey_4_encode',			\
+			'_rskey_4_decode',			\
+			'_rskey_5_encode',			\
+			'_rskey_5_decode' ]"
 EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS="[ '_main' ]"
 
 
@@ -54,8 +63,9 @@ test:		testbin testjs
 
 js:		jsprod jstest
 
-jsprod:		js/ezpwd/rspwd.js				\
-		js/ezpwd/ezcod.js
+jsprod:		js/ezpwd/ezcod.js				\
+		js/ezpwd/rspwd.js				\
+		js/ezpwd/rskey.js
 
 jstest:		rsexample.js					\
 		rssimple.js					\
@@ -74,7 +84,14 @@ bintest:	rsexample					\
 		rskey_test
 
 testbin:	bintest
-	./rsexample; ./rssimple; ./rsexercise; ./rscompare; ./rsvalidate; ./rspwd_test; ./ezcod_test; ./rskey_test
+	./rsexample
+	./rssimple
+	./rsexercise
+	./rscompare
+	./rsvalidate
+	./rspwd_test
+	./ezcod_test
+	./rskey_test
 
 testjs:		jstest
 	node ./rsexample.js
@@ -93,6 +110,11 @@ js/ezpwd/rspwd.js: rspwd.C					\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@ 
+
+js/ezpwd/rskey.js: rskey.C					\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+		emscripten
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY) $< -o $@ 
 
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs

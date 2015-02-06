@@ -1395,7 +1395,7 @@ namespace ezpwd {
 	    << corrected << " corrections (R-S decode success)"
 	    << " at: "			<< positions
 	    << ", "			<< erasures.size() + missed
-	    << " erasures ( "		<< missed
+	    << " erasures ("		<< missed
 	    << " unreported) at: "	<< erasures
 	    << ") ==> "			<< errors
 	    <<  " errors, and " 	<< consumed << " / " << PARITY

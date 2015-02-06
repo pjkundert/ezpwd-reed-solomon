@@ -21,14 +21,18 @@
 #include "array_safe"
 
 // 
-// scatter -- 8-bit binary data into 5-bit (base32) and 6-bit (base64) chunks (optionally w/pad)
-// gather -- collect up 5/6-bit binary data back into 8-bit characters (optionally w/pad)
+// EZPWD (no padding) and RFC4648 (enforce padding) base-N codecs
+// 
+// scatter	-- 8-bit binary data into 5-bit (base32) and 6-bit (base64) chunks (optionally w/pad)
+// gather	-- collect up 5/6-bit binary data back into 8-bit characters (optionally w/pad)
+// ..._standard	-- enforce RFC4648-standard padding
 // 
 //     Scatters or gathers 8-bit binary character data to 5/6-bit symbols, suitable for base32/64
 // encoding.
 // 
-// encode -- convert binary data to ASCII base32/64, in-place
-// decode -- convert ASCII base32/64 to binary data, in-place
+// encode	-- convert binary data to ASCII base32/64, in-place
+// decode	-- convert ASCII base32/64 to binary data, in-place
+// ..._standard	-- enforce RFC4648-standard padding
 // 
 //     Transforms iterable containers of char between ASCII symbols and binary data, always in-place.
 // The decode may alter the size of the result (by ignoring whitespace).
@@ -36,6 +40,8 @@
 //     In general the ezpwd::base32/64 en/decoders are designed to produce easily human-usable
 // encodings, and can ignore common whitespace characters and '-' to allow human-readable
 // formatting.  The RFC4648 Standard base 32/64 and Crockford base32 encodings are also supported.
+// 
+//     Adding new symbol encodings (and even new bases, up to base-128) is trivial.
 // 
 namespace ezpwd {
 
@@ -152,7 +158,7 @@ namespace ezpwd {
 	// base<64> tables
 	// 
 	template <> struct	standard<64> {
-	    static const constexpr array<char,64>	// RFC4846 Standard
+	    static const constexpr array<char,64>	// RFC4648 Standard
 				encoder {
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -326,7 +332,7 @@ namespace ezpwd {
 				    std::vector<int>   *erasure,		// Deem invalid symbols as erasures
 				    std::vector<char>  *invalid	= 0,		//   and return the symbols
 				    ws_use_t		ws_use	= ws_ignored,  	// skip any whitespace
-				    pd_use_t		pd_use	= pd_ignored )	// ignore padding (works for any encode pd_use)
+				    pd_use_t		pd_use	= pd_invalid )	// no padding expected; invalid
 	    {
 		if ( erasure )
 		    erasure->clear();
@@ -378,9 +384,18 @@ namespace ezpwd {
 				    I			begin,
 				    I			end,
 				    ws_use_t		ws_use	= ws_ignored,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		return decode( begin, end, 0, 0, ws_use, pd_use );
+	    }
+
+	    template < typename I >
+	    static
+	    I			decode_standard(
+				    I			begin,
+				    I			end )
+	    {
+		return decode( begin, end, 0, 0, ws_ignored, pd_enforce ); // RFC4648 padding
 	    }
 
 	    static
@@ -389,13 +404,21 @@ namespace ezpwd {
 				    std::vector<int>   *erasure = 0,
 				    std::vector<char>  *invalid	= 0,
 				    ws_use_t		ws_use	= ws_ignored,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		auto		last	= decode( symbols.begin(), symbols.end(), erasure, invalid,
 						  ws_use, pd_use );
 		if ( last != symbols.end() )
 		    symbols.resize( last - symbols.begin() ); // eliminated some whitespace
 		return symbols;
+	    }
+	    static
+	    std::string	       &decode_standard(
+				    std::string	       &symbols,
+				    std::vector<int>   *erasure = 0,
+				    std::vector<char>  *invalid	= 0 )
+	    {
+		return decode( symbols, erasure, invalid, ws_ignored, pd_enforce ); // RFC4648 padding
 	    }
 
 	    //
@@ -484,7 +507,7 @@ namespace ezpwd {
 
 	    static constexpr size_t encode_size(
 				    size_t		len,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		return ( pd_enforce == pd_use
 			 ? ( len + 4 ) / 5 * 8
@@ -670,9 +693,19 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		return scatter( beg, end, out, pd_use, typename std::iterator_traits<I>::iterator_category() );
+	    }
+
+	    template < typename I, typename O >
+	    static
+	    O			scatter_standard(
+				    I			beg,
+				    I			end,
+				    O 			out )
+	    {
+		return scatter( beg, end, out, pd_enforce, typename std::iterator_traits<I>::iterator_category() );
 	    }
 
 	    // 
@@ -693,7 +726,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O			out,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		while ( beg != end ) {
 		    int		c0	= gather_next( beg, end, pd_use, 0 );
@@ -724,6 +757,15 @@ namespace ezpwd {
 		}
 		return out;
 	    }
+	    template < typename I, typename O >
+	    static
+	    O			gather_standard(
+				    I			beg,
+				    I			end,
+				    O			out )
+	    {
+		return gather( beg, end, out, pd_enforce );
+	    }
 	}; // ezpwd::base<32>
 
 	// 
@@ -745,8 +787,8 @@ namespace ezpwd {
 	//     The char values [0,64) are mapped by base64::encode onto either the
 	// standard or ezpwd (url-safe) tables:
 	// 
-	//         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ -- RFC4846 standard
-	//         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_ -- RFC4846 standard_url
+	//         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/ -- RFC4648 standard
+	//         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_ -- RFC4648 standard_url
 	//         ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+. -- ezpwd
 	// 
 	// and base<64>::decode performs the inverse (handles both standard and url-safe encodings).
@@ -764,7 +806,7 @@ namespace ezpwd {
 
 	    static constexpr size_t encode_size(
 				    size_t		len,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		return ( pd_enforce == pd_use
 			 ? ( len + 2 ) / 3 * 4
@@ -867,9 +909,20 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O 			out,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		return scatter( beg, end, out, pd_use, typename std::iterator_traits<I>::iterator_category() );
+	    }
+
+
+	    template < typename I, typename O >
+	    static
+	    O			scatter_standard(
+				    I			beg,
+				    I			end,
+				    O 			out )
+	    {
+		return scatter( beg, end, out, pd_enforce, typename std::iterator_traits<I>::iterator_category() );
 	    }
 
 	    // 
@@ -881,7 +934,7 @@ namespace ezpwd {
 				    I			beg,
 				    I			end,
 				    O			out,
-				    pd_use_t		pd_use	= pd_ignored )
+				    pd_use_t		pd_use	= pd_invalid )
 	    {
 		while ( beg != end ) {
 		    int		c0	= gather_next( beg, end, pd_use, 0 );
@@ -899,6 +952,15 @@ namespace ezpwd {
 				           | (c3 < 0 ? 0 : c3));
 		}
 		return out;
+	    }
+	    template < typename I, typename O >
+	    static
+	    O			gather_standard(
+				    I			beg,
+				    I			end,
+				    O			out )
+	    {
+		return gather( beg, end, out, pd_enforce );
 	    }
 	}; // ezpwd::serialize::base<64>
 
