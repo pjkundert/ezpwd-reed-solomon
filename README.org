@@ -12,6 +12,9 @@
 
   Available both under GPLv3 and Commercial licenses (Phil's original code)
 
+  Several Javascript implementations using Reed-Solomon are provided.  They aer
+  produced from the C++ implementation using =emscripten=.
+
 ** c++/ezpwd/rs
 
    C++ implementation of Reed-Solomon codec.  Fully implemented as inline code,
@@ -30,11 +33,35 @@
 
    #+END_SRC
 
+** js/ezpwd/rskey.js
+
+   A Javascript error-corrected user data input utility.
+
+   Asking a user to reliably enter even a few bytes of data (eg. a product key
+   or a redemption code) is, well, basically impossible.  
+
+   Use rskey.js to encode your data into an easily human readable key:
+
+   #+BEGIN_SRC Javascript
+   > rskey_5_encode( 12, "Mag.1ckπ" );
+   "9MGNE-BHHCD-MVY00-00000-MVRFN"
+   #+END_SRC
+
+   Later, you can decode it -- even if the user adds an error and skips
+   the last few symbols:
+
+   #+BEGIN_SRC Javascript
+   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
+   Object {confidence: 100, data: ArrayBuffer, string: "Mag.1ckπ"}
+   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" )
+   Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
+   #+END_SRC
+
+
 ** js/ezpwd/rspwd.js
 
    Javascript implementation of Reed-Solomon codec based password error
-   detection and correction.  Produced from the C++ implementation using =emscripten=.
-
+   detection and correction.
 ** Enhancements
 
    Several enhancements have been made.

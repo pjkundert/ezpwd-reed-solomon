@@ -54,12 +54,13 @@ function index_in_heap( typ, ptr, idx ) {
 //     Encoding raw string/ArrayBuffer data returns the RSKEY-encoded string, encoding exactly
 // 'rawsiz' bytes of data, resuling in ((( rawsiz * 8 + 4 ) / 5 ) + PARITY ) base-32 symbols.
 // 
-// rskey_<PARITY>_decode( rawsiz, str ) --> { confidence: <int>, data: <ArrayBuffer> }
+// rskey_<PARITY>_decode( rawsiz, str ) --> { confidence: <int>, data: <ArrayBuffer>, string: <string> }
 // 
 //     Decoding an RSKEY-encoded string returns:
 // 
 // confidence	-- Percentage [0,100] of parity symbols in excess, after error/erasure correction
 // data		-- An <ArrayBuffer> containing the recovered data, w/ .length == rawsiz
+// string	-- The UTF-8 decoded string representation of the data (undefined, if not decoded)
 // 
 rskey_N_encode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
@@ -74,28 +75,25 @@ rskey_N_encode_wrap = function( func_name ) {
         var 		len	= 1024; // room for error message, spaces, etc.
         var		res	= -1;
         var		str	= func_name + " invocation failed.";
-        var		buf;
-        var		buflen;
-        var		bufsiz;
         // Allocate buf at least 'len' bytes for return of key data+parity, or error.  The Array
         // must have length <= rawsiz.
 	if ( typeof data == 'string' ) {
-            // A string of binary data to an int Array.
+            // A string of binary data to an int Array
             var		arr	= intArrayFromString( data );
-            buflen		= arr.length - 1; // no NUL
+            arr.length	       -= 1; // don't include trailing NUL
         } else if ( data instanceof ArrayBuffer ) {
             // Convert the ArrayBuffer bytes to an int Array.
             var		u8arr	= new Uint8Array( data );
             var		arr	= Array.prototype.slice.call( u8arr );
-            buflen		= arr.length; // all data significant
         } else 
             throw "Unsupported buf; must be string or ArrayBuffer"
-
+        console.log( "Encoding ", arr );
         // Extend the int Array to the target 'len', to support return of error message.
+        var buflen		= arr.length;
         if ( arr.length < len )
             arr.length		= len;
-        bufsiz			= arr.length;
-        buf			= allocate( arr, 'i8', ALLOC_NORMAL );
+        var bufsiz		= arr.length;
+        var buf			= allocate( arr, 'i8', ALLOC_NORMAL );
         try { // must de-allocate buf after this point
             res			= func( rawsiz, buf, buflen, bufsiz, sep );
             str			= heapi8_to_string( buf );
@@ -138,9 +136,20 @@ rskey_N_decode_wrap = function( func_name ) {
                 u8arr		= new Uint8Array( rawsiz );
                 for ( var i = 0; i < rawsiz; ++i )
                     u8arr[i]	= getValue( buf+i, 'i8' );
+                // If possible, decode data payload as utf-8; leave undefined on failure
+                var utf8;
+                try {
+                    td		= new TextDecoder( 'utf-8' );
+                    utf8	= td.decode( new DataView( u8arr.buffer )).replace( /\0*$/, '' );
+                } catch ( exc ) {
+                    // leave utf8 == undefined
+                    // console.log( "Not UTF-8", u8arr.buffer );
+                }
+                // Return the confidence, the raw ArrayBuffer, and its UTF-8 representation (if any)
                 ret		= {
                     confidence:	cnf,
                     data: 	u8arr.buffer,
+                    string:	utf8,
                 };
             }
         } finally {

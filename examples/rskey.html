@@ -88,10 +88,9 @@
             try {
                 var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
                 dec		= window[rskey_decode]( rawsiz, key );
-                td		= new TextDecoder( 'utf-8' );
-                str		= td.decode( new DataView( dec.data ));
+                console.log( "decoded: ", dec );
                 $('#confidence').text( dec.confidence );
-                $('#data').val( str ).blur(); // and regenerate the key (fixing errors/erasures)
+                $('#data').val( dec.string ).blur(); // and regenerate the key (fixing errors/erasures)
             } catch ( exc ) {
                 $('#data').val( "Exception: " + exc );
             }                
