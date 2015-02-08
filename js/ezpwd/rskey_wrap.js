@@ -46,82 +46,105 @@ function index_in_heap( typ, ptr, idx ) {
 }
 
 // 
-// rskey_3_<N>_encode -- encodes the lat/lon as an ezcod 3:<N> code, returning the encoded string
-// ezcod_3_<N>_decode -- decodes the 3:<N> encoded string to confidence, lat/lon and accuracy
+// rskey_<PARITY>_encode -- encodes 'rawsiz' data bytes (String or ArrayBuffer) to an RSKEY w/ PARITY
+// rskey_<PARITY>_decode -- decodes 'rawsiz' data bytes from an RSKEY w/ PARITY, returning confidence
 // 
-//     Since arrays are used to communicate, they must be allocated locally and release after the
-// wrapped call.  The underlying "C" decode returns a -'ve confidence and a (NUL terminated) string
-// describing the error on failure, or a zero or +'ve confidence and the decoded lat/lon and
-// accuracy on success.
+// rskey_<PARITY>_encode( rawsiz, buf, sep ) --> <string>
 // 
-//     Decoding an EZCOD 3:10/11/12 encoded string returns an array:
+//     Encoding raw string/ArrayBuffer data returns the RSKEY-encoded string, encoding exactly
+// 'rawsiz' bytes of data, resuling in ((( rawsiz * 8 + 4 ) / 5 ) + PARITY ) base-32 symbols.
 // 
-//         [<confidence>, <latitude>, <longitude>, <accuracy>]
+// rskey_<PARITY>_decode( rawsiz, str ) --> { confidence: <int>, data: <ArrayBuffer> }
 // 
-// <confidence>	-- The proportion [0,1] of parity symbols in excess, after error/erasure correction
-// <latitude>	-- Latitude in degress [-90,90]
-// <longitude>	-- Longitude in degrees [-180,180]
-// <accuracy>	-- Estimated accuracty in meters
+//     Decoding an RSKEY-encoded string returns:
 // 
-ezcod_3_N_encode_wrap = function( func_name ) {
+// confidence	-- Percentage [0,100] of parity symbols in excess, after error/erasure correction
+// data		-- An <ArrayBuffer> containing the recovered data, w/ .length == rawsiz
+// 
+rskey_N_encode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
-                                                ['number'	// lat
-                                                 ,'number'	// lon
-                                                 ,'number'	// array (buf allocated here)
-                                                 ,'number'] );	// array size
-    return function( lat, lon ) {
+                                                ['number'	// rawsiz
+                                                 ,'number'	// buf (array, allocated here)
+                                                 ,'number'	// buflen (supplied raw data, <= rawsiz)
+                                                 ,'number'	// bufsiz (buffer capacity)
+                                                 ,'number'] );	// sep (output a '-' every n'th symbol)
+    return function( rawsiz, data, sep ) {
+        if ( typeof sep == 'undefined' )
+            sep			= 5;
         var 		len	= 1024; // room for error message, spaces, etc.
         var		res	= -1;
         var		str	= func_name + " invocation failed.";
-        var		buf	= string_to_heapi8( "", len );
+        var		buf;
+        var		buflen;
+        var		bufsiz;
+        // Allocate buf at least 'len' bytes for return of key data+parity, or error.  The Array
+        // must have length <= rawsiz.
+	if ( typeof data == 'string' ) {
+            // A string of binary data to an int Array.
+            var		arr	= intArrayFromString( data );
+            buflen		= arr.length - 1; // no NUL
+        } else if ( data instanceof ArrayBuffer ) {
+            // Convert the ArrayBuffer bytes to an int Array.
+            var		u8arr	= new Uint8Array( data );
+            var		arr	= Array.prototype.slice.call( u8arr );
+            buflen		= arr.length; // all data significant
+        } else 
+            throw "Unsupported buf; must be string or ArrayBuffer"
+
+        // Extend the int Array to the target 'len', to support return of error message.
+        if ( arr.length < len )
+            arr.length		= len;
+        bufsiz			= arr.length;
+        buf			= allocate( arr, 'i8', ALLOC_NORMAL );
         try { // must de-allocate buf after this point
-            res			= func( lat, lon, buf, len );
+            res			= func( rawsiz, buf, buflen, bufsiz, sep );
             str			= heapi8_to_string( buf );
         } finally {
             if ( buf ) _free( buf );
-        }
-        if ( res < 0 ) { // call failed, or call attempt failed w/o exception
-            console.log( str );
-            throw str;
         }
         return str;
     }
 }
 
-ezcod_3_10_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_10_encode' );
-ezcod_3_11_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_11_encode' );
-ezcod_3_12_encode		= ezcod_3_N_encode_wrap( 'ezcod_3_12_encode' );
+rskey_2_encode			= rskey_N_encode_wrap( 'rskey_2_encode' );
+rskey_3_encode			= rskey_N_encode_wrap( 'rskey_3_encode' );
+rskey_4_encode			= rskey_N_encode_wrap( 'rskey_4_encode' );
+rskey_5_encode			= rskey_N_encode_wrap( 'rskey_5_encode' );
 
-ezcod_3_N_decode_wrap = function( func_name ) {
+rskey_N_decode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
-                                                ['number'	// array (buf allocated here)
-                                                 ,'number'	// array size
-                                                 ,'number'	// lat * (pos allocated here)
-                                                 ,'number'	// lon *  ''
-                                                 ,'number'] );	// acc *  ''
-    return function( cod ) {
+                                                ['number', 	// rawsiz
+                                                 'number'	// buf (allocated here)
+                                                 ,'number'	// buflen (supplied key length)
+                                                 ,'number'] );	// bufsiz (buffer capacity)
+    return function( rawsiz, key ) {
         var		cnf	= -1;
         var		str	= func_name + " invocation failed.";
         var		ret;
-        var		pos;
         var 		len	= 1024; // room for error message, spaces, etc.
-        var		buf	= string_to_heapi8( cod, len );
-        try { // must de-allocate buf and lat/lon/acc after this point
-            pos			= array_to_heap( 'double', [], 3 );
-            var		lat	= index_in_heap( 'double', pos, 0 );
-            var		lon	= index_in_heap( 'double', pos, 1 );
-            var		acc	= index_in_heap( 'double', pos, 2 );
-            cnf			= func( buf, len, lat, lon, acc );
+
+        var		arr	= intArrayFromString( key );
+        var		buflen	= arr.length - 1; // no NUL
+        if ( buflen < len )
+            arr.length		= len;
+        var		bufsiz	= arr.length;
+
+        var		buf	= allocate( arr, 'i8', ALLOC_NORMAL );
+        try { // must de-allocate buf after this point
+            cnf			= func( rawsiz, buf, buflen, bufsiz );
             if ( cnf < 0 ) {
                 str		= heapi8_to_string( buf );
             } else {
-                ret		= [
-                    cnf / 100.0, getValue( lat, 'double', 1 ), getValue( lon, 'double', 1 ), getValue( acc, 'double', 1 )
-                ];
+                u8arr		= new Uint8Array( rawsiz );
+                for ( var i = 0; i < rawsiz; ++i )
+                    u8arr[i]	= getValue( buf+i, 'i8' );
+                ret		= {
+                    confidence:	cnf,
+                    data: 	u8arr.buffer,
+                };
             }
         } finally {
             if ( buf ) _free( buf );
-            if ( pos ) _free( pos );
         }
         if ( cnf < 0 ) { // call failed, or call attempt failed w/o exception
             console.log( str );
@@ -132,6 +155,7 @@ ezcod_3_N_decode_wrap = function( func_name ) {
     }
 }
 
-ezcod_3_10_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_10_decode' );
-ezcod_3_11_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_11_decode' );
-ezcod_3_12_decode		= ezcod_3_N_decode_wrap( 'ezcod_3_12_decode' );
+rskey_2_decode		= rskey_N_decode_wrap( 'rskey_2_decode' );
+rskey_3_decode		= rskey_N_decode_wrap( 'rskey_3_decode' );
+rskey_4_decode		= rskey_N_decode_wrap( 'rskey_4_decode' );
+rskey_5_decode		= rskey_N_decode_wrap( 'rskey_5_decode' );

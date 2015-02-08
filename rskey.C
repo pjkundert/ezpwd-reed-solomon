@@ -48,43 +48,43 @@ namespace ezpwd {
 extern "C" {
 
     // ABCDE-FG
-    int rskey_2_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    int rskey_2_encode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
     {
-	return ezpwd::rskey_encode<2>( keysiz, buf, buflen, bufsiz, sep );
+	return ezpwd::rskey_encode<2>( rawsiz, buf, buflen, bufsiz, sep );
     }
-    int rskey_2_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz )
+    int rskey_2_decode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
     {
-	return ezpwd::rskey_decode<2>( keysiz, buf, buflen, bufsiz );
+	return ezpwd::rskey_decode<2>( rawsiz, buf, buflen, bufsiz );
     }
 
     // ABCDE-FGH
-    int rskey_3_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    int rskey_3_encode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
     {
-	return ezpwd::rskey_encode<3>( keysiz, buf, buflen, bufsiz, sep );
+	return ezpwd::rskey_encode<3>( rawsiz, buf, buflen, bufsiz, sep );
     }
-    int rskey_3_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz )
+    int rskey_3_decode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
     {
-	return ezpwd::rskey_decode<3>( keysiz, buf, buflen, bufsiz );
+	return ezpwd::rskey_decode<3>( rawsiz, buf, buflen, bufsiz );
     }
 
     // ABCDE-FGH1
-    int rskey_4_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    int rskey_4_encode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
     {
-	return ezpwd::rskey_encode<4>( keysiz, buf, buflen, bufsiz, sep );
+	return ezpwd::rskey_encode<4>( rawsiz, buf, buflen, bufsiz, sep );
     }
-    int rskey_4_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz )
+    int rskey_4_decode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
     {
-	return ezpwd::rskey_decode<4>( keysiz, buf, buflen, bufsiz );
+	return ezpwd::rskey_decode<4>( rawsiz, buf, buflen, bufsiz );
     }
 
     // ABCDE-FGH1K
-    int rskey_5_encode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    int rskey_5_encode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
     {
-	return ezpwd::rskey_encode<5>( keysiz, buf, buflen, bufsiz, sep );
+	return ezpwd::rskey_encode<5>( rawsiz, buf, buflen, bufsiz, sep );
     }
-    int rskey_5_decode( size_t keysiz, char *buf, size_t buflen, size_t bufsiz )
+    int rskey_5_decode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
     {
-	return ezpwd::rskey_decode<5>( keysiz, buf, buflen, bufsiz );
+	return ezpwd::rskey_decode<5>( rawsiz, buf, buflen, bufsiz );
     }
 
 } // extern "C"
@@ -122,7 +122,7 @@ int				rskey_encode(
 	std::cout << "base-32:  " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
 #endif
 	if ( key.size() > sep )
-	    for ( size_t i = key.size() / sep - 1; i > 0; --i )
+	    for ( size_t i = ( key.size() - 1 ) / sep; i > 0; --i )
 		key.insert( i * sep, 1, '-' );
 #if defined( DEBUG )
 	std::cout << "seperate: " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
@@ -143,14 +143,14 @@ int				rskey_encode(
 }
 
 // 
-// rskey_decode -- Recover BITS bits of data w/ PCT % parity, returning confidence
+// rskey_decode -- Recover 'rawsiz' bytes of data w/ PARITY R-S parity symols, returning confidence
 // 
-//     If result is -'ve, then the decode has failed; the 'buf' will contain a
-// NUL-terminated string describing the failure.
+//     If result is -'ve, then the decode has failed; the 'buf' will contain a NUL-terminated string
+// describing the failure.
 // 
-//     Otherwise, BITS bits of data will be returned in 'buf', and the return
-// value will be an integer percentage confidence, roughly the percentage of the
-// parity that remained unconsumed by any required error correction.
+//     Otherwise, 'rawsiz' bytes of data will be returned in 'buf', and the return value will be an
+// integer percentage confidence, roughly the percentage of the parity that remained unconsumed by
+// any required error correction.
 // 
 template < size_t PARITY >
 int				rskey_decode(

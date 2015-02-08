@@ -3,14 +3,105 @@
     <head>
         <meta charset="utf-8">
         <title>RSKEY</title>
-        <link rel="stylesheet" href="rskey.css">
-        <script type="text/javascript" src="../js/ezpwd/rskey_wrap.js"></script>
-        <script type="text/javascript" src="../js/ezpwd/rskey.js"></script>
-        <script type="text/javascript">
-            
-        </script>
+        <style>
+            html,body {
+                margin:0;
+                padding:0;
+                height:100%;
+                background:lightgray;
+                font-family:arial,sans-serif;
+                font-size:small;
+                color:#darkgray;
+            }
+            table {
+                width: 450px;
+            }
+            td:last-child {
+                width: 100%;
+            }
+            table input {
+                width: 100%;
+            }
+        </style>
     </head>
     <body>
-        000G4-0YYYU-XYQYK-Y120G-T8P84
+        <table>
+            <tr>
+                <td class="description">
+                    Parity:
+                </td>
+                <td class="entry">
+                    <input type='number' id='parity' value='5' min='2' max='5' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Data Size:
+                </td>
+                <td class="entry">
+                    <input type='number' id='rawsiz' value='12' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Data:
+                </td>
+                <td class="entry">
+                    <input type='text'   id='data' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Key:
+                </td>
+                <td class="entry">
+                    <input type='text'   id='key' value='9MGNE-BHHCD-MVY00-00000-MVRFN' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Confidence:
+                </td>
+                <td class="description">
+                    <div id='confidence' />
+                </td>
+            </tr>
+        </table>
     </body>
+    <script type="text/javascript" src="../js/ezpwd/rskey.js"></script>
+    <script type="text/javascript" src="../js/ezpwd/rskey_wrap.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript">
+
+        $('#data').on( 'blur change keyup paste input', function() {
+            var data		= $('#data').val();
+            var rawsiz		= $('#rawsiz').val();
+            console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
+            var rskey_encode	= 'rskey_' + $('#parity').val() + "_encode"
+            $('#key').val( window[rskey_encode]( rawsiz|0, data ));
+        });
+
+        $('#key').on( 'blur', function() {
+            var key		= $('#key').val();
+            var rawsiz		= $('#rawsiz').val();
+            console.log( "decoding rawsiz == ", rawsiz, ",  key == ", key );
+            try {
+                var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
+                dec		= window[rskey_decode]( rawsiz, key );
+                td		= new TextDecoder( 'utf-8' );
+                str		= td.decode( new DataView( dec.data ));
+                $('#confidence').text( dec.confidence );
+                $('#data').val( str ).blur(); // and regenerate the key (fixing errors/erasures)
+            } catch ( exc ) {
+                $('#data').val( "Exception: " + exc );
+            }                
+        });
+
+        // regenerate the key from data on parity, rawsiz change
+        $('#parity').on( 'blur', function(){ $('#data').blur(); } );
+        $('#rawsiz').on( 'blur', function(){ $('#data').blur(); } );
+
+        // And finally, decode the provided key to start things off
+        $('#key').blur();
+    </script>
 </html>
