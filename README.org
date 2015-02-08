@@ -1,5 +1,5 @@
-#+TITLE: ezpwd-reed-solomon.js
-#+STYLE: <link rel="stylesheet" type="text/css" href="org.css" />
+# -*- coding: utf-8 -*-
+#+TITLE: EZPWD Reed-Solomon
 
 * Reed-Solomon Loss/Error Correction Coding
 
@@ -47,13 +47,16 @@
    "9MGNE-BHHCD-MVY00-00000-MVRFN"
    #+END_SRC
 
-   Later, you can decode it -- even if the user adds an error and skips
-   the last few symbols:
+   Later, you can decode it -- even if the user adds an error or two (the 'X',
+   below), or skips a few symbols (the last few, or by indicating they are
+   missing with an \_):
 
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
    Object {confidence: 100, data: ArrayBuffer, string: "Mag.1ckπ"}
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" )
+   Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
+   > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" )
    Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
    #+END_SRC
 
