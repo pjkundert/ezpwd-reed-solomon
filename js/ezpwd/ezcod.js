@@ -74,11 +74,11 @@ function index_in_heap( typ, ptr, idx ) {
 // describing the error on failure, or a zero or +'ve confidence and the decoded lat/lon and
 // accuracy on success.
 // 
-//     Decoding an EZCOD 3:10/11/12 encoded string returns an array:
+//     Decoding an EZCOD 3:10/11/12 encoded string returns a Javascript Object:
 // 
-//         [<confidence>, <latitude>, <longitude>, <accuracy>]
+//         { confidence: <int>, latitude: <double>, longitude: <double>, accuracy: <double]
 // 
-// <confidence>	-- The proportion [0,1] of parity symbols in excess, after error/erasure correction
+// <confidence>	-- The percentage [0,100] of parity symbols in excess, after error/erasure correction
 // <latitude>	-- Latitude in degress [-90,90]
 // <longitude>	-- Longitude in degrees [-180,180]
 // <accuracy>	-- Estimated accuracty in meters
@@ -135,9 +135,12 @@ ezcod_3_N_decode_wrap = function( func_name ) {
             if ( cnf < 0 ) {
                 str		= heapi8_to_string( buf );
             } else {
-                ret		= [
-                    cnf / 100.0, getValue( lat, 'double', 1 ), getValue( lon, 'double', 1 ), getValue( acc, 'double', 1 )
-                ];
+                ret		= {
+                    confidence: cnf,
+                    latitude:	getValue( lat, 'double', 1 ),
+                    longitude:	getValue( lon, 'double', 1 ),
+                    accuracy:	getValue( acc, 'double', 1 ),
+                };
             }
         } finally {
             if ( buf ) _free( buf );
