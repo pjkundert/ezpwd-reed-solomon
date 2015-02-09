@@ -330,6 +330,12 @@
        accuracy: 0.020401379521588606}
    #+END_SRC
 
+   Try it at [[http://ezcod.com][ezcod.com]].  Switch to "EXCOD 3:12", and enter "mmf-bbf-Xc1-a16.1vd"
+   as the EXCOD.  You will see a computed accuracy of 20.4mm, and observe that
+   the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
+   precision, so it will re-encode the position, discarding the extra
+   precision.)
+
 *** Robustness
 
     All symbols after the initial 9 are Reed-Solomon code symbols.  Each R-S

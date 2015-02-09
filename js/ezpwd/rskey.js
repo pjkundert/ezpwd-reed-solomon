@@ -108,7 +108,7 @@ rskey_N_encode_wrap = function( func_name ) {
             var		arr	= Array.prototype.slice.call( u8arr );
         } else 
             throw "Unsupported buf; must be string or ArrayBuffer"
-        console.log( "Encoding ", arr );
+
         // Extend the int Array to the target 'len', to support return of error message.
         var buflen		= arr.length;
         if ( arr.length < len )
@@ -164,7 +164,6 @@ rskey_N_decode_wrap = function( func_name ) {
                     utf8	= td.decode( new DataView( u8arr.buffer )).replace( /\0*$/, '' );
                 } catch ( exc ) {
                     // leave utf8 == undefined
-                    // console.log( "Not UTF-8", u8arr.buffer );
                 }
                 // Return the confidence, the raw ArrayBuffer, and its UTF-8 representation (if any)
                 ret		= {
