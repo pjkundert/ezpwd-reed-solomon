@@ -112,7 +112,7 @@ main()
     std::cout 
 	<< "Phil's CCSDS corrections: "	<< ccorrs
 	<< " at "			<< ctps/1000
-	<< " kTPS ("			<< abs( ctps - gtps ) * 100 / gtps
+	<< " kTPS ("			<< ctps/gtps * 100
 	<< "% "				<< ( ctps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
@@ -144,7 +144,7 @@ main()
     std::cout 
         << nrs << "  corrections: " 	<< ncorrs
 	<< " at "			<< ntps/1000
-	<< " kTPS ("			<< abs( ntps - gtps ) * 100 / gtps
+	<< " kTPS ("			<< ntps/gtps * 100
 	<< "% "				<< ( ntps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;

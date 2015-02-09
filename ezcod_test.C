@@ -127,16 +127,20 @@ int				main( int argc, char **argv )
 	{{1,11},"R3U 08M PVTQJ.Y"},
 	{{1,12},"R3U 08M PVT QJQ.E"}};
     std::map<std::pair<size_t,size_t>,double>
-   				acc	= {{{1, 3}, 2.600 },
-					   {{1, 4}, 2.600 },
-					   {{1, 5}, 2.600 },
-					   {{1, 6}, 2.600 },
-					   {{1, 7}, 2.600 },
-					   {{1, 8}, 2.600 },
-					   {{1, 9}, 2.600 },
-					   {{1,10}, 2.600 },
-					   {{1,11}, 2.600 },
-					   {{1,12}, 2.600 }};
+   				acc	= {{{1, 3}, 90611.067453 },
+					   {{2, 3}, 90611.067453 },
+					   {{3, 3}, 90611.067453 },
+					   {{1, 4}, 20387.698592 },
+					   {{2, 4}, 20387.698592 },
+					   {{3, 4}, 20387.698592 },
+					   {{1, 5},  2841.975017 },
+					   {{1, 6},   637.189335 },
+					   {{1, 7},    88.807584 },
+					   {{1, 8},    19.912068 },
+					   {{1, 9},     2.775226 },
+					   {{1,10},     0.622252 },
+					   {{1,11},     0.086726 },
+					   {{1,12},     0.019445 }};
 
     ezpwd::ezcod_base	      *ezc[] = {
 	new ezpwd::ezcod<1, 3>( lat, lon ),
@@ -272,7 +276,7 @@ int				main( int argc, char **argv )
 	// Get EZCOD using C API for chuckles; gotta love NUL terminated strings...
 	std::string		cod;
 	cod.resize( 256 );
-	int			siz	= ezcod_3_10_encode( lat, lon, &cod.front(), cod.size() );
+	int			siz	= ezcod_3_10_encode( lat, lon, &cod.front(), cod.size(), 0 );
 	if ( siz < 0 ) {
 	    std::cout << "encode " << lat << ", " << lon << " failed: " << &cod.front() << std::endl;
 	    continue;

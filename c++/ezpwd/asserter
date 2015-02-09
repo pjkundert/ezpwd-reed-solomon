@@ -94,13 +94,13 @@ namespace ezpwd {
 	    difference			= ( a < b
 					    ? T( b - a )
 					    : T( a - b ));
-	    if ( ! (( delta < T( 0 ) ? T( -delta ) : delta ) < difference )) {
+	    if ( ! ( difference < ( delta < T( 0 ) ? T( -delta ) : T( delta )))) {
 		++failures;
 		std::ostringstream oss;
 		oss
 		    << std::setw( 24 ) << slash << ", "
 		    << std::setw( -5 ) << line
-		    << "; FAILURE: " << a << " != " << b << " +/- " << delta
+		    << "; FAILURE: " << std::setprecision( 13 ) << a << " != " << b << " +/- " << delta
 		    << ( comment.size() ? ": " : "" ) << comment
 		    << std::endl;
 		out			= oss.str();

@@ -54,6 +54,11 @@ function index_in_heap( typ, ptr, idx ) {
 // describing the error on failure, or a zero or +'ve confidence and the decoded lat/lon and
 // accuracy on success.
 // 
+//     Encoding a Latitude/Longitude yields a 3:10/11/12 code with (default) 9 symbols of position
+// information and 1, 2 or 3 symbols of parity.  You can specify an alternative number of symbols of
+// position information, between 1 symbol (global quadrant) and 12 symbols (millimeters) of
+// precision.
+// 
 //     Decoding an EZCOD 3:10/11/12 encoded string returns a Javascript Object:
 // 
 //         { confidence: <int>, latitude: <double>, longitude: <double>, accuracy: <double]
@@ -68,14 +73,17 @@ ezcod_3_N_encode_wrap = function( func_name ) {
                                                 ['number'	// lat
                                                  ,'number'	// lon
                                                  ,'number'	// array (buf allocated here)
-                                                 ,'number'] );	// array size
-    return function( lat, lon ) {
+                                                 ,'number'	// array size
+                                                 ,'number'] );	// precision (0 --> default)
+    return function( lat, lon, pre ) {
+        if ( typeof pre == 'undefined' )
+            pre			= 0;	// the default precision (9 symbols)
         var 		len	= 1024; // room for error message, spaces, etc.
         var		res	= -1;
         var		str	= func_name + " invocation failed.";
         var		buf	= string_to_heapi8( "", len );
         try { // must de-allocate buf after this point
-            res			= func( lat, lon, buf, len );
+            res			= func( lat, lon, buf, len, pre );
             str			= heapi8_to_string( buf );
         } finally {
             if ( buf ) _free( buf );

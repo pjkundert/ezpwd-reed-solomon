@@ -19,13 +19,15 @@ int				ezcod_3_encode(
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz )
+				    size_t		siz,
+				    size_t		pre	= 0 ) // default precision: L symbols
 {
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
-	<< "ezcod_3_encode<" << P << "," << L << ">("
-	<< " lat == " << lat
-	<< ", lon == " << lon
+	<< "ezcod_3_encode<"	<< P << "," << L << ">("
+	<< " lat == "		<< lat
+	<< ", lon == "		<< lon
+	<< ", w/ "		<< pre ? pre : L << " symbols precision"
 #if DEBUG > 2
 	<< ", buf[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
 #endif
@@ -33,7 +35,7 @@ int				ezcod_3_encode(
 #endif
     int				res;
     try {
-	const std::string      &str( ezpwd::ezcod<P,L>( lat, lon ).encode() );
+	const std::string      &str( ezpwd::ezcod<P,L>( lat, lon ).encode( pre ));
 	if ( str.size() + 1 > siz )
 	    throw std::runtime_error( "insufficient buffer provided" );
 	std::copy( str.begin(), str.end(), enc );
@@ -93,9 +95,9 @@ int				ezcod_3_decode(
 extern "C" {
 
     /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
-    int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<1>( lat, lon, enc, siz );
+	return ezcod_3_encode<1>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
@@ -103,9 +105,9 @@ extern "C" {
     }
 
     /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
-    int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<2>( lat, lon, enc, siz );
+	return ezcod_3_encode<2>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
@@ -113,9 +115,9 @@ extern "C" {
     }
 
     /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
-    int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<3>( lat, lon, enc, siz );
+	return ezcod_3_encode<3>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {

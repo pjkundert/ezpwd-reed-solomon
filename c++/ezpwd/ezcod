@@ -237,13 +237,26 @@ namespace ezpwd {
 	    std::ios_base::fmtflags
 				flg	= lhs.flags();
 	    lhs.precision( 10 );
-	    bool		km	= accuracy > 1000;	
+	    std::string		uni	= "m ";
+	    double		acc	= accuracy;
+	    double		dec	= 2;
+	    if ( acc > 1000 ) {
+		uni			= "km";
+		acc		       /= 1000;
+	    } else if ( acc < 1 ) {
+		uni			= "mm";
+		acc		       *= 1000;
+	    }
+	    if ( acc >= 100 )
+		dec			= 0;
+	    else if ( acc >= 10 )
+		dec			= 1;
+
 	    lhs << encode()
 		<< " ("		<< std::setw( 3 ) << confidence
-		<< "%)  == "	<< std::showpos   << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << latitude
-		<< ", "		<< std::showpos   << std::fixed << std::setprecision( 10 ) << std::setw( 15 ) << longitude
-		<< " +/- "	<< std::noshowpos << std::fixed << std::setprecision(  2 )
-		<< ( km ? accuracy / 1000 : accuracy ) << ( km ? "km" : "m" );
+		<< "%)  == "	<< std::showpos   << std::fixed << std::setprecision(  10 ) << std::setw( 15 ) << latitude
+		<< ", "		<< std::showpos   << std::fixed << std::setprecision(  10 ) << std::setw( 15 ) << longitude
+		<< " +/- "	<< std::noshowpos << std::fixed << std::setprecision( dec ) << std::setw(  6 ) << acc << uni;
 	    lhs.precision( prec );
 	    lhs.flags( flg );
 	    return lhs;

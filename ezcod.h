@@ -19,7 +19,8 @@ extern "C" {
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz );
+				    size_t		siz,
+				    size_t		pre );
     int				ezcod_3_10_decode(
 				    char	       *dec,
 				    size_t		siz,
@@ -31,7 +32,8 @@ extern "C" {
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz );
+				    size_t		siz,
+				    size_t		pre );
     int				ezcod_3_11_decode(
 				    char	       *dec,
 				    size_t		siz,
@@ -43,7 +45,8 @@ extern "C" {
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz );
+				    size_t		siz,
+				    size_t		pre );
     int				ezcod_3_12_decode(
 				    char	       *dec,
 				    size_t		siz,
@@ -68,9 +71,10 @@ class [[jsexport]] ezcod_cheerp
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz )
+				    size_t		siz,
+				    size_t		pre )
     {
-	return ::ezcod_3_10_encode( lat, lon, enc, siz );
+	return ::ezcod_3_10_encode( lat, lon, enc, siz, pre );
     }
     int				ezcod_3_10_decode(
 				    char	       *dec,
@@ -86,9 +90,10 @@ class [[jsexport]] ezcod_cheerp
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz )
+				    size_t		siz,
+				    size_t		pre )
     {
-	return ::ezcod_3_11_encode( lat, lon, enc, siz );
+	return ::ezcod_3_11_encode( lat, lon, enc, siz, pre );
     }
     int				ezcod_3_11_decode(
 				    char	       *dec,
@@ -104,9 +109,10 @@ class [[jsexport]] ezcod_cheerp
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz )
+				    size_t		siz,
+				    size_t		pre )
     {
-	return ::ezcod_3_12_encode( lat, lon, enc, siz );
+	return ::ezcod_3_12_encode( lat, lon, enc, siz, pre );
     }
     int				ezcod_3_12_decode(
 				    char	       *dec,
