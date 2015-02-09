@@ -108,14 +108,15 @@ rspwd_core.js: rspwd.C rspwd.h								\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@
-js/ezpwd/rspwd.js: rspwd_core.js rspwd_wrap.js
+js/ezpwd/rspwd.js: COPYRIGHT rspwd_core.js rspwd_wrap.js
+	    echo "/*! v$$( cat VERSION) | $$( cat COPYRIGHT ) */" > $@
 	    cat $^ > $@
 
 rskey_core.js:	rskey.C rskey.h								\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY) $< -o $@
-js/ezpwd/rskey.js: rskey_core.js rskey_wrap.js
+js/ezpwd/rskey.js: COPYRIGHT rskey_core.js rskey_wrap.js
 	    cat $^ > $@
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
@@ -124,7 +125,7 @@ ezcod_core.js:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@
-js/ezpwd/ezcod.js: ezcod_core.js ezcod_wrap.js
+js/ezpwd/ezcod.js: COPYRIGHT ezcod_core.js ezcod_wrap.js
 	    cat $^ > $@
 
 clean:
