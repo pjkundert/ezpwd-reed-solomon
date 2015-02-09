@@ -12,7 +12,7 @@
 
 int main() 
 {
-    RS_255( 253 )		rs;
+    ezpwd::RS<255,253>		rs;
     std::string			orig	= "Hello, world!";
     std::vector<int>		erasure;
 
@@ -38,23 +38,4 @@ int main()
 	std::cout << "Fixed:   " << fixes << "(count: " << count << ")" << std::endl;
 	std::cout << "Decoded: " << std::vector<uint8_t>( data.begin(), data.end() ) << std::endl << std::endl;
     }
-
-    // Get a basic TPS rate for a simple R-S decode with an error
-    timeval		beg	= ezpwd::timeofday();
-    timeval		end	= beg;
-    end.tv_sec		       += 1;
-    int			count	= 0;
-    timeval		now;
-    while (( now = ezpwd::timeofday() ) < end ) {
-	for ( int final = count + 1000; count < final; ++count ) {
-	    std::string		data( orig );
-	    data[0] ^= 1;
-	    rs.decode( data );
-	}
-    }
-    double		elapsed	= ezpwd::seconds( now - beg );
-    std::cout 
-	<< rs << " rate: "
-	<< count / elapsed / 1000 << " kTPS."
-	<< std::endl;
 }

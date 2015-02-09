@@ -1,7 +1,12 @@
 
-#include <iostream>
-#include <ezpwd/rs>
 #include <time.h>
+
+#include <iostream>
+
+#include <ezpwd/rs>
+#include <ezpwd/corrector>
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
 
 #ifndef NROOTS
 #define NROOTS 3
@@ -12,7 +17,7 @@ int main()
     std::string			ori	= "ba5!l";
     std::cout << "Original: " << ezpwd::hexstr( ori ) << std::endl;
 
-    RS_255( 255-NROOTS )	rs;
+    ezpwd::RS<255,255-NROOTS>	rs;
     for ( size_t errpos = 0; errpos < ori.size() + NROOTS + 1; ++errpos ) {
 	std::cout << "Raw Reed-Solomon codec:" << std::endl;
 	std::string		enc	= ori;

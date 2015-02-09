@@ -6,12 +6,15 @@
 #include <sstream>
 
 #include <cstdint>
+#include <map>
+
 #include <ezpwd/rs>
 #include <ezpwd/output>
 #include <ezpwd/asserter>
 #include <ezpwd/ezcod>
+#include <ezpwd/serialize>
 
-#include "ezcod.h"
+#include "ezcod.h"		// C API declarations
 
 #if defined( DEBUG )
 extern "C" {
@@ -83,39 +86,94 @@ int				main( int argc, char **argv )
     if ( argc > 1 )
 	std::istringstream( argv[1] ) >> symbols;
 
+    // Tests of basic facilities
+    char			buf[16]	= { 0 };
+    ezpwd::streambuf_to_buffer	sbf( buf, sizeof buf );
+    std::ostream 		obf( &sbf );
+
+    obf << "String" << ' ' << 123 << std::endl;
+    assert.ISEQUAL( strlen( buf ), size_t( 11 ));
+    assert.ISEQUAL( strcmp( buf, "String 123\n" ), 0 );
+    obf << "Too Long!";
+    assert.ISEQUAL( strcmp( buf, "String 123\nToo " ), 0 );
+
+
     std::string			abc	= "0123abcz";
     std::string			dec	= abc;
-    ezpwd::base32::decode( dec );
+    ezpwd::serialize::base32::decode( dec );
     // std::cout << ezpwd::hexstr( abc ) << " ==> " << ezpwd::hexstr( dec ) << std::endl;
     std::string			enc	= dec;
-    ezpwd::base32::encode( enc );
+    ezpwd::serialize::base32::encode( enc );
     // std::cout << ezpwd::hexstr( dec ) << " ==> " << ezpwd::hexstr( enc ) << std::endl;
     if ( assert.ISEQUAL( enc, std::string( "0123ABC2" )))
 	std::cout << assert << std::endl;
 
     double			lat	=   53.555556;
     double			lon	= -113.873889;
+    std::map<std::pair<size_t,size_t>,std::string>
+				str	= {
+	{{1, 3},"R3U.9"},
+	{{2, 3},"R3U.WD"},
+	{{3, 3},"R3U.09K"},
+	{{1, 4},"R3U0.J"},
+	{{2, 4},"R3U0.9K"},
+	{{3, 4},"R3U0.9K0"},
+	{{1, 5},"R3U08.H"},
+	{{1, 6},"R3U 08M.8"},
+	{{1, 7},"R3U 08MP.U"},
+	{{1, 8},"R3U 08MPV.E"},
+	{{1, 9},"R3U 08M PVT.D"},
+	{{1,10},"R3U 08M PVTQ.F"},
+	{{1,11},"R3U 08M PVTQJ.Y"},
+	{{1,12},"R3U 08M PVT QJQ.E"}};
+    std::map<std::pair<size_t,size_t>,double>
+   				acc	= {{{1, 3}, 90611.067453 },
+					   {{2, 3}, 90611.067453 },
+					   {{3, 3}, 90611.067453 },
+					   {{1, 4}, 20387.698592 },
+					   {{2, 4}, 20387.698592 },
+					   {{3, 4}, 20387.698592 },
+					   {{1, 5},  2841.975017 },
+					   {{1, 6},   637.189335 },
+					   {{1, 7},    88.807584 },
+					   {{1, 8},    19.912068 },
+					   {{1, 9},     2.775226 },
+					   {{1,10},     0.622252 },
+					   {{1,11},     0.086726 },
+					   {{1,12},     0.019445 }};
+
+    ezpwd::ezcod_base	      *ezc[] = {
+	new ezpwd::ezcod<1, 3>( lat, lon ),
+	new ezpwd::ezcod<2, 3>( lat, lon ),
+	new ezpwd::ezcod<3, 3>( lat, lon ),
+	new ezpwd::ezcod<1, 4>( lat, lon ),
+	new ezpwd::ezcod<2, 4>( lat, lon ),
+	new ezpwd::ezcod<3, 4>( lat, lon ),
+	new ezpwd::ezcod<1, 5>( lat, lon ),
+	new ezpwd::ezcod<1, 6>( lat, lon ),
+	new ezpwd::ezcod<1, 7>( lat, lon ),
+	new ezpwd::ezcod<1, 8>( lat, lon ),
+	new ezpwd::ezcod<1, 9>( lat, lon ),
+	new ezpwd::ezcod<1,10>( lat, lon ),
+	new ezpwd::ezcod<1,11>( lat, lon ),
+	new ezpwd::ezcod<1,11>( lat, lon ),
+	new ezpwd::ezcod<1,12>( lat, lon )
+    };
+
     // Try all the practical variants of Location and Parity
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 3>( lat, lon ).encode(), std::string( "R3U.9" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 4>( lat, lon ).encode(), std::string( "R3U0.J" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 5>( lat, lon ).encode(), std::string( "R3U08.H" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 6>( lat, lon ).encode(), std::string( "R3U 08M.8" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 7>( lat, lon ).encode(), std::string( "R3U 08MP.U" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 8>( lat, lon ).encode(), std::string( "R3U 08MPV.E" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1, 9>( lat, lon ).encode(), std::string( "R3U 08M PVT.D" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,10>( lat, lon ).encode(), std::string( "R3U 08M PVTQ.F" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,11>( lat, lon ).encode(), std::string( "R3U 08M PVTQJ.Y" )))
-	std::cout << assert << std::endl;
-    if ( assert.ISEQUAL( ezpwd::ezcod<1,12>( lat, lon ).encode(), std::string( "R3U 08M PVT QJQ.E" )))
-	std::cout << assert << std::endl;
+    for ( auto &e : ezc ) {
+	if ( assert.ISEQUAL( e->encode(), str[e->symbols()] ))
+	    std::cout << "On " << *e << ": " << assert;
+	try {
+	   e->decode( str[e->symbols()] );
+	   if ( assert.ISNEAR( e->accuracy, acc[e->symbols()], 1e-4 ))
+	       std::cout << "On " << *e << ": " << assert;
+	} catch ( std::exception &exc ) {
+	    assert.ISTRUE( false, exc.what() );
+	    std::cout << "On " << *e << ": " << assert;
+	}
+	std::cout << *e << std::endl;
+    }
 
     ezpwd::ezcod<1>		edm1( lat, lon );
     ezcod_exercise( edm1 );
@@ -128,6 +186,35 @@ int				main( int argc, char **argv )
     ezpwd::ezcod<5>		edm5( lat, lon );
     ezcod_exercise( edm5 );
 
+
+    // Ensure we can encode and decode any valid number of position symbols, w/ any
+    // ezpwd::ezcod<PARITY,...> codec, with any number of remaining parity symbols, so long as we
+    // retain the position-parity separator.
+    edm5.latitude		= 53.555518;
+    edm5.longitude		= -113.873530;
+    std::string		e5p3	= edm5.encode( 3 );
+    if ( assert.ISEQUAL( e5p3, std::string( "R3U.XVVHH" )))
+	std::cout << assert << std::endl;
+    for ( ; e5p3.back() != 'U'; e5p3.resize( e5p3.size() - 1 )) {
+	int		cnf	= edm5.decode( e5p3 );
+	//std::cout << "Got: " << edm5 << " from: " << e5p3 << " w/ confidence " << cnf <<std::endl;
+	if ( assert.ISTRUE( e5p3.back() == '.' ? cnf == 0 : cnf >= 0 ))
+	    std::cout << "For " << e5p3 << ": " << assert << std::endl;
+    }
+
+    edm5.latitude		= 53.555518;
+    edm5.longitude		= -113.873530;
+    std::string		e5p12	= edm5.encode( 12 );
+    if ( assert.ISEQUAL( e5p12, std::string( "R3U 08M PXT 31N.71K3E" )))
+	std::cout << assert << std::endl;
+    for ( ; e5p12.back() != 'N'; e5p12.resize( e5p12.size() - 1 )) {
+	int		cnf	= edm5.decode( e5p12 );
+	//std::cout << "Got: " << edm5 << " from: " << e5p12 << " w/ confidence " << cnf <<std::endl;
+	if ( assert.ISTRUE( e5p12.back() == '.' ? cnf == 0 : cnf >= 0 ))
+	    std::cout << "For " << e5p12 << ": " << assert << std::endl;
+    }
+
+
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in
@@ -138,11 +225,11 @@ int				main( int argc, char **argv )
     //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
     std::string			fix2	= err2;
-    ezpwd::base32::decode( fix2 );
+    ezpwd::serialize::base32::decode( fix2 );
     std::vector<int>		pos2;
     int				cor2	= edm2.rscodec.decode( fix2, std::vector<int>(), &pos2  );
     std::string			enc2	= fix2;
-    ezpwd::base32::encode( enc2 );
+    ezpwd::serialize::base32::encode( enc2 );
     std::cout
 	<< "2 errors (ezpwd::reed_solomon): " << ezpwd::hexstr( err2 )
 	<< " --> " << ezpwd::hexstr( enc2 )
@@ -155,13 +242,13 @@ int				main( int argc, char **argv )
     // May compute error positions in "pad" (unused portion), not in supplied data or parity!
     void	       	       *rs_31_29= ::init_rs_char( 5, 0x25, 1, 1, 2, 29-9 );
     std::string			fix_31_29= err2;
-    ezpwd::base32::decode( fix_31_29 );
+    ezpwd::serialize::base32::decode( fix_31_29 );
     std::vector<int>		era_31_29;
     era_31_29.resize( 2 );
     int				cor_31_29= ::decode_rs_char( rs_31_29, (unsigned char *)&fix_31_29.front(),
 							    &era_31_29.front(), 0 );
     std::string			enc_31_29= fix_31_29;
-    ezpwd::base32::encode( enc_31_29 );
+    ezpwd::serialize::base32::encode( enc_31_29 );
     era_31_29.resize( std::max( 0, cor_31_29 ));
     std::cout
 	<< "2 errors (Phil Karn R-S coded): " << ezpwd::hexstr( err2 )
@@ -218,7 +305,7 @@ int				main( int argc, char **argv )
 	// Get EZCOD using C API for chuckles; gotta love NUL terminated strings...
 	std::string		cod;
 	cod.resize( 256 );
-	int			siz	= ezcod_3_10_encode( lat, lon, &cod.front(), cod.size() );
+	int			siz	= ezcod_3_10_encode( lat, lon, &cod.front(), cod.size(), 0 );
 	if ( siz < 0 ) {
 	    std::cout << "encode " << lat << ", " << lon << " failed: " << &cod.front() << std::endl;
 	    continue;
@@ -226,10 +313,10 @@ int				main( int argc, char **argv )
 	// Reduce the number of symbols to the specified amount.
 	int			sizmax	= 0;
 	for ( int syms = 0; syms < symbols && sizmax < siz; ++sizmax )
-	    if ( ! ::isspace( cod[sizmax] ))
+	    if ( ! ::isspace( cod[sizmax] ) && cod[sizmax] != '!' && cod[sizmax] != '.' )
 		 ++syms;
-
 	cod.resize( sizmax );
+
 #if defined( DEBUG ) && DEBUG > 0
 	std::cout
 	    << "encode " << std::setw( 16 ) << lat << ", " << std::setw( 16 ) << lon

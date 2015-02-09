@@ -3,12 +3,14 @@
 
 #include <iostream>
 #include <iomanip>
+#include <sstream>
 
 namespace ezpwd {
 
 
 #define ISEQUAL( ... ) isequal( __FILE__, __LINE__, __VA_ARGS__ )
 #define ISTRUE( ... )  istrue(  __FILE__, __LINE__, __VA_ARGS__ )
+#define ISNEAR( ... )  isnear(  __FILE__, __LINE__, __VA_ARGS__ )
 
     struct asserter {
 	bool			failed;		// The last test failed
@@ -69,13 +71,47 @@ namespace ezpwd {
 		    << ( comment.size() ? ": " : "" ) << comment
 		    << std::endl;
 		out			= oss.str();
-		failed = true;
+		failed			= true;
 		return *this;
 	    }
 	    out.clear();
-	    failed = false;
+	    failed			= false;
 	    return *this;
 	}
+
+	template < typename T >
+	asserter	       &isnear( const char *file, int line, const T &a, const T &b, const T &delta, const std::string &comment = std::string() )
+	{
+	    const char	       *needle	= "/";
+	    const char	       *slash	= std::find_end( file, file + strlen( file ),
+							 needle, needle + strlen( needle ));
+	    if ( slash == file + strlen( file ))
+		slash			= file;
+	    else
+		slash		       += 1;
+
+	    T			difference;
+	    difference			= ( a < b
+					    ? T( b - a )
+					    : T( a - b ));
+	    if ( ! ( difference < ( delta < T( 0 ) ? T( -delta ) : T( delta )))) {
+		++failures;
+		std::ostringstream oss;
+		oss
+		    << std::setw( 24 ) << slash << ", "
+		    << std::setw( -5 ) << line
+		    << "; FAILURE: " << std::setprecision( 13 ) << a << " != " << b << " +/- " << delta
+		    << ( comment.size() ? ": " : "" ) << comment
+		    << std::endl;
+		out			= oss.str();
+		failed			= true;
+		return *this;
+	    }
+	    out.clear();
+	    failed			= false;
+	    return *this;
+	}
+	
     }; // class asserter
 } // namespace ezpwd
 

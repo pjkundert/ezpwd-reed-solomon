@@ -3,33 +3,13 @@
 #include <utility>
 
 #include <ezpwd/ezcod>		// C++ implementation
-#include "ezcod.h"		// C API declarations
 #if defined( DEBUG )
-#include <ezpwd/output>
-#endif
+#  include <ezpwd/output>
+#endif // DEBUG
 
-// 
-// <buf_t> << <string> -- Copy the <string> into the C <char*,size_t> buffer, always NUL terminating
-// 
-//     Copies <string> contents into buffer, and always NUL-terminates.  Returns advanced buf_t (NOT
-// including the terminating NUL, suitable for repeating ... << <string> operations.
-// 
-typedef std::pair<char *,size_t> buf_t;
-buf_t			operator<<(
-			    const buf_t	       &buf,
-			    const std::string  &str )
-{
-    if ( buf.first && str.size() + 1 <= buf.second ) {
-	std::copy( str.begin(), str.end(), buf.first );
-	buf.first[str.size()]		= 0;
-	return buf_t( buf.first + str.size(), buf.second - str.size() );
-    } else if ( buf.first && buf.second ) {
-	std::copy( str.begin(), str.begin() + buf.second - 1, buf.first );
-	buf.first[buf.second-1]		= 0;
-	return buf_t( buf.first + buf.second - 1, 1 );
-    }
-    return buf; // NULL pointer or 0 size.
-}
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
+
+#include "ezcod.h"		// C API declarations
 
 // 
 // Encode lat/lon with default worst-case 3m. accuracy: 1 part in 2^22 Latitude, 2^23 Longitude.
@@ -39,32 +19,35 @@ int				ezcod_3_encode(
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
-				    size_t		siz )
+				    size_t		siz,
+				    size_t		pre	= 0 ) // default precision: L symbols
 {
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
-	<< "ezcod_3_encode<" << P << "," << L << ">("
-	<< " lat == " << lat
-	<< ", lon == " << lon
+	<< "ezcod_3_encode<"	<< P << "," << L << ">("
+	<< " lat == "		<< lat
+	<< ", lon == "		<< lon
+	<< ", w/ "		<< pre ? pre : L << " symbols precision"
 #if DEBUG > 2
 	<< ", buf[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
 #endif
 	<< std::endl;
 #endif
     int				res;
-    std::string			str;
     try {
-	ezpwd::ezcod<P,L>	loc( lat, lon );
-	str				= loc.encode();
-	res				= str.size();
+	const std::string      &str( ezpwd::ezcod<P,L>( lat, lon ).encode( pre ));
 	if ( str.size() + 1 > siz )
-	    throw std::runtime_error( "ezcod_3_encode: insufficient buffer provided" );
+	    throw std::runtime_error( "insufficient buffer provided" );
+	std::copy( str.begin(), str.end(), enc );
 	res				= str.size();
+	enc[res]			= 0;
     } catch ( std::exception &exc ) {
-	str				= exc.what();
+	ezpwd::streambuf_to_buffer sbf( enc, siz );
+	std::ostream( &sbf )
+	    << "ezcod_3_encode<" << P << "," << L << ">(" << lat << ", " << lon << ") failed: "
+	    << exc.what();
 	res				= -1;
     }
-    buf_t( enc, siz ) << str;
     return res;
 }
 
@@ -73,46 +56,48 @@ int				ezcod_3_encode(
 // 
 template < size_t P=1, size_t L=9 >
 int				ezcod_3_decode(
-				    char	       *dec,
+				    char	       *buf,
 				    size_t		siz,
 				    double	       *lat	= 0,
 				    double	       *lon	= 0,
 				    double	       *acc	= 0 )
 {
-    int				res;
-    std::string			str;
+    int				confidence;
+    std::string			location( buf );
+    ezpwd::ezcod<P,L>		decoder( location );
     try {
-	ezpwd::ezcod<P,L>	loc;
-	res				= loc.decode( dec );
+	confidence			= decoder.confidence;
 #if defined( DEBUG ) && DEBUG > 1
-    std::cout
-	<< "ezcod_3_decode<" << P << "," << L << ">("
-	<< " lat (" << (void *)lat << ") == " << loc.latitude
-	<< ", lon (" << (void *)lon << ") == " << loc.longitude
-	<< ", acc (" << (void *)acc << ") == " << loc.accuracy
-	<< std::endl;
+	std::cout
+	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location
+	    << "\") == " << confidence << "% confidence: "
+	    << " lat (" << (void *)lat << ") == " << decoder.latitude
+	    << ", lon (" << (void *)lon << ") == " << decoder.longitude
+	    << ", acc (" << (void *)acc << ") == " << decoder.accuracy
+	    << std::endl;
 #endif
 	if ( lat )
-	    *lat			= loc.latitude;
+	    *lat			= decoder.latitude;
 	if ( lon )
-	    *lon			= loc.longitude;
+	    *lon			= decoder.longitude;
 	if ( acc )
-	    *acc			= loc.accuracy;
+	    *acc			= decoder.accuracy;
     } catch ( std::exception &exc ) {
-	str				= exc.what();
-	res				= -1;
+	ezpwd::streambuf_to_buffer	sbf( buf, siz );
+	std::ostream( &sbf )
+	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location << "\") failed: "
+	    << exc.what();
+	confidence			= -1;
     }
-    buf_t( dec, siz ) << str;
-    return res;
+    return confidence;
 }
-
 
 extern "C" {
 
     /* ezcod 3:10 -- 9+1 Reed-Solomon parity symbol */
-    int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_10_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<1>( lat, lon, enc, siz );
+	return ezcod_3_encode<1>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_10_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
@@ -120,9 +105,9 @@ extern "C" {
     }
 
     /* ezcod 3:11 -- 9+2 Reed-Solomon parity symbols */
-    int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_11_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<2>( lat, lon, enc, siz );
+	return ezcod_3_encode<2>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_11_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {
@@ -130,9 +115,9 @@ extern "C" {
     }
 
     /* ezcod 3:12 -- 9+3 Reed-Solomon parity symbols */
-    int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz )
+    int ezcod_3_12_encode( double lat, double lon, char *enc, size_t siz, size_t pre )
     {
-	return ezcod_3_encode<3>( lat, lon, enc, siz );
+	return ezcod_3_encode<3>( lat, lon, enc, siz, pre );
     }
     int ezcod_3_12_decode( char *dec, size_t siz, double *lat, double *lon, double *acc )
     {

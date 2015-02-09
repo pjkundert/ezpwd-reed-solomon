@@ -1,0 +1,42 @@
+Ezpwd Reed-Solomon is distributed under the GNU General Public License version 3
+and is also available under alternative Commercial licenses negotiated directly
+with Hard Consulting Corporation. If you obtained Ezpwd Reed-Solomon under the
+GPL, then the GPL applies to all Ezpwd Reed-Solomon modules used on your system
+as well, except as defined below. The GPL (version 3) is included in this source
+tree in the file COPYING.
+
+The c++/ezpwd/rs file is redistributed under the terms of the LGPL, regardless
+of the overall licensing terms; see the file for more details, or visit:
+
+    https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/c++/ezpwd/rs
+
+Hard Consulting Corporation holds copyright and/or sufficient licenses to all
+components of the Ezpwd Reed-Solomon package, and therefore can grant, at its
+sole discretion, the ability for companies, individuals, or organizations to
+create proprietary or Open Source (even if not GPL) modules which may use at
+runtime the portions of Ezpwd Reed-Solomon which fall under the umbrella of our
+copyright/license, or are distributed under more flexible licenses than GPL.
+
+If you wish to use our code in other GPL programs, don't worry -- there is no
+requirement that you provide the same exception in your GPL'd products (although
+if you've written a module for Ezpwd Reed-Solomon we would strongly encourage
+you to make the same exception that we do).
+
+In addition, Ezpwd Reed-Solomon implements many tools and APIs using its
+Reed-Solomon implementation.  It is our belief that applications using these
+tools and APIs do not have to be licensed under the GPL or a compatible license,
+as we believe that the use of these tools and APIs do not create a 'derivative
+work' as referred to in the GPL.  However, should any court or other judiciary
+body find that these tools and APIs do fall under the terms of the GPL, then we
+hereby grant you a license to use these protocols in combination with Ezpwd
+Reed-Solomon in external applications licensed under any license you wish.
+
+If you have any questions regarding our licensing policy, please contact us:
+
++1.780.970.8148
+info@hardconsulting.com
+
+Hard Consulting Corporation
+74 Greystone Crescent
+Spruce Grove, AB, T7X 0A7
+Canada

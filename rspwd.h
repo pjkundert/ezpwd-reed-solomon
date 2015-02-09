@@ -1,5 +1,5 @@
-#ifndef _EZPWD_RSPWD
-#define _EZPWD_RSPWD
+#ifndef _EZPWD_RSPWD_H
+#define _EZPWD_RSPWD_H
 
 #if defined( __cplusplus )
 extern "C" {
@@ -15,4 +15,4 @@ extern "C" {
 } // extern "C"
 #endif
 
-#endif // _EZPWD_RSPWD
+#endif // _EZPWD_RSPWD_H

@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <title>RSKEY Example</title>
+        <style>
+            html,body {
+                margin:0;
+                padding:0;
+                height:100%;
+                background:lightgray;
+                font-family:arial,sans-serif;
+                font-size:small;
+                color:#darkgray;
+            }
+            table {
+                width: 450px;
+            }
+            td:last-child {
+                width: 100%;
+            }
+            table input {
+                width: 100%;
+            }
+        </style>
+    </head>
+    <body>
+        <h2>RSKEY Data Encoding with Error Correction.</h2>
+        <p>Change the Parity to increase or decrease the error detection and
+        correction capacity of the RSKEY.  It takes 1 parity symbol to correct
+        any other missing symbol (eg. one not yet entered on the end of the
+        RSKEY, or one replaced by an '_' or some other invalid character), and
+        it uses 2 parity symbols to correct any erroneous symbol.</p>
+        
+        <table>
+            <tr>
+                <td class="description">
+                    Parity:
+                </td>
+                <td class="entry">
+                    <input type='number' id='parity' value='5' min='2' max='5' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Data Size:
+                </td>
+                <td class="entry">
+                    <input type='number' id='rawsiz' value='12' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Data:
+                </td>
+                <td class="entry">
+                    <input type='text'   id='data' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Key:
+                </td>
+                <td class="entry">
+                    <input type='text'   id='key' value='9MGNE-BHHCD-MVY00-00000-MVRFN' />
+                </td>
+            </tr>
+            <tr>
+                <td class="description">
+                    Confidence:
+                </td>
+                <td class="description">
+                    <div id='confidence' />
+                </td>
+            </tr>
+        </table>
+    </body>
+    <script type="text/javascript" src="../js/ezpwd/rskey.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript">
+
+        $('#data').on( 'blur change paste input', function() {
+            var data		= $('#data').val();
+            var rawsiz		= $('#rawsiz').val();
+            console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
+            var rskey_encode	= 'rskey_' + $('#parity').val() + "_encode"
+            $('#key').val( window[rskey_encode]( rawsiz|0, data ));
+        });
+
+        $('#key').on( 'blur', function() {
+            var key		= $('#key').val();
+            var rawsiz		= $('#rawsiz').val();
+            console.log( "decoding rawsiz == ", rawsiz, ",  key == ", key );
+            try {
+                var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
+                dec		= window[rskey_decode]( rawsiz, key );
+                console.log( "decoded: ", dec );
+                $('#confidence').text( dec.confidence );
+                $('#data').val( dec.string ).blur(); // and regenerate the key (fixing errors/erasures)
+            } catch ( exc ) {
+                $('#data').val( "Exception: " + exc );
+            }                
+        });
+
+        // regenerate the key from data on parity, rawsiz change
+        $('#parity').on( 'change', function(){ $('#data').blur(); } );
+        $('#rawsiz').on( 'change', function(){ $('#data').blur(); } );
+
+        // And finally, decode the provided key to start things off
+        $('#key').blur();
+    </script>
+</html>

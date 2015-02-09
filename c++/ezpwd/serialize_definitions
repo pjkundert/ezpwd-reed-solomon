@@ -1,0 +1,45 @@
+
+// 
+// The encoder/decoder tables for all ezpwd::serialize::... base<N> codecs
+// 
+//     Must be included in exactly one C++ compilation unit.
+// 
+
+#ifndef _EZPWD_SERIALIZE_DEFINITIONS
+#define _EZPWD_SERIALIZE_DEFINITIONS
+
+#include "serialize"
+
+// 
+// base<32> tables for RFC4864 standard, and the EZPWD and Crockford codecs
+// 
+const constexpr ezpwd::array<char,32>
+			ezpwd::serialize::standard<32>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::standard<32>::decoder;
+const constexpr ezpwd::array<char,32>
+			ezpwd::serialize::ezpwd<32>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::ezpwd<32>::decoder;
+const constexpr ezpwd::array<char,32>
+			ezpwd::serialize::crockford<32>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::crockford<32>::decoder;
+
+// 
+// base<64> tables for RFC4864 standard (regular and url), and the EZPWD codecs
+// 
+const constexpr ezpwd::array<char,64>
+			ezpwd::serialize::standard<64>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::standard<64>::decoder;
+const constexpr ezpwd::array<char,64>
+			ezpwd::serialize::standard_url<64>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::standard_url<64>::decoder;
+const constexpr ezpwd::array<char,64>
+			ezpwd::serialize::ezpwd<64>::encoder;
+const constexpr ezpwd::array<char,127>
+			ezpwd::serialize::ezpwd<64>::decoder;
+
+#endif // _EZPWD_SERIALIZE_DEFINITIONS

@@ -5,6 +5,9 @@
 #include <string.h>
 
 #include <ezpwd/rs>
+#include <ezpwd/corrector>
+
+#include <ezpwd/definitions>	// must be included in one C++ compilation unit
 
 // 
 // rspwd_test -- test instances of ezpwd::corrector<N>, as used by "C" rspwd_decode_N API

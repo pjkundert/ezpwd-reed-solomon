@@ -1,3 +1,19 @@
+//
+// Ezpwd Reed-Solomon -- Reed-Solomon encoder / decoder library
+// 
+// Copyright (c) 2014, Hard Consulting Corporation.
+//
+// Ezpwd Reed-Solomon is free software: you can redistribute it and/or modify it under the terms of
+// the GNU General Public License as published by the Free Software Foundation, either version 3 of
+// the License, or (at your option) any later version.  See the LICENSE file at the top of the
+// source tree.  Ezpwd Reed-Solomon is also available under Commercial license.  The c++/ezpwd/rs
+// file is redistributed under the terms of the LGPL, regardless of the overall licensing terms.
+// 
+// Ezpwd Reed-Solomon is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+// without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See
+// the GNU General Public License for more details.
+//
+
 // 
 // string_to_heapi8	-- allocate buffer of (at least) len of type (eg. i8), initializing from str
 // heapi8_to_string	-- decode a JS string from the buffer, til NUL
@@ -29,11 +45,9 @@ function index_in_heap( typ, ptr, idx ) {
     return ptr + idx * Runtime.getNativeTypeSize( typ );
 }
 
-
-
 // 
-// ezcod_3_<N>_encode -- encodes the lat/lon as an ezcod 3:<N> code, returning the encoded string
-// ezcod_3_<N>_decode -- decodes the 3:<N> encoded string to confidence, lat/lon and accuracy
+// rspwd_encode_<N> -- Adds <N> parity to the supplied string (w/ max. size), returning length
+// rspwd_decode_<N> -- Decodes the supplied string w/ up to <N> parity, returning confidence
 // 
 //     Since arrays are used to communicate, they must be allocated locally and release after the
 // wrapped call.  The underlying "C" decode returns a -'ve confidence and a (NUL terminated) string
@@ -49,11 +63,9 @@ function index_in_heap( typ, ptr, idx ) {
 // <longitude>	-- Longitude in degrees [-180,180]
 // <accuracy>	-- Estimated accuracty in meters
 // 
-ezcod_3_N_encode_wrap = function( func_name ) {
+rspwd_encode_N_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
-                                                ['number'	// lat
-                                                 ,'number'	// lon
-                                                 ,'number'	// array (buf allocated here)
+                                                ['number'	// array (buf allocated here)
                                                  ,'number'] );	// array size
     return function( lat, lon ) {
         var 		len	= 1024; // room for error message, spaces, etc.
