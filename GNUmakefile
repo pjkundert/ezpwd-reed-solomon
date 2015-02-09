@@ -101,29 +101,31 @@ testjs:		jstest
 	node ./ezcod_test.js
 	node ./rskey_test.js
 
-rspwd_test.js:	rspwd_test.C rspwd.C				\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+# 
+# Production Javascript targets
+# 
+rspwd_core.js: rspwd.C rspwd.h								\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@
+js/ezpwd/rspwd.js: rspwd_core.js rspwd_wrap.js
+	    cat $^ > $@
 
-js/ezpwd/rspwd.js: rspwd.C					\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+rskey_core.js:	rskey.C rskey.h								\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY) $< -o $@
+js/ezpwd/rskey.js: rskey_core.js rskey_wrap.js
+	    cat $^ > $@
 
-js/ezpwd/rskey.js: rskey.C					\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+ezcod_core.js:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY) $< -o $@ 
-
-
-ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
-ezcod:		ezcod.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-js/ezpwd/ezcod.js: ezcod.C ezcod.h c++/ezpwd/ezcod		\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
-		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@ 
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@
+js/ezpwd/ezcod.js: ezcod_core.js ezcod_wrap.js
+	    cat $^ > $@
 
 clean:
 	rm -f rsexample		rsexample.o	rsexample.js	rsexample.js.mem	\
@@ -133,9 +135,16 @@ clean:
 	      rskey_test	rskey_test.o	rskey_test.js	rskey_test.js.mem	\
 	      rscompare		rscompare.o						\
 	      rsvalidate	rsvalidate.o						\
-	      ezcod		ezcod.o		ezcod.js	ezcod.js.mem		\
+	      ezcod_core.js								\
+	      rspwd_core.js								\
+	      rskey_core.js								\
 	      ezcod_test	ezcod_test.o	ezcod_test.js	ezcod_test.js.mem
 	make -C phil-karn clean
+
+rspwd_test.js:	rspwd_test.C rspwd.C							\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
+		emscripten
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o

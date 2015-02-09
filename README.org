@@ -35,12 +35,21 @@
 
 ** js/ezpwd/rskey.js
 
-   A Javascript error-corrected user data input utility.
-
    Asking a user to reliably enter even a few bytes of data (eg. a product key
-   or a redemption code) is, well, basically impossible.  
+   or a redemption code) is, well, basically impossible.  It is not reasonable
+   to expect that someone will be able to perfectly read and enter a blob of
+   random letters and numbers with 100% reliability.
 
-   Use rskey.js to encode your data into an easily human readable key:
+   Import =js/ezpwd/rskey.js= Javascript to use RSKEY error-corrected binary
+   data input tokens in your application.  Raw binary data (in Javascript or
+   string or ArrayBuffer) can be encoded into an RSKEY for later entry by a
+   user.  Using built-in parity (extra validation) symbols, any errors or
+   missing symbols can be detected and possibly recovered.  An RSKEY that
+   validates as correct can be trusted with a high degree of certainty,
+   proportional to the number of excess parity symbols remaining (beyond those
+   consumed by error detection and correction).
+
+   Use rskey.js's API to encode your data into an easily human readable key:
 
    #+BEGIN_SRC Javascript
    > rskey_5_encode( 12, "Mag.1ckπ" );
@@ -48,23 +57,42 @@
    #+END_SRC
 
    Later, you can decode it -- even if the user adds an error or two (the 'X',
-   below), or skips a few symbols (the last few, or by indicating they are
-   missing with an \_):
+   below), or skips a few symbols (if some were unreadable, indicated with an
+   \_, or the last few are not yet entered):
 
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
    Object {confidence: 100, data: ArrayBuffer, string: "Mag.1ckπ"}
-   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" )
+   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" ) // not yet entered
    Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
-   > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" )
+   > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" ) // or unreable w/ _
    Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
    #+END_SRC
 
+
+   If you have raw numeric data (eg. record IDs, data HMACs, etc), use the
+   ArrayBuffer interface.  You can supply any type of raw data, up to the
+   capacity of the RSKEY (12 bytes, in this case).  Then, even if errors are
+   introduced on entry, they will be recovered if the parity is sufficient, and
+   the returned Object's .data property will be an ArrayBuffer containing the
+   original binary data, which you can used a TypedArray to access:
+
+   #+BEGIN_SRC Javascript
+   > ia = new Int32Array([0x31323334, 0x41424344, 0x51525354])
+   [825373492, 1094861636, 1364349780]
+   > rskey_5_encode( 12, ia.buffer ) // raw capacity is 12 bytes, w/ 5 parity
+   "6GRK4-CA48D-142M2-KA98G-V2MYP"
+   > dec=rskey_5_decode( 12, "6GRK4-CA48D-142M2-KA98G-V2XXP" ) // XX are errors
+   Object {confidence: 20, data: ArrayBuffer, string: "4321DCBATSRQ"}
+   > new Int32Array( dec.data ) // recover original data
+   [825373492, 1094861636, 1364349780]
+   #+END_SRC
 
 ** js/ezpwd/rspwd.js
 
    Javascript implementation of Reed-Solomon codec based password error
    detection and correction.
+
 ** Enhancements
 
    Several enhancements have been made.

@@ -2,7 +2,7 @@
 <html lang="en">
     <head>
         <meta charset="utf-8">
-        <title>RSKEY</title>
+        <title>RSKEY Example</title>
         <style>
             html,body {
                 margin:0;
@@ -25,6 +25,13 @@
         </style>
     </head>
     <body>
+        <h2>RSKEY Data Encoding with Error Correction.</h2>
+        <p>Change the Parity to increase or decrease the error detection and
+        correction capacity of the RSKEY.  It takes 1 parity symbol to correct
+        any other missing symbol (eg. one not yet entered on the end of the
+        RSKEY, or one replaced by an '_' or some other invalid character), and
+        it uses 2 parity symbols to correct any erroneous symbol.</p>
+        
         <table>
             <tr>
                 <td class="description">
@@ -69,11 +76,10 @@
         </table>
     </body>
     <script type="text/javascript" src="../js/ezpwd/rskey.js"></script>
-    <script type="text/javascript" src="../js/ezpwd/rskey_wrap.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script type="text/javascript">
 
-        $('#data').on( 'blur change keyup paste input', function() {
+        $('#data').on( 'blur change paste input', function() {
             var data		= $('#data').val();
             var rawsiz		= $('#rawsiz').val();
             console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
@@ -97,8 +103,8 @@
         });
 
         // regenerate the key from data on parity, rawsiz change
-        $('#parity').on( 'blur', function(){ $('#data').blur(); } );
-        $('#rawsiz').on( 'blur', function(){ $('#data').blur(); } );
+        $('#parity').on( 'change', function(){ $('#data').blur(); } );
+        $('#rawsiz').on( 'change', function(){ $('#data').blur(); } );
 
         // And finally, decode the provided key to start things off
         $('#key').blur();
