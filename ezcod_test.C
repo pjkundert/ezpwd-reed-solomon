@@ -186,6 +186,35 @@ int				main( int argc, char **argv )
     ezpwd::ezcod<5>		edm5( lat, lon );
     ezcod_exercise( edm5 );
 
+
+    // Ensure we can encode and decode any valid number of position symbols, w/ any
+    // ezpwd::ezcod<PARITY,...> codec, with any number of remaining parity symbols, so long as we
+    // retain the position-parity separator.
+    edm5.latitude		= 53.555518;
+    edm5.longitude		= -113.873530;
+    std::string		e5p3	= edm5.encode( 3 );
+    if ( assert.ISEQUAL( e5p3, std::string( "R3U.XVVHH" )))
+	std::cout << assert << std::endl;
+    for ( ; e5p3.back() != 'U'; e5p3.resize( e5p3.size() - 1 )) {
+	int		cnf	= edm5.decode( e5p3 );
+	//std::cout << "Got: " << edm5 << " from: " << e5p3 << " w/ confidence " << cnf <<std::endl;
+	if ( assert.ISTRUE( e5p3.back() == '.' ? cnf == 0 : cnf >= 0 ))
+	    std::cout << "For " << e5p3 << ": " << assert << std::endl;
+    }
+
+    edm5.latitude		= 53.555518;
+    edm5.longitude		= -113.873530;
+    std::string		e5p12	= edm5.encode( 12 );
+    if ( assert.ISEQUAL( e5p12, std::string( "R3U 08M PXT 31N.71K3E" )))
+	std::cout << assert << std::endl;
+    for ( ; e5p12.back() != 'N'; e5p12.resize( e5p12.size() - 1 )) {
+	int		cnf	= edm5.decode( e5p12 );
+	//std::cout << "Got: " << edm5 << " from: " << e5p12 << " w/ confidence " << cnf <<std::endl;
+	if ( assert.ISTRUE( e5p12.back() == '.' ? cnf == 0 : cnf >= 0 ))
+	    std::cout << "For " << e5p12 << ": " << assert << std::endl;
+    }
+
+
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in

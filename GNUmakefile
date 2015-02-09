@@ -181,12 +181,14 @@ rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/co
 rspwd_test:	rspwd_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h c++/ezpwd/ezcod c++/ezpwd/rs
+ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h						\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
 ezcod_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
-ezcod_test.js: ezcod_test.C ezcod.C c++/ezpwd/rs				\
+ezcod_test.js: ezcod_test.C ezcod.C ezcod.h						\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod	\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 

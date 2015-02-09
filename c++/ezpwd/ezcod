@@ -413,8 +413,8 @@ namespace ezpwd {
 		}
 	    }
 #if defined( DEBUG ) && DEBUG >= 1
-	    std::cout << " --> 0x" << std::vector<uint8_t>( dec.begin(), dec.begin() + std::min( L, dec.length()) )
-		      << " + 0x" << std::vector<uint8_t>( dec.begin() + std::min( L, dec.length()),
+	    std::cout << " --> 0x" << std::vector<uint8_t>( dec.begin(), dec.begin() + std::min( parbeg, dec.length()) )
+		      << " + 0x" << std::vector<uint8_t>( dec.begin() + std::min( parbeg, dec.length()),
 							  dec.begin() + dec.length() )
 		      << " parity" << std::endl;
 #endif

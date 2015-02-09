@@ -306,8 +306,28 @@
    (erased) symbol by default, with greater erasure/error detection and
    correction optionally available.
 
+   To encode a position of center of the Taj Mahal dome to 3m accuracy (9
+   position symbols, the default) and 20mm accuracy (12 symbols), and with 3
+   parity symbols (5-nines confidence):
    #+BEGIN_SRC Javascript
-   
+   > ezcod_3_12_encode( 27.175036985,  78.042124565 ) // default: 3m (9 symbols)
+   "MMF BBF GC1.2U2"
+   > ezcod_3_12_encode( 27.175036985,  78.042124565, 12 ) // 20mm (12 symbols)
+   "MMF BBF GC1 A16.1VD"
+   #+END_SRC
+
+   Later, if the EZCOD is entered, errors and erasures are transparently
+   corrected, up to the capacity of the Reed-Solomon encoded parity:
+   #+BEGIN_SRC Javascript
+   > ezcod_3_12_decode( "MMF BBF GC1 A16.1VD" )
+   Object {confidence: 100, latitude: 27.17503683641553, longitude: 78.04212455637753,
+       accuracy: 0.020401379521588606}
+   > ezcod_3_12_decode( "MMF BBF GC1 A16.1" ) // missing some parity
+   Object {confidence: 34, latitude: 27.17503683641553, longitude: 78.04212455637753,
+       accuracy: 0.020401379521588606}
+   > ezcod_3_12_decode( "mmf-bbf-Xc1-a16.1vd" ) // An error
+   Object {confidence: 34, latitude: 27.17503683641553, longitude: 78.04212455637753,
+       accuracy: 0.020401379521588606}
    #+END_SRC
 
 *** Robustness
