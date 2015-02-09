@@ -358,13 +358,18 @@ namespace ezpwd {
 	// parity symbols to fill in the erasures), and the returned confidence will reflect the
 	// amount of unused parity capacity.  Each erasure consumes one parity symbol to repair.
 	// 
-	//     We'll allow question-mark or any of the stroke characters: "_-/\?" to indicate an
+	//     We'll allow question-mark or any of the stroke characters: "_/\?" to indicate an
 	// erasure.  Either of the "!."  symbol may be used to indicates the split between location
 	// symbols and parity symbols, and must be in a position that corresponds to the indicated
 	// number of location 'L' and parity 'P' symbols.
 	// 
 	//     Thus, an EZCOD like "R3U 1JU QUY!0" may only be decoded by an ezcod<L=9,P=1>.
 	// Without the "!" or ".", it could be an ezcod<L=8,P=2> -- there's no way to know for sure.
+	// If no explicit position-parity separator is given, then we assume the default: L position
+	// symbols, then up to P parity symbols.
+	// 
+	//     If an explicit "!" or "." separator IS provided, then we will attempt to decode the
+	// position with the given number of position symbols, and up to P parity symbols.
 	// 
     private:
 	int			validate( std::string &dec )
@@ -386,7 +391,7 @@ namespace ezpwd {
 	    std::vector<char>	invalid;
 	    serialize::base32::decode( dec, &erasure, &invalid );
 
-	    int			parbeg	= L;		// Parity begins after Location, by default
+	    size_t		parbeg	= L;		// Parity begins after Location, by default
 	    for ( size_t i = 0; i < invalid.size(); ++i ) {
 		switch ( invalid[i] ) {
 		case '!': case '.':
@@ -400,7 +405,7 @@ namespace ezpwd {
 		    for ( size_t j = i; j < erasure.size(); ++j )
 			erasure[j]     -= 1;
 		    break;
-		case '_': case '-': case '/': case '\\':
+		case '_': case '/': case '\\': case '?':
 		    break;
 		default:
 		    throw std::runtime_error( std::string( "ezpwd::ezcod::decode: invalid symbol presented: '" )
@@ -413,35 +418,35 @@ namespace ezpwd {
 							  dec.begin() + dec.length() )
 		      << " parity" << std::endl;
 #endif
-	    if ( parbeg != int( L ))
-		throw std::runtime_error( std::string( "ezpwd::ezcod::decode: Error correction failed; expected " )
-					  + std::to_string( L ) + " location characters; found " + std::to_string( parbeg ));
 	    
-	    if ( dec.size() > L || erasure.size() > 0 ) {
+	    if ( dec.size() > parbeg || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
 		// successfully decode/correct, or (at least) use one parity symbol as a check
 		// character.  If we identify more erasures than R-S parity, we must fail; we can't
 		// recover the data.  This will of course be the case if we have *any* erasures in
 		// the data, and no parity.
 		size_t		parity	= 0;
-		if ( dec.size() > L )
-		    parity		= dec.size() - L;
-		while ( dec.size() < L + P ) {
+		if ( dec.size() > parbeg )
+		    parity		= dec.size() - parbeg;
+		while ( dec.size() < parbeg + P ) {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
 		}
 		if ( erasure.size() > parity ) {
-		    // We cannot do R-S decoding; not enough parity.  If exactly one parity symbol
-		    // was provided, and all erasures were due the missing remaining parity symbols,
-		    // we can use the existing parity symbol(s) as "check character(s)", by simply
-		    // re-encoding the supplied non-parity data, and see if the generated parity
-		    // symbol(s) match the supplied parity.  This has basically the same strength as
-		    // the 10:10 code's check character.
+		    // We cannot do R-S decoding; not enough parity symbols to even cover erasures.
+		    // If parity symbol(s) were provided ('parity' > 0), and all erasures were due the
+		    // missing remaining parity symbols, we can use the existing parity symbol(s) as
+		    // "check character(s)", by simply re-encoding the supplied non-parity data, and
+		    // see if the generated parity symbol(s) match the supplied parity.  This has
+		    // basically the same strength as the 10:10 code's check character.
 		    if ( parity + erasure.size() == P ) {
-			std::string chk( dec.begin(), dec.begin() + L );
+			// All erasures must be at end, in remaining parity symbols!
+			std::string chk( dec.begin(), dec.begin() + parbeg );
 			rscodec.encode( chk );
-			if ( dec[L] != chk[L] )
-			    throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; check character mismatch" );
+			// each parity symbol provided must match the corresponding encoded chk symbol
+			for ( size_t i = 0; i < parity; ++i )
+			    if ( dec[parbeg+i] != chk[parbeg+i] )
+				throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; check character mismatch" );
 			// Check character(s) matched; erasure.size()/P of confidence gone
 			validity	= ezpwd::strength<P>( erasure.size(), erasure, erasure );
 		    } else
@@ -463,8 +468,8 @@ namespace ezpwd {
 		    if ( validity < 0 )
 			throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; R-S decode overwhelmed" );
 		}
-		if ( dec.size() > L )
-		    dec.resize( L ); // Discard any parity symbols
+		if ( dec.size() > parbeg )
+		    dec.resize( parbeg ); // Discard any parity symbols
 	    }
 	    return validity;
 	}
