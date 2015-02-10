@@ -18,6 +18,27 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
+** Version 1.0.0 Available
+
+   Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
+   is heavily tested under both g++ and clang++, with full optimization enabled.
+
+   Production minified Javascript is served by MaxCDN, using a URL like:
+   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js]].
+
+   For example, to use the EZCOD position encoding API in your website, add
+   this at the end of your website template, before your application.js:
+   : <script type="text/javascript"
+   :     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js">
+   : </script>
+
+   Note the current <VERSION> number encoded in the URI as =.../v<VERSION>/...".
+
+   Your application may permanently access any current or historical version of
+   the EZPWD Reed-Solomon Javascript which has a Tag in the official Git repo,
+   by encoding the <VERSION> number in the URL: 
+   : //cdn.rawgit.com/.../v<VERSION>/...
+
 ** Licensing
 
    All ezpwd-reed-solomon code is available under both GPLv3 and Commercial
@@ -35,11 +56,11 @@
     software.  Any modifications to underlying GPLv3 software (ie. EZPWD) must
     also be made available.
 
-*** Commercial Licensing
+*** Commercial Licensing and Pricing
 
     If you use EZPWD Reed-Solomon APIs in your product but you don't wish to
-    make your product's source code available, then a Commercial license is
-    appropriate.  The pricing breakdown is as follows (in CAD$):
+    make your product's or website's source code available, then a Commercial
+    license is appropriate.  The pricing breakdown is as follows (in CAD$):
 
     |------------+-------+---------+---------------------------------|
     | Users avg. | Price | Support | Included application assistance |
@@ -50,6 +71,8 @@
     | 1K-1M      |  1000 |     250 | 4 hours                         |
     | 1M-        | 10000 |    2500 | 16 hours                        |
     |------------+-------+---------+---------------------------------|
+
+    Call us at +1-780-970-8148 to discuss your application.
 
 **** Example: website gift card redemption codes
 
@@ -194,7 +217,7 @@
     Guard object.  These default to 'int' (NO-OP), but if a threading mutex and
     guard are provided, the shared initialization is thread-safe.
 
-** c++/ezpwd/rs: C++ Reed-Solomon API
+** ezpwd::RS<...>: C++ Reed-Solomon API
 
    C++ implementation of Reed-Solomon codec.  Fully implemented as inline code,
    in C++ header files.  Highly performant, in both C++ and Javascript.
@@ -212,33 +235,40 @@
 
    #+END_SRC
 
-** Javascript Data Key API: js/ezpwd/rskey.js
+* RSKEY: Javascript Data Key API
 
-   Asking a user to reliably enter even a few bytes of data (eg. a product key
-   or a redemption code) is, well, basically impossible.  It is not reasonable
-   to expect that someone will be able to perfectly read and enter a blob of
-   random letters and numbers with 100% reliability.
+  Asking a user to reliably enter even a few bytes of data (eg. a product key
+  or a redemption code) is, well, basically impossible.  It is not reasonable
+  to expect that someone will be able to perfectly read and enter a blob of
+  random letters and numbers with 100% reliability.
 
-   Import =js/ezpwd/rskey.js= Javascript to use RSKEY error-corrected binary
-   data input tokens in your application.  Raw binary data (in Javascript or
-   string or ArrayBuffer) can be encoded into an RSKEY for later entry by a
-   user.  Using built-in parity (extra validation) symbols, any errors or
-   missing symbols can be detected and possibly recovered.  An RSKEY that
-   validates as correct can be trusted with a high degree of certainty,
-   proportional to the number of excess parity symbols remaining (beyond those
-   consumed by error detection and correction).
+  Import =js/ezpwd/rskey.js= Javascript to use RSKEY error-corrected binary
+  data input tokens in your application.  Raw binary data (in Javascript or
+  string or ArrayBuffer) can be encoded into an RSKEY for later entry by a
+  user.  Using built-in parity (extra validation) symbols, any errors or
+  missing symbols can be detected and possibly recovered.  An RSKEY that
+  validates as correct can be trusted with a high degree of certainty,
+  proportional to the number of excess parity symbols remaining (beyond those
+  consumed by error detection and correction).
+
+** Javascript Library: js/ezpwd/rskey.js
+
+   Load the rskey.js Javascript into your project:
+   : <script type="text/javascript"
+   :    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/rskey.js">
+   : </script>
 
    Use rskey.js's API to encode your data into an easily human readable key:
-
+  
    #+BEGIN_SRC Javascript
    > rskey_5_encode( 12, "Mag.1ckπ" );
    "9MGNE-BHHCD-MVY00-00000-MVRFN"
    #+END_SRC
-
+  
    Later, you can decode it -- even if the user adds an error or two (the 'X',
    below), or skips a few symbols (if some were unreadable, indicated with an
    \_, or the last few are not yet entered):
-
+  
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
    Object {confidence: 100, data: ArrayBuffer, string: "Mag.1ckπ"}
@@ -247,14 +277,14 @@
    > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" ) // or unreable w/ _
    Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
    #+END_SRC
-
+  
    If you have raw numeric data (eg. record IDs, data HMACs, etc), use the
    ArrayBuffer interface.  You can supply any type of raw data, up to the
    capacity of the RSKEY (12 bytes, in this case).  Then, even if errors are
    introduced on entry, they will be recovered if the parity is sufficient, and
    the returned Object's .data property will be an ArrayBuffer containing the
    original binary data, which you can used a TypedArray to access:
-
+  
    #+BEGIN_SRC Javascript
    > ia = new Int32Array([0x31323334, 0x41424344, 0x51525354])
    [825373492, 1094861636, 1364349780]
@@ -266,45 +296,52 @@
    [825373492, 1094861636, 1364349780]
    #+END_SRC
 
-*** RSKEY Demo examples/rskey.html
+** HTML Demo: examples/rskey.html
 
-    Clone RSKEY Reed-Solomon into ~/src/ezcod-reed-solomon:
-    : cd ~/src
-    : git clone git@github.com:pjkundert/ezpwd-reed-solomon.git
+   Clone RSKEY Reed-Solomon into ~/src/ezcod-reed-solomon:
+   : cd ~/src
+   : git clone git@github.com:pjkundert/ezpwd-reed-solomon.git
 
-    In your web browser, visit (replace <username> with your user name):
-    : file:///Users/<username>/src/ezpwd-reed-solomon/examples/rskey.html
+   In your web browser, visit (replace <username> with your user name):
+   : file:///Users/<username>/src/ezpwd-reed-solomon/examples/rskey.html
 
-    Try changing the Parity, Data Size and Data.  Try changing the Key by
-    entering some _ (indicating a missing/invalid symbol).  These are called
-    Erasures in Reed-Solomon terms, and we can recover one Erasure with each
-    Parity symbol.  Try changing some Key values to incorrect values.  These
-    Reed-Solomon Errors each require 2 Parity symbols to detect and correct.
+   Try changing the Parity, Data Size and Data.  Try changing the Key by
+   entering some _ (indicating a missing/invalid symbol).  These are called
+   Erasures in Reed-Solomon terms, and we can recover one Erasure with each
+   Parity symbol.  Try changing some Key values to incorrect values.  These
+   Reed-Solomon Errors each require 2 Parity symbols to detect and correct.
 
-    You can also access the Console (right click, select Inspect Element, click
-    on "Console"), and enter the above =rskey_=... API example code.
+   You can also access the Console (right click, select Inspect Element, click
+   on "Console"), and enter the above =rskey_=... API example code.
 
-** js/ezpwd/ezcod.js: Javascript Location Code API
+* EXCOD: Javascript Location Code API
 
-   To specify the location of something on the surface of the earth, a Latitude,
-   Longitude pair is typically used.   To get within +/-3m, a Latitude, Longitude
-   pair with at least 5 digits of precision after the decimal point is required.
+  To specify the location of something on the surface of the earth, a Latitude,
+  Longitude pair is typically used.   To get within +/-3m, a Latitude, Longitude
+  pair with at least 5 digits of precision after the decimal point is required.
 
-   So, to specify where my daughter Amarissa was born, I can write down the
-   coordinate:
-   : 53.655832,-113.625433
+  So, to specify where my daughter Amarissa was born, I can write down the
+  coordinate:
+  : 53.655832,-113.625433
 
-   This is both longer and more error prone than writing the equivalent EZCOD:
-   : R3U 1JU QUY.0
+  This is both longer and more error prone than writing the equivalent EZCOD:
+  : R3U 1JU QUY.0
 
-   If a digit is wrong in the Latitude or Longitude coordinate, the amount of error
-   introduced is anywhere from a few centimeters to many kilometers:
-   : 53.655832,-113.62543X == centimeters error
-   : 53.655832,-1X3.625433 == many kilometers error
+  If a digit is wrong in the Latitude or Longitude coordinate, the amount of error
+  introduced is anywhere from a few centimeters to many kilometers:
+  : 53.655832,-113.62543X == centimeters error
+  : 53.655832,-1X3.625433 == many kilometers error
 
-   EZCOD uses error/erasure correction to correct for up to 1 known missing
-   (erased) symbol by default, with greater erasure/error detection and
-   correction optionally available.
+  EZCOD uses error/erasure correction to correct for up to 1 known missing
+  (erased) symbol by default, with greater erasure/error detection and
+  correction optionally available.
+
+** Javascript Library: js/ezpwd/ezcod.js:
+
+   Load the ezcod.js Javascript into your project:
+   : <script type="text/javascript"
+   :    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js">
+   : </script>
 
    To encode a position of center of the Taj Mahal dome to 3m accuracy (9
    position symbols, the default) and 20mm accuracy (12 symbols), and with 3
@@ -315,7 +352,7 @@
    > ezcod_3_12_encode( 27.175036985,  78.042124565, 12 ) // 20mm (12 symbols)
    "MMF BBF GC1 A16.1VD"
    #+END_SRC
-
+  
    Later, if the EZCOD is entered, errors and erasures are transparently
    corrected, up to the capacity of the Reed-Solomon encoded parity:
    #+BEGIN_SRC Javascript
@@ -329,87 +366,89 @@
    Object {confidence: 34, latitude: 27.17503683641553, longitude: 78.04212455637753,
        accuracy: 0.020401379521588606}
    #+END_SRC
-
+  
    Try it at [[http://ezcod.com][ezcod.com]].  Switch to "EXCOD 3:12", and enter "mmf-bbf-Xc1-a16.1vd"
    as the EXCOD.  You will see a computed accuracy of 20.4mm, and observe that
    the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
    precision, so it will re-encode the position, discarding the extra
    precision.)
 
-*** Robustness
+** Robustness
 
-    All symbols after the initial 9 are Reed-Solomon code symbols.  Each R-S
-    symbol can recover one known erasure; every two R-S symbols can detect and
-    correct one other erroneous symbol.  If any R-S symbols remains unused in
-    excess of all erasures and errors, then the entire sequence can be confirmed
-    as an R-S "codeword", and its validity is assured, to a probability of:
-    : P(1-1/2^(5*excess))
+   All symbols after the initial 9 are Reed-Solomon code symbols.  Each R-S
+   symbol can recover one known erasure; every two R-S symbols can detect and
+   correct one other erroneous symbol.  If any R-S symbols remains unused in
+   excess of all erasures and errors, then the entire sequence can be confirmed
+   as an R-S "codeword", and its validity is assured, to a probability of:
+   : P(1-1/2^(5*excess))
 
-    For example, with one R-S symbol remaining, the probability that the EZCOD
-    is correct is:
-    : P(1-1/2^5) == .969
-    If two excess R-S symbols exist, then the
-    probability rises to:
-    : P(1-1/2^10) == P(1-1/1024) == 0.999
-    With 3, it's:
-    : P(1-1/2^15) == P(1-1/32768) == 0.99997
+   For example, with one R-S symbol remaining, the probability that the EZCOD
+   is correct is:
+   : P(1-1/2^5) == .969
+   If two excess R-S symbols exist, then the
+   probability rises to:
+   : P(1-1/2^10) == P(1-1/1024) == 0.999
+   With 3, it's:
+   : P(1-1/2^15) == P(1-1/32768) == 0.99997
 
-    Therefore, if extremely robust positions are required, select an EZCOD with
-    3 parity symbols, yielding almost 5-nines reliability in transmitting
-    accurate position information -- even if it must be written down, recited or
-    entered by a human.
+   Therefore, if extremely robust positions are required, select an EZCOD with
+   3 parity symbols, yielding almost 5-nines reliability in transmitting
+   accurate position information -- even if it must be written down, recited or
+   entered by a human.
 
-*** Precision
+** Precision
 
-    To identify the location of something within +/- 10 feet (3m) is simple: you
-    must specify the Latitude (-90,90) to within 1 part in 4,194,304 (2^22) and
-    Longitude (-180,180) to within 1 part in 8,388,608 (2^23).
+   To identify the location of something within +/- 10 feet (3m) is simple: you
+   must specify the Latitude (-90,90) to within 1 part in 4,194,304 (2^22) and
+   Longitude (-180,180) to within 1 part in 8,388,608 (2^23).
 
-    The default 10-symbol EZCOD transmits 22 bits of Latitude and 23 bits of
-    Longitude in 9 symbols of position data (the 10th is a parity symbol).  The
-    EZCOD API can encode up to 12 symbols of position data (29 bits of Latitude,
-    and 31 bits of Longitude), yielding a maximum precision capability of +/- 20
-    millimeters.
+   The default 10-symbol EZCOD transmits 22 bits of Latitude and 23 bits of
+   Longitude in 9 symbols of position data (the 10th is a parity symbol).  The
+   EZCOD API can encode up to 12 symbols of position data (29 bits of Latitude,
+   and 31 bits of Longitude), yielding a maximum precision capability of +/- 20
+   millimeters.
 
-    Since the earth's circumference at the equator is ~40,075,000m, each part in
-    both vertical and horizontal directions is 40,075,000 / 8,388,608 == 4.777m.  If
-    you can specify a rectangle having sides of length equal to one part in the
-    vertical and horizontal direction, then at the equator, you have a square that
-    is 4.777m on a side.  So, if we know which square some geographical coordinate
-    lies within, it is at most sqrt( 2 * (4.777/2)^2 ) == 3.378m distant from the
-    center of the square.
+   Since the earth's circumference at the equator is ~40,075,000m, each part in
+   both vertical and horizontal directions is 40,075,000 / 8,388,608 == 4.777m.  If
+   you can specify a rectangle having sides of length equal to one part in the
+   vertical and horizontal direction, then at the equator, you have a square that
+   is 4.777m on a side.  So, if we know which square some geographical coordinate
+   lies within, it is at most sqrt( 2 * (4.777/2)^2 ) == 3.378m distant from the
+   center of the square.
 
-    As you travel north or south, the circumference of the Longitude lines
-    decreases, as absolute Latitude increases.  The average radius of the earth is
-    ~6,371,000m.  At 53 degrees North, the circumference of the earth along a line
-    of fixed Latitude is:
-    : 2 * pi * radius * cos( Latitude )
-    : 2 * 3.1415926534 * 6,371,000m * 0.60181502315
-    : 24,090,760m
+   As you travel north or south, the circumference of the Longitude lines
+   decreases, as absolute Latitude increases.  The average radius of the earth is
+   ~6,371,000m.  At 53 degrees North, the circumference of the earth along a line
+   of fixed Latitude is:
+   : 2 * pi * radius * cos( Latitude )
+   : 2 * 3.1415926534 * 6,371,000m * 0.60181502315
+   : 24,090,760m
 
-    Thus, each part along the vertical axis is still 4.777m, but each horizontal
-    part is:
-    : 24,090,760 / 8,388,608 == 2.872m.
+   Thus, each part along the vertical axis is still 4.777m, but each horizontal
+   part is:
+   : 24,090,760 / 8,388,608 == 2.872m.
 
-    Now the point within each rectangle is at most:
-    : sqrt( (4.777/2)^2 + (2.872/2)^2 ) == 2.787m
-    distant from the center of the rectangle.
+   Now the point within each rectangle is at most:
+   : sqrt( (4.777/2)^2 + (2.872/2)^2 ) == 2.787m
+   distant from the center of the rectangle.
 
-    Thus, with 9 symbols of position data, the precision of such a
-    Latitude/Longitude encoding is at worst +/- 3.378m at the equator, at best
-    +/-2.389m at the poles, and has an average error of less than +/-3m.
+   Thus, with 9 symbols of position data, the precision of such a
+   Latitude/Longitude encoding is at worst +/- 3.378m at the equator, at best
+   +/-2.389m at the poles, and has an average error of less than +/-3m.
 
-*** EZCOD Demo: http://ezcod.com
+** EZCOD Demo: http://ezcod.com
 
-    To see EZCOD in action, visit [[http://ezcod.com][ezcod.com]].  Try entering:
-    : R3U 1JU QUY.0
-    to see where my daughter Amarissa was born.
+   To see EZCOD in action, visit [[http://ezcod.com][ezcod.com]].  Try entering:
+   : R3U 1JU QUY.0
+   to see where my daughter Amarissa was born.
 
-    You can also access the Console (right click, select Inspect Element, click
-    on "Console"), and enter the above =rskey_=... API example code.
+   You can also access the Console (right click, select Inspect Element, click
+   on "Console"), and enter the above =rskey_=... API example code.
 
 
-** js/ezpwd/rspwd.js: Javascript Password Correction API
+* RSPWD: Javascript Password Correction API
 
-   Javascript implementation of Reed-Solomon codec based password error
-   detection and correction.
+  Javascript implementation of Reed-Solomon codec based password error
+  detection and correction.
+
+** Javascript Library: js/ezpwd/rspwd.js
