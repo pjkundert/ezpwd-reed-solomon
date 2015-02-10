@@ -1,0 +1,48 @@
+{
+    "name":		"ezpwd-coupon-code",
+    "description":	"A Reed-Solomon error correcting implementation of Perl's Algorithm::CouponCode for NodeJS.",
+    "version": 		"1.0.0",
+    "author": {
+        "name":		"Perry Kundert",
+        "email":	"perry@hardconsulting.com",
+        "url":		"http://hardconsulting.com"
+    },
+    "homepage": 	"https://github.com/pjkundert/ezpwd-reed-solomom",
+    "contributors": 	[],
+    "devDependencies": {
+    },
+    "dependencies": {
+    },
+    "main": 		"js/ezpwd/rscod.js",
+    "engines": {
+        "node":		"*"
+    },
+    "repository": {
+        "type":		"git",
+        "url":		"git://github.com/pjkundert/ezpwd-reed-solomon.git"
+    },
+   "bugs" : {
+        "url":		"http://github.com/pjkundert/ezpwd-reed-solomon/issues",
+        "mail" :	"perry@hardconsulting.com"
+    },
+    "licenses": [
+        {
+            "type":	"GPL-3.0+",
+            "url":	"https://raw.github.com/pjkundert/ezpwd-reed-solomon/master/LICENSE"
+        },
+        {
+            "type":	"LGPL-3.0+",
+            "url":	 "https://raw.github.com/pjkundert/ezpwd-reed-solomon/master/LICENSE"
+        },
+        {
+            "type":	"Commercial",
+            "url":	 "https://raw.github.com/pjkundert/ezpwd-reed-solomon/master/LICENSE"
+        }
+    ],
+    "keywords": [
+        "code", "token", "validation token", "verification token", "coupon code", "reed-solomon", "error correction"
+    ],
+    "scripts" : {
+        "test":		"set -e; for FILE in test/node-*.js; do node $FILE; done"
+    }
+}
