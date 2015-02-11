@@ -30,42 +30,50 @@
         
         <table>
             <tr>
-                <td class="description">
+                <td>
                     Parity:
                 </td>
-                <td class="entry">
+                <td>
                     <input type='number' id='parity' value='5' min='2' max='5' />
                 </td>
             </tr>
             <tr>
-                <td class="description">
+                <td>
                     Data Size:
                 </td>
-                <td class="entry">
-                    <input type='number' id='rawsiz' value='12' />
+                <td>
+                    <input type='number' id='rawsiz' value='12' min='0' />
                 </td>
             </tr>
             <tr>
-                <td class="description">
+                <td>
                     Data:
                 </td>
-                <td class="entry">
+                <td>
                     <input type='text'   id='data' />
                 </td>
             </tr>
             <tr>
-                <td class="description">
+                <td>
+                    Separators:
+                </td>
+                <td>
+                    <input type='number' id='sepers' value='5' min='0' />
+                </td>
+            </tr>
+            <tr>
+                <td>
                     Key:
                 </td>
-                <td class="entry">
+                <td>
                     <input type='text'   id='key' value='9MGNE-BHHCD-MVY00-00000-MVRFN' />
                 </td>
             </tr>
             <tr>
-                <td class="description">
+                <td>
                     Confidence:
                 </td>
-                <td class="description">
+                <td>
                     <div id='confidence' />
                 </td>
             </tr>
@@ -78,9 +86,10 @@
         $('#data').on( 'blur change paste input', function() {
             var data		= $('#data').val();
             var rawsiz		= $('#rawsiz').val();
+            var sepers		= $('#sepers').val();
             console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
             var rskey_encode	= 'rskey_' + $('#parity').val() + "_encode"
-            $('#key').val( window[rskey_encode]( rawsiz|0, data ));
+            $('#key').val( window[rskey_encode]( rawsiz|0, data, sepers|0 ));
         });
 
         $('#key').on( 'blur', function() {
@@ -101,6 +110,7 @@
         // regenerate the key from data on parity, rawsiz change
         $('#parity').on( 'change', function(){ $('#data').blur(); } );
         $('#rawsiz').on( 'change', function(){ $('#data').blur(); } );
+        $('#sepers').on( 'change', function(){ $('#data').blur(); } );
 
         // And finally, decode the provided key to start things off
         $('#key').blur();
