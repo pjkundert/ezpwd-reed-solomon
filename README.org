@@ -120,7 +120,7 @@
    #+BEGIN_SRC C++
    #include <ezpwd/rs>
 
-   // Reed Solomon coded w/ 255 symbols, up to 251 data, 4 parity symbols
+   // Reed Solomon codec w/ 255 symbols, up to 251 data, 4 parity symbols
    ezpwd::RS<255,251> rs;
 
    std::vector<uint8_t> data;
