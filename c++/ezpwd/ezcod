@@ -328,9 +328,9 @@ namespace ezpwd {
 	    rscodec.encode( res );
 	    serialize::base32::encode( res );
 	    if ( seper != SEP_NONE ) {
-		char		sep;
+		char		sep	= 0;
 		switch( seper ) {
-		case SEP_NONE:	sep	= 0;	break; // not used
+		case SEP_NONE:			break; // not used
 		case SEP_DOT:	sep	= '.';	break;
 		case SEP_BANG:	sep	= '!';	break;
 		case SEP_SPACE:	sep	= ' ';	break;

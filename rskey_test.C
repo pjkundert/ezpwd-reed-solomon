@@ -1,7 +1,7 @@
 #include <vector>
 #include <list>
 #include <set>
-#include <tuple>
+#include <array>
 
 #include <ezpwd/rs>
 #include <ezpwd/corrector>
@@ -114,26 +114,30 @@ void				test_rskey_simple( ezpwd::asserter &assert )
 // 
 // Try a custom base-16 codec
 // 
-template <> struct		ezpwd::serialize::standard<16> {
-    static const constexpr array<char,16>
-    				encoder = { {
-	'0', '1', '2', '3', '4', '5', '6', '7',
-	'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-    } };
-    static const constexpr array<char,127>
-				decoder = { {
-	nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
-	nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
-	ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
-	 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?  '=' is pad
-	nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // @ABCDEFGHIJKLMNO
-	nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
-	nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // `abcdefghijklmno
-	nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
-    } };
-}; // struct serialize::standard<16>
-const ezpwd::array<char,16>	ezpwd::serialize::standard<16>::encoder;
-const ezpwd::array<char,127>	ezpwd::serialize::standard<16>::decoder;
+namespace ezpwd {
+    namespace serialize {
+	template <> struct		standard<16> {
+	    static const constexpr array<char,16>
+	    encoder = { {
+	        '0', '1', '2', '3', '4', '5', '6', '7',
+	        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+	    } };
+	    static const constexpr array<char,127>
+	    decoder = { {
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+	        ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
+	        0,  1,  2,  3,  4,  5,  6,  7,  8,  9, nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?  '=' is pad
+	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // @ABCDEFGHIJKLMNO
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // `abcdefghijklmno
+	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	    } };
+	}; // struct serialize::standard<16>
+    } // namespace serialize
+} // namesapce ezpwd
+const constexpr ezpwd::array<char,16>	ezpwd::serialize::standard<16>::encoder;
+const constexpr ezpwd::array<char,127>	ezpwd::serialize::standard<16>::decoder;
 typedef ezpwd::serialize::base<16,ezpwd::serialize::standard<16>>
 				base16;
 
@@ -151,7 +155,7 @@ void				test_base16( ezpwd::asserter &assert )
 	std::cout << assert << std::endl;
 }
 
-typedef std::list<std::tuple<std::string, std::string, std::string, std::string>>
+typedef std::list<std::array<const std::string, 4>>
 			       baseN_tests_t;
 
 template < typename SERSTD, typename SEREZC >
@@ -261,7 +265,7 @@ void				test_baseN(
 void				test_base32( ezpwd::asserter &assert )
 {
     test_baseN< ezpwd::serialize::base32_standard, ezpwd::serialize::base32 >( assert,
-        baseN_tests_t {
+        {
 	    // original scatter to 5-bit chunks				standard		ezcod
 	    { "a",	R"""(\f04FFFFFFFFFFFF)""",			"ME======",		"C4" },
 	    { "ab",	R"""(\f051100FFFFFFFF)""",			"MFRA====",		"C5H0" },
@@ -334,7 +338,7 @@ void				test_base32( ezpwd::asserter &assert )
 void				test_base64( ezpwd::asserter &assert )
 {
     test_baseN< ezpwd::serialize::base64_standard, ezpwd::serialize::base64 >( assert,
-        baseN_tests_t {
+        {
 	    // original scatter to 6-bit chunks				standard		ezcod
 	    { "",       R"""()""",					"",			"" },
 	    { "a",	R"""(1810FFFF)""",				"YQ==",			"YQ" },
