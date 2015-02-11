@@ -155,7 +155,6 @@ rskey_N_decode_wrap = function( func_name ) {
             if ( buf ) _free( buf );
         }
         if ( cnf < 0 ) { // call failed, or call attempt failed w/o exception
-            console.log( str );
             throw str;
         }
  

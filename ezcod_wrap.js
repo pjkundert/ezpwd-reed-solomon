@@ -89,7 +89,6 @@ ezcod_3_N_encode_wrap = function( func_name ) {
             if ( buf ) _free( buf );
         }
         if ( res < 0 ) { // call failed, or call attempt failed w/o exception
-            console.log( str );
             throw str;
         }
         return str;
@@ -135,7 +134,6 @@ ezcod_3_N_decode_wrap = function( func_name ) {
             if ( pos ) _free( pos );
         }
         if ( cnf < 0 ) { // call failed, or call attempt failed w/o exception
-            console.log( str );
             throw str;
         }
  

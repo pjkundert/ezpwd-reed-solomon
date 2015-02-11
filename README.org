@@ -18,19 +18,21 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
-** Version 1.0.0 Available
+** Version 1.0.1 Available
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
 
    Production minified Javascript is served by MaxCDN, using a URL like:
-   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js]].
+   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js]].
 
    For example, to use the EZCOD position encoding API in your website, add
    this at the end of your website template, before your application.js:
-   : <script type="text/javascript"
-   :     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js">
-   : </script>
+   #+BEGIN_SRC HTML
+   <script
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js">
+   </script>
+   #+END_SRC
 
    Note the current <VERSION> number encoded in the URI as =.../v<VERSION>/...".
 
@@ -73,113 +75,6 @@
     |------------+-------+---------+---------------------------------|
 
     Call us at +1-780-970-8148 to discuss your application.
-
-**** Example: website gift card redemption codes
-
-     Lets say you have an online Widget business, and generate gift cards.  You
-     average about 500 unique visitors/month, with a peak of 1500 around
-     Christmas.  You want to make your gift card redemption more reliable and
-     secure.
-
-     Your cost would be $100, plus a $25/yr support subscription, and you would
-     have access to an hour of time with a support developer to help you apply
-     the js/ezpwd/rskey.js API to your website's gift card generation and
-     redemption pages.
-
-     You decide to associate each gift card with the buyer's account (so you and
-     the gift-card giver can know when the card is redeemed).  So, each gift
-     card RSKEY needs to contain:
-     - a 32-bit customer ID
-     - a 32-bit gift card ID
-
-     Using an RSKEY encoding 8 bytes of data, with 3 parity symbols, we get
-     protection against 1 error or 2 erased symbols, with 1 parity symbol left
-     over for validation.
-
-     #+BEGIN_SRC Javascript
-     // Your first customer ever, buys his first gift card!
-     card = {
-         customer: {
-             id:         0,
-         },
-         id:             0,
-     }
-     card_arr = new Int32Array( [card.customer.id, card.id] );
-
-     // Encrypt the gift card contents w/ an appropriate library (I don't
-     // recommend using a fixed one-time pad with poor randomness
-     // embedded in your source code...)
-     card_arr[0] ^= 0x21222324; // ==  555885348
-     card_arr[1] ^= 0x51525354; // == 1364349780
-
-     // Encode the data using the ArrayBuffer interface to RSKEY
-     card_key = rskey_3_encode( 8, card_arr.buffer, 4 );
-
-     // RSKEY: "4GHJ-48AL-AD95-2X8V" is printed/emailed on gift card
-     #+END_SRC
-
-     Later on, the gift card recipient comes back to the website and enters the
-     gift-card key during checkout, mistyping some symbols, and using lower-case
-     and alternative whitespace:
-
-     #+BEGIN_SRC Javascript
-     // Decode the customer-entered data using the same RSKEY parameters:
-     // EZPWD base-32 equivalents:               v v
-     //                    errors:    v
-     //                  original: "4GHJ-48AL-AD95-2X8V"
-     card_dec = rskey_3_decode( 8, "4g8j 48al ad9S zx8v" )
-     // Object {confidence: 34, data: ArrayBuffer, string: "$#"!TSRQ"}
-
-     // Recover the IDs and decrypt (once again -- don't ship one-time pad!
-     // The encrypted IDs can be recovered in the client, but decryption
-     // should, of course, be done back on the server...)
-     card_arr = new Int32Array( card_dec.data )// [555885348, 1364349780]
-     card_arr[0] ^= 0x21222324; // == 0
-     card_arr[1] ^= 0x51525354; // == 0
-
-     card = {
-         customer: {
-             id:         card_arr[0],
-         },
-         id:             card_arr[1],
-     }
-     // This is gift card ID 0, purchased by our first customer ID 0!
-     #+END_SRC
-
-     Assuming that an attacker does not have access to the encryption key used
-     to encrypt the customer and card IDs in a single 64-bit block, then the
-     probability of a fake key being produced and accepted is vanishingly small.
-
-     Lets assume that they *do* know that you are using EZPWD Reed-Solomon, and
-     therefore always present RSKEYs that are valid R-S codewords.  Furthermore,
-     lets assume that you have alot of customers (> 2 billion), so your 32-bit
-     customer ID is likely to accidentally match a valid customer with a
-     probability >50%.
-
-     The decrypted customer and card IDs must be correct -- match a valid
-     customer and card ID.  Since it is unlikely for each customer to generate
-     more than a handful of gift cards, the probability that the 32-bit card ID
-     will accidentally decrypt to any given value is 1/2^32 (1 in ~4
-     billion). The combined 64-bit RSKEY indexes a sparsely populated array of
-     valid values; given a number in the range (0,2^64], only every 4-billionth
-     value will turn out to be valid (much less than that, in realistic
-     scenarios).
-
-     Therefore, an attacker must generate and try more than 2 billion valid
-     RSKEYs before they have a 50% chance of stumbling upon one that matches a
-     valid gift card, given the above (generous) assumptions.  Even if you don't
-     rate-limit your card redemption API, you might notice that your server is
-     saturated with gift-card redemption requests.  Assuming that your server
-     can process 1000 redemptions per second, it would take the attacker 23 days
-     (2,000,000 seconds) to have a 50% chance of finding his first valid fake
-     key.  So, I recommend rate-limiting your gift-card redemption API to 10
-     request per second, increasing the time to 6 years.
-
-     Therefore, using RSKEY and a simple encoding scheme presents an effective,
-     robust and secure means of generating and redeeming gift-card codes.
-
-     Customer aggravation due to mis-typed codes is reduced, increasing the
-     likelihood of return visits and positive reviews.
 
 ** Enhancements
 
@@ -225,14 +120,18 @@
    #+BEGIN_SRC C++
    #include <ezpwd/rs>
 
-   ezpwd::RS<255,251> rs;       // Reed Solomon w/ 255 8-bit symbols, up to 251 data
-   std::vector<uint8_t> data;   // fill data with  up to 251 bytes ...
-   rs.encode( data );           // Add 4 Reed-Solomon parity symbols (255-251 == 4)
+   // Reed Solomon coded w/ 255 symbols, up to 251 data, 4 parity symbols
+   ezpwd::RS<255,251> rs;
+
+   std::vector<uint8_t> data;
+
+   // ... fill data with up to 251 bytes ...
+
+   rs.encode( data ); // Add 4 Reed-Solomon parity symbols (255-251 == 4)
 
    // ... later, after data is possibly corrupted ...
 
-   int fix = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
-
+   int fixed = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
    #+END_SRC
 
 * RSKEY: Javascript Data Key API
@@ -254,10 +153,11 @@
 ** Javascript Library: js/ezpwd/rskey.js
 
    Load the rskey.js Javascript into your project:
-   : <script type="text/javascript"
-   :    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/rskey.js">
-   : </script>
-
+   #+BEGIN_SRC HTML
+   <script
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/rskey.js">
+   </script>
+   #+END_SRC
    Use rskey.js's API to encode your data into an easily human readable key:
   
    #+BEGIN_SRC Javascript
@@ -296,7 +196,7 @@
    [825373492, 1094861636, 1364349780]
    #+END_SRC
 
-** HTML Demo: examples/rskey.html
+** RSKEY Demo: HTML RSKEY Encoder/Decoder
 
    Clone RSKEY Reed-Solomon into ~/src/ezcod-reed-solomon:
    : cd ~/src
@@ -313,6 +213,212 @@
 
    You can also access the Console (right click, select Inspect Element, click
    on "Console"), and enter the above =rskey_=... API example code.
+
+** Example Node.JS: Encrypted Gift Card Redemption Codes
+
+   Lets say you have an online Widget business, and generate gift cards.  You
+   average about 500 unique visitors/month, with a peak of 1500 around
+   Christmas.  You want to make your gift card redemption more reliable and
+   secure.
+
+   Your RSKEY license cost would be $100, plus a $25/yr support subscription,
+   and you would have access to an hour of time with a support developer to help
+   you apply the js/ezpwd/rskey.js API to your website's gift card generation
+   and redemption pages.
+
+   You decide to associate each gift card with the buyer's account (so you and
+   the gift-card giver can know when the card is redeemed).  So, each gift
+   card RSKEY needs to contain:
+   - a 32-bit customer ID
+   - a 32-bit gift card ID
+
+   Using an RSKEY encoding 8 bytes of data, with 3 parity symbols, we get
+   protection against 1 error or 2 erased symbols, with 1 parity symbol left
+   over for validation.
+
+   See =rskey_node.js= for sample code (the communication of the JSON request
+   and reply between the client Website and the Node.JS server is left as an
+   excercise to the reader.)
+
+*** Client Website RSKEY Implementation
+
+    On the client website, you would use something like:
+
+#+BEGIN_SRC Javascript
+<script
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/rskey.js">
+</script>
+<script>
+var client = {
+    // 
+    // card_key_encode( card ) -- encrypt card's IDs on the server, return RSKEY
+    // card_key_decode( key )  -- recover RSKEY, decrypt IDs on server, return card
+    // 
+    //     These are run in the browser, and expect to call server methods that
+    // run under node.js back on the server.  For this demo, we'll all just run
+    // here in node.js...
+    // 
+    card_key_encode: function( card ) {
+        // Get the server to encrypt the card IDs
+        server.card_keydata_encode( card );
+        // Produce the RSKEY from the card's keydata w/ Uint8Array's ArrayBuffer
+        card.key = rskey_3_encode( 8, new Uint8Array( card.keydata ).buffer, 4 );
+        return card.key;
+    },
+
+    card_key_decode: function( key ) {
+        // Decode the ASCII key; will raise an Exception if decode fails
+        var keyinfo = rskey_3_decode( 8, key );
+
+        // Convert ArrayBuffer (as Uint8Array) to plain javascript Array
+        var keyuint8 = new Uint8Array( keyinfo.data );
+        var keydata = Array( 8 );
+        for ( var i = 0; i < 8; ++i )
+            keydata[i]	= keyuint8[i];
+
+        // Get the server to decrypt the card.keydata, return the card IDs
+        return server.card_keydata_decode({ keydata: keydata });
+    }
+}
+
+// Your first customer ever, buys his first gift card!
+card = {
+    id: 0,
+    customer: { id: 0 },
+}
+
+// Encode the card IDs to RSKEY
+card_key = client.card_key_encode( card );
+
+// "P5X1-TPW8-5NFP-2M7G" is printed/emailed on gift card
+#+END_SRC
+
+    Later on, the gift card recipient comes back to the website and enters the
+    gift-card key during checkout, mistyping some symbols, and using lower-case
+    and alternative whitespace (the base-32 encoding handles the substitutions
+    z<->2, s<->5, 1<->l; the W->v is an error):
+
+#+BEGIN_SRC Javascript
+// Decode the customer-entered data using the same RSKEY parameters:
+//                          error:         v
+//                    equivalents:   v v      v    v
+//                       original: "P5X1-TPW8-5NFP-2M7G"
+card_dec = client.card_key_decode( "psxl tpv8 snfp zm7g" );
+
+// This is gift card ID 0, purchased by our very first customer ID 0! Find out
+// what that gift card is still worth, and apply it to the order...
+#+END_SRC
+
+*** Server Node.js Encryption Implementation
+
+    All encryption should take place on the server, with a secret symmetric
+    encryption key (which should not be stored in the repo!  Use other secure
+    key storage, or existing key material already on the server).  Encrypt on
+    the server using an appropriate cipher that either encrypts all 64 bits as
+    a block (such as =blowfish=).
+
+#+BEGIN_SRC Javascript
+
+/*
+ * rskey_node.js -- Demonstrate use of rskey in node application
+ * 
+ *     Node "crypto" uses the Buffer type to manipulate binary data.  The rskey
+ * library uses ArrayBuffer, because it is intended to be used in both Node and
+ * Browser Javascript applications.
+ * 
+ *    The server will expect an Object containing (at least) card.id and
+ * card.customer.id, and produce/consume card.keydata.
+ * 
+ */
+var rskey		= require( './js/ezpwd/rskey.js' );
+var crypto		= require( "crypto" );
+var crypto_algo		= 'blowfish'; // 64-bit block cipher
+var crypto_secret	= 'not.here'; // Super secret master key; don't keep in Git...
+
+var server = {
+    //
+    // card_keydata_encode -- Encipher card IDs into card.keydata Array
+    // card_keydata_decode -- Decipher card IDs from card.keydata Array
+    // 
+    //     Run these on your server (of course, keeping crypto_secret... secret.)
+    // 
+    card_keydata_encode: function( card ) {
+        // Create Buffer containing raw card ID data
+        var buf		= new Buffer( 8 );
+        buf.writeUInt32LE( card.customer.id,	0 );
+        buf.writeUInt32LE( card.id,		4 );
+
+        // Encrypt the Buffer of keydata
+        var encipher	= crypto.createCipher( crypto_algo, crypto_secret );
+        encipher.setAutoPadding( false ); // must use exact 64-bit blocks
+        var enc		= Buffer.concat([ 
+            encipher.update( buf ),
+            encipher.final()
+        ]);
+
+        // Return card w/ encrypted IDs as plain Javascript Array in .keydata
+        card.keydata	= enc.toJSON();
+        return card;
+    },
+
+    card_keydata_decode: function( card ) {
+        if ( card.keydata.length != 8 )
+            throw "Expected 8 bytes of card.keydata, got: " + card.keydata.length;
+
+        // Decrypt the Buffer of keydata
+        var decipher	= crypto.createDecipher( crypto_algo, crypto_secret );
+        decipher.setAutoPadding( false ); // must use exact 64-bit blocks
+        var dec		= Buffer.concat([
+            decipher.update( new Buffer( card.keydata )),
+            decipher.final()
+        ]);
+
+        // Recover raw card IDs from Buffer
+        if ( card.customer == undefined )
+            card.customer = {};
+        card.customer.id= dec.readUInt32LE( 0 );
+        card.id		= dec.readUInt32LE( 4 );
+        return card;
+    }
+};
+#+END_SRC    
+
+    Assuming that an attacker does not have access to the encryption key used
+    by the server to encrypt the customer and card IDs in a single 64-bit
+    block, then the probability of a fake key being produced and accepted is
+    vanishingly small.
+
+    Lets assume that they *do* know that you are using EZPWD Reed-Solomon, and
+    therefore always present RSKEYs that are valid R-S codewords.  Furthermore,
+    lets assume that you have alot of customers (> 2 billion), so your 32-bit
+    customer ID is likely to accidentally match a valid customer with a
+    probability >50%.
+
+    The decrypted customer and card IDs must be correct -- match a valid
+    customer and card ID.  Since it is unlikely for each customer to generate
+    more than a handful of gift cards, the probability that the 32-bit card ID
+    will accidentally decrypt to any given value is 1/2^32 (1 in ~4
+    billion). The combined 64-bit RSKEY (remember: all data must be encrypted
+    with a block cipher)indexes a sparsely populated array of
+    valid values; given a number in the range (0,2^64], only every 4-billionth
+    value will turn out to be valid (much less than that, in realistic
+    scenarios).
+
+    Therefore, an attacker must generate and try more than 2 billion valid
+    RSKEYs before they have a 50% chance of stumbling upon one that matches a
+    valid gift card, given the above (generous) assumptions.  Even if you don't
+    rate-limit your card redemption API, you might notice that your server is
+    saturated with gift-card redemption requests.  Assuming that your server
+    can process 1000 redemptions per second, it would take the attacker 23 days
+    (2,000,000 seconds) to have a 50% chance of finding his first valid fake
+    key.  So, I recommend rate-limiting your gift-card redemption API to 10
+    request per second, increasing the time to 6 years.
+
+    Therefore, using RSKEY and a simple encoding scheme presents an effective,
+    robust and secure means of generating and redeeming gift-card codes.
+
+    Customer aggravation due to mis-typed codes is reduced, increasing the
+    likelihood of return visits and positive reviews.
 
 * EXCOD: Javascript Location Code API
 
@@ -339,9 +445,11 @@
 ** Javascript Library: js/ezpwd/ezcod.js:
 
    Load the ezcod.js Javascript into your project:
-   : <script type="text/javascript"
-   :    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.0/js/ezpwd/ezcod.js">
-   : </script>
+   #+BEGIN_SRC HTML
+   <script
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js">
+   </script>
+   #+END_SRC
 
    To encode a position of center of the Taj Mahal dome to 3m accuracy (9
    position symbols, the default) and 20mm accuracy (12 symbols), and with 3
