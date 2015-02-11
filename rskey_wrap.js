@@ -49,18 +49,23 @@ function index_in_heap( typ, ptr, idx ) {
 // rskey_<PARITY>_encode -- encodes 'rawsiz' data bytes (String or ArrayBuffer) to an RSKEY w/ PARITY
 // rskey_<PARITY>_decode -- decodes 'rawsiz' data bytes from an RSKEY w/ PARITY, returning confidence
 // 
-// rskey_<PARITY>_encode( rawsiz, buf, sep ) --> <string>
+// rskey_<PARITY>_encode( rawsiz, data, sep ) --> <string>
 // 
 //     Encoding raw string/ArrayBuffer data returns the RSKEY-encoded string, encoding exactly
-// 'rawsiz' bytes of data, resuling in ((( rawsiz * 8 + 4 ) / 5 ) + PARITY ) base-32 symbols.
+// 'rawsiz' bytes of data, resuling in ((( rawsiz * 8 + 4 ) / 5 ) + PARITY ) base-32 symbols.  If
+// the provided data string starts with "0x", then it is decoded as a hex string; otherwise it is
+// decoded as utf-8 text.
 // 
-// rskey_<PARITY>_decode( rawsiz, str ) --> { confidence: <int>, data: <ArrayBuffer>, string: <string> }
+// rskey_<PARITY>_decode( rawsiz, key ) --> {
+//     confidence: <int>, data: <ArrayBuffer>, utf8: <string>, hex: <string>
+// }
 // 
-//     Decoding an RSKEY-encoded string returns:
+//     Decoding an RSKEY-encoded string returns an Object with properties:
 // 
 // confidence	-- Percentage [0,100] of parity symbols in excess, after error/erasure correction
 // data		-- An <ArrayBuffer> containing the recovered data, w/ .length == rawsiz
-// string	-- The UTF-8 decoded string representation of the data (undefined, if not decoded)
+// hex		-- The hex string representation of the data, in the form: 0x01...
+// utf8		-- The UTF-8 decoded representation of the data (undefined if decoding fails)
 // 
 rskey_N_encode_wrap = function( func_name ) {
     var func			= Module.cwrap( func_name, 'number',
@@ -78,9 +83,19 @@ rskey_N_encode_wrap = function( func_name ) {
         // Allocate buf at least 'len' bytes for return of key data+parity, or error.  The Array
         // must have length <= rawsiz.
 	if ( typeof data == 'string' ) {
-            // A string of binary data to an int Array
-            var		arr	= intArrayFromString( data );
-            arr.length	       -= 1; // don't include trailing NUL
+            // A string of binary data to an int Array (do "0x..." here)
+            var		arr	= [];
+            var		hex	= data.match( /^0x([0-9a-fA-F]{2})*/ );
+            if ( hex ) {
+                // hex[0] == 0x001122...FF
+                pairs		= hex[0].slice(2).match( /([0-9a-zA-Z]{2})/g )
+                if ( pairs )
+                    // ['01', 'AB', ...]
+                    arr		= pairs.map( function( n ) { return parseInt( n, 16 ); } );
+            } else {
+            	arr		= intArrayFromString( data );
+                arr.length     -= 1; // don't include trailing NUL
+            }
         } else if ( data instanceof ArrayBuffer ) {
             // Convert the ArrayBuffer bytes to an int Array.
             var		u8arr	= new Uint8Array( data );
@@ -133,9 +148,13 @@ rskey_N_decode_wrap = function( func_name ) {
             if ( cnf < 0 ) {
                 str		= heapi8_to_string( buf );
             } else {
+                var	hex	= '0x';
                 u8arr		= new Uint8Array( rawsiz );
-                for ( var i = 0; i < rawsiz; ++i )
+                for ( var i = 0; i < rawsiz; ++i ) {
                     u8arr[i]	= getValue( buf+i, 'i8' );
+                    hex	       += "0123456789ABCDEF"[(u8arr[i] >> 4) & 0x0f];
+                    hex	       += "0123456789ABCDEF"[(u8arr[i] >> 0) & 0x0f];
+                }
                 // If possible, decode data payload as utf-8; leave undefined on failure
                 var utf8;
                 try {
@@ -148,7 +167,8 @@ rskey_N_decode_wrap = function( func_name ) {
                 ret		= {
                     confidence:	cnf,
                     data: 	u8arr.buffer,
-                    string:	utf8,
+                    utf8:	utf8,
+                    hex:	hex,
                 };
             }
         } finally {

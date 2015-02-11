@@ -109,7 +109,6 @@ rspwd_core.js: rspwd.C rspwd.h								\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@
 js/ezpwd/rspwd.js: COPYRIGHT rspwd_core.js rspwd_wrap.js
-	    echo "/*! v$$( cat VERSION) | $$( cat COPYRIGHT ) */" > $@
 	    cat $^ > $@
 
 rskey_core.js:	rskey.C rskey.h								\

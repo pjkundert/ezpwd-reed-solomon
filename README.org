@@ -18,19 +18,19 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
-** Version 1.0.1 Available
+** Version 1.1.0 Available
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
 
    Production minified Javascript is served by MaxCDN, using a URL like:
-   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js]].
+   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js]].
 
    For example, to use the EZCOD position encoding API in your website, add
    this at the end of your website template, before your application.js:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -150,15 +150,32 @@
   proportional to the number of excess parity symbols remaining (beyond those
   consumed by error detection and correction).
 
+
+   : rskey_<PARITY>_encode( <bytes>, data, [ sep ] ) -- encode data to RSKEY
+   : rskey_<PARITY>_decode( <bytes>, key )           -- decode RSKEY 
+
+   PARITY of 2-5 is supported, and any number of bytes of data.  The optional
+   =sep= parameter (default 5) is the clusters to separate the RSKEY into.
+
 ** Javascript Library: js/ezpwd/rskey.js
+
+   : rskey_<PARITY>_encode( <bytes>, data, [ sep ] ) -- encode data to RSKEY
+   : rskey_<PARITY>_decode( <bytes>, key )           -- decode RSKEY 
+
+   PARITY of 2-5 is supported, and any number of bytes of data.  The optional
+   =sep= parameter (default 5) is the clusters to separate the RSKEY into.
 
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
-   Use rskey.js's API to encode your data into an easily human readable key:
+
+   Use rskey.js's API to encode your data into an easily human readable key.
+   Call the rskey_<PARITY>_encode API (with PARITY 2-5), specify the number of
+   bytes of data to encode in the RSKEY's payload, and provide some data to
+   encode (as a hex string "0x3344...", or as a utf-8 string):
   
    #+BEGIN_SRC Javascript
    > rskey_5_encode( 12, "Mag.1ckπ" );
@@ -171,11 +188,11 @@
   
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
-   Object {confidence: 100, data: ArrayBuffer, string: "Mag.1ckπ"}
+   {confidence: 100, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" ) // not yet entered
-   Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
+   {confidence: 20, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
    > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" ) // or unreable w/ _
-   Object {confidence: 20, data: ArrayBuffer, string: "Mag.1ckπ"}
+   {confidence: 20, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
    #+END_SRC
   
    If you have raw numeric data (eg. record IDs, data HMACs, etc), use the
@@ -191,19 +208,12 @@
    > rskey_5_encode( 12, ia.buffer ) // raw capacity is 12 bytes, w/ 5 parity
    "6GRK4-CA48D-142M2-KA98G-V2MYP"
    > dec=rskey_5_decode( 12, "6GRK4-CA48D-142M2-KA98G-V2XXP" ) // XX are errors
-   Object {confidence: 20, data: ArrayBuffer, string: "4321DCBATSRQ"}
+   {confidence: 20, data: ArrayBuffer, utf8: "4321DCBATSRQ", hex: "0x343332314443424154535251"}
    > new Int32Array( dec.data ) // recover original data
    [825373492, 1094861636, 1364349780]
    #+END_SRC
 
-** RSKEY Demo: HTML RSKEY Encoder/Decoder
-
-   Clone RSKEY Reed-Solomon into ~/src/ezcod-reed-solomon:
-   : cd ~/src
-   : git clone git@github.com:pjkundert/ezpwd-reed-solomon.git
-
-   In your web browser, visit (replace <username> with your user name):
-   : file:///Users/<username>/src/ezpwd-reed-solomon/examples/rskey.html
+** RSKEY Demo: http://rskey.hardconsulting.com
 
    Try changing the Parity, Data Size and Data.  Try changing the Key by
    entering some _ (indicating a missing/invalid symbol).  These are called
@@ -246,7 +256,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -444,10 +454,18 @@ var server = {
 
 ** Javascript Library: js/ezpwd/ezcod.js:
 
+   : ezcod_3_10_encode( lat, lon, [ symbols ] ) -- encode location to EZCOD
+   : ezcod_3_10_decode( ezcod )                 -- decode EZCOD to position
+
+   There are three variants provided:
+   - =ezcod_3_10_...= -- 1 parity symbol
+   - =ezcod_3_11_...= -- 2 parity symbols
+   - =ezcod_3_12_...= -- 3 parity symbols
+
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.0.1/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
