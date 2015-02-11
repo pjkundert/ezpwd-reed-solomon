@@ -98,7 +98,7 @@
             console.log( "decoding rawsiz == ", rawsiz, ",  key == ", key );
             try {
                 var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
-                dec		= window[rskey_decode]( rawsiz, key );
+                dec		= window[rskey_decode]( rawsiz|0, key );
                 console.log( "decoded: ", dec );
                 $('#confidence').text( dec.confidence );
                 $('#data').val( dec.hex + ": " + dec.utf8 ).blur(); // and regenerate the key (fixing errors/erasures)
