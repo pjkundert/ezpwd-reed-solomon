@@ -91,6 +91,15 @@ extern "C" {
 
 namespace ezpwd {
 
+// 
+// rskey_encode -- Encode 'rawsiz' bytes of data w/ PARITY R-S parity symols, returning RSKEY size
+// 
+//     The encoded ASCII RSKEY is placed in buf w/NUL termination, and its size is returned (not
+// including the NUL).
+// 
+//     The maximum raw data capacity is limited by expansion due to base-32 encoding, and maximum
+// payload of the RS(31,31-PARITY) codec used.
+// 
 template < size_t PARITY >					// number of R-S parity bytes
 int				rskey_encode(
 				    size_t		rawsiz,	// number of data payload bytes
@@ -102,31 +111,25 @@ int				rskey_encode(
     size_t			keysiz	= ezpwd::serialize::base32::encode_size( rawsiz ); // no padding
     int				res;
     try {
+	// Check that specified rawsiz payload isn't beyond RS(31,31-PARITY) codec payload capacity,
+	// and that the supplied number of data bytes isn't beyond the specified payload.
+	if ( ezpwd::serialize::base32::encode_size( rawsiz ) > 31-PARITY )
+	    throw std::runtime_error( 
+	        std::string( "specified data payload of " ) << rawsiz
+		<< " when base-32 encoded yields " << ezpwd::serialize::base32::encode_size( rawsiz )
+		<< " symbols, which is > " << 31-PARITY
+		<< " bytes, exceeding the RS(31,31-" << PARITY << ") capacity" );
 	if ( buflen > rawsiz )
 	    throw std::runtime_error( 
-	        std::string( "too much base-32 data (" ) << buflen << " > " << rawsiz << " bytes) provided" );
+	        std::string( "too much data (" ) << buflen << " > " << rawsiz
+		<< " bytes) for specified data payload" );
 	std::string		key( keysiz, 0 );
-#if defined( DEBUG )
-	std::cout << "raw data: " << std::vector<uint8_t>( buf, buf + buflen ) << std::endl;
-#endif
 	ezpwd::serialize::base32::scatter( buf, buf + buflen, key.begin() );
-#if defined( DEBUG )
-	std::cout << "scatter:  " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
 	ezpwd::corrector<PARITY,32>::encode( key );
-#if defined( DEBUG )
-	std::cout << "correct:  " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
 	ezpwd::serialize::base32::encode( key.begin(), key.begin() + keysiz );
-#if defined( DEBUG )
-	std::cout << "base-32:  " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
 	if ( key.size() > sep )
 	    for ( size_t i = ( key.size() - 1 ) / sep; i > 0; --i )
 		key.insert( i * sep, 1, '-' );
-#if defined( DEBUG )
-	std::cout << "seperate: " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
 	if ( key.size() + 1 > bufsiz  )
 	    throw std::runtime_error(
 	        std::string( "insufficient buffer provided for " ) << key.size() + 1 << " byte result" );
@@ -171,9 +174,6 @@ int				rskey_decode(
 	// --> 0000001004  001F1F1F1B  1E00181F13  1F01020010  1A08170804 w/1 erasures
 	// 
 	std::string		key( buf, buf + buflen );
-#if defined( DEBUG )
-	std::cout << "rskey:    " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
 	std::vector<int>	erasures;
 	ezpwd::serialize::base32::decode( key, &erasures, 0, serialize::ws_ignored, serialize::pd_invalid );
 	if ( key.size() < rawsiz )
@@ -187,15 +187,8 @@ int				rskey_decode(
 	//     0000001004  001F1F1F1B  1E00181F13  1F01020010   1A08170804
 	// --> 0000001004  001F1F1F1B  1E00181F13  1F01020010   T 8 P 8 4
 	//                                                      ^^^^^^^^^^
-#if defined( DEBUG )
-	std::cout << "decoded:  " << std::vector<uint8_t>( key.begin(), key.end() ) << " w/" << erasures.size() << " erasures" << std::endl;
-#endif
-	if ( key.size() > keysiz ) {
+	if ( key.size() > keysiz )
 	    ezpwd::serialize::base32::encode( key.begin() + keysiz, key.end() );
-#if defined( DEBUG )
-	    std::cout << "reencode: " << std::vector<uint8_t>( key.begin(), key.end() ) << std::endl;
-#endif
-	}
 
 	//
 	// Correct (or at least check) data payload using any available parity (min. DATSIZ data),
@@ -207,11 +200,6 @@ int				rskey_decode(
 	//     0000001004  001F1F1F1B  1E1F181F13  1F01020010 w/80% confidence
 	//                               ^^
 	confidence			= ezpwd::corrector<PARITY,32>::decode( key, erasures, keysiz, keysiz );
-#if defined( DEBUG )
-	std::cout << "correct:  " << std::vector<uint8_t>( key.begin(), key.end() ) 
-		  << " w/" << confidence << "% confidence"
-		  << std::endl;
-#endif
 	if ( confidence < 0 )
 	    throw std::runtime_error(
 	        std::string( "too many errors to recover original data; low confidence" ));
@@ -231,9 +219,6 @@ int				rskey_decode(
 	    throw std::logic_error( "Key recovery invalid: '" << std::vector<uint8_t>( key.begin(), key.end() )
 				    << "; " << exc.what() );
 	}
-#if defined( DEBUG )
-	std::cout << "gathered: " << std::vector<uint8_t>( buf, buf + rawsiz ) << std::endl;
-#endif
     } catch ( std::exception &exc ) {
 	ezpwd::streambuf_to_buffer	sbf( buf, bufsiz );
 	std::ostream( &sbf )

@@ -18,19 +18,19 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
-** Version 1.1.0 Available
+** Version 1.1.1 Available
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
 
    Production minified Javascript is served by MaxCDN, using a URL like:
-   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js]].
+   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js]].
 
    For example, to use the EZCOD position encoding API in your website, add
    this at the end of your website template, before your application.js:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -52,17 +52,18 @@
 *** GPLv3 Licensing
 
     If your application complies with the terms of the GPLv3, then you can use
-    EZPWD Reed-Solomon without cost.  All users of the software (eg. an
-    installed application) or "software as a service" (eg. a website) must have
-    access to the software source code so they can freely modify and run the
-    software.  Any modifications to underlying GPLv3 software (ie. EZPWD) must
-    also be made available.
+    EZPWD Reed-Solomon based APIs without cost.  All users of your software
+    (eg. an installed application) or "software as a service" (eg. a website)
+    must have access to all of the software source code so they can freely
+    modify, rebuild and run the software.  Any modifications to underlying GPLv3
+    software (ie. EZPWD) must also be made available.
 
 *** Commercial Licensing and Pricing
 
-    If you use EZPWD Reed-Solomon APIs in your product but you don't wish to
-    make your product's or website's source code available, then a Commercial
-    license is appropriate.  The pricing breakdown is as follows (in CAD$):
+    If you use any of the EZPWD Reed-Solomon based APIs in your product but you
+    don't wish to make your product's or website's source code available, then a
+    Commercial license is appropriate.  The pricing breakdown is as follows (in
+    CAD$):
 
     |------------+-------+---------+---------------------------------|
     | Users avg. | Price | Support | Included application assistance |
@@ -74,7 +75,14 @@
     | >1M        | 10000 |    2500 | 16 hours                        |
     |------------+-------+---------+---------------------------------|
 
-    Call us at +1-780-970-8148 to discuss your application.
+    Use of EZCOD is free, forever, for any application.  It is available under
+    both GPLv3 and free Commercial licenses, and may even be reimplemented in
+    any language, so long as it remains compatible (includes the Reed-Solomon
+    error correction, and equivalent encoding and decoding of Latitude and
+    Longitude coordinates).
+
+    Call us at +1-780-970-8148 or email us at info@hardconsulting.com to discuss
+    your application.
 
 ** Enhancements
 
@@ -141,34 +149,32 @@
   to expect that someone will be able to perfectly read and enter a blob of
   random letters and numbers with 100% reliability.
 
-  Import =js/ezpwd/rskey.js= Javascript to use RSKEY error-corrected binary
-  data input tokens in your application.  Raw binary data (in Javascript or
-  string or ArrayBuffer) can be encoded into an RSKEY for later entry by a
-  user.  Using built-in parity (extra validation) symbols, any errors or
-  missing symbols can be detected and possibly recovered.  An RSKEY that
-  validates as correct can be trusted with a high degree of certainty,
-  proportional to the number of excess parity symbols remaining (beyond those
-  consumed by error detection and correction).
-
-
-   : rskey_<PARITY>_encode( <bytes>, data, [ sep ] ) -- encode data to RSKEY
-   : rskey_<PARITY>_decode( <bytes>, key )           -- decode RSKEY 
-
-   PARITY of 2-5 is supported, and any number of bytes of data.  The optional
-   =sep= parameter (default 5) is the clusters to separate the RSKEY into.
+  Import =js/ezpwd/rskey.js= to use RSKEY error-corrected binary data input
+  tokens in your application.  Raw binary data (in Javascript string or
+  ArrayBuffer) can be encoded into an RSKEY for later entry by a user.  Using
+  built-in parity (extra validation) symbols, any errors or missing symbols can
+  be detected and possibly recovered.  An RSKEY that validates as correct can be
+  trusted with a high degree of certainty, proportional to the number of excess
+  parity symbols remaining (beyond those consumed by error detection and
+  correction).
 
 ** Javascript Library: js/ezpwd/rskey.js
 
    : rskey_<PARITY>_encode( <bytes>, data, [ sep ] ) -- encode data to RSKEY
    : rskey_<PARITY>_decode( <bytes>, key )           -- decode RSKEY 
 
-   PARITY of 2-5 is supported, and any number of bytes of data.  The optional
-   =sep= parameter (default 5) is the clusters to separate the RSKEY into.
+   PARITY of 2-5 is supported, with a maximum capacity of 31-PARITY bytes of
+   base-32 encoded data (raw data expands by the factor ( <bytes> * 8 + 4 ) / 5
+   when base-32 encoded).  With PARITY 2, the maximum capacity is 18 bytes; with
+   PARITY 5, 16 bytes.
+   
+   The optional =sep= parameter (default 5) is the cluster size to separate the
+   RSKEY into; 0 specifies no separators.
 
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -256,7 +262,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -465,7 +471,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.0/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 

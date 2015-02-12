@@ -110,7 +110,7 @@ rskey_N_encode_wrap = function( func_name ) {
         var bufsiz		= arr.length;
         var buf			= allocate( arr, 'i8', ALLOC_NORMAL );
         try { // must de-allocate buf after this point
-            res			= func( rawsiz, buf, buflen, bufsiz, sep );
+            res			= func( rawsiz|0, buf, buflen, bufsiz, sep|0 );
             str			= heapi8_to_string( buf );
         } finally {
             if ( buf ) _free( buf );
@@ -144,13 +144,13 @@ rskey_N_decode_wrap = function( func_name ) {
 
         var		buf	= allocate( arr, 'i8', ALLOC_NORMAL );
         try { // must de-allocate buf after this point
-            cnf			= func( rawsiz, buf, buflen, bufsiz );
+            cnf			= func( rawsiz|0, buf, buflen, bufsiz );
             if ( cnf < 0 ) {
                 str		= heapi8_to_string( buf );
             } else {
                 var	hex	= '0x';
-                u8arr		= new Uint8Array( rawsiz );
-                for ( var i = 0; i < rawsiz; ++i ) {
+                u8arr		= new Uint8Array( rawsiz|0 );
+                for ( var i = 0; i < rawsiz|0; ++i ) {
                     u8arr[i]	= getValue( buf+i, 'i8' );
                     hex	       += "0123456789ABCDEF"[(u8arr[i] >> 4) & 0x0f];
                     hex	       += "0123456789ABCDEF"[(u8arr[i] >> 0) & 0x0f];
