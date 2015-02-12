@@ -179,6 +179,12 @@
    when base-32 encoded).  With PARITY 2, the maximum capacity is 18 bytes; with
    PARITY 5, 16 bytes.
    
+   The =data= may be an ArrayBuffer of byte-length <= =<bytes>=.  If a string is
+   supplied, it may be a hex string beginning with '0x...' (all subsequent pairs
+   of hex digits are used; any data beyond that is ignored).  Otherwise, the
+   string is decoded as utf-8 (of course, this means that you can't supply a
+   utf-8 string that starts with '0x'...).
+
    The optional =sep= parameter (default 5) is the cluster size to separate the
    RSKEY into; 0 specifies no separators.
 
@@ -190,7 +196,7 @@
    #+END_SRC
 
    Use rskey.js's API to encode your data into an easily human readable key.
-   Call the rskey_<PARITY>_encode API (with PARITY 2-5), specify the number of
+   Call the =rskey_<PARITY>_encode= API (with PARITY 2-5), specify the number of
    bytes of data to encode in the RSKEY's payload, and provide some data to
    encode (as a hex string "0x3344...", or as a utf-8 string):
   
@@ -200,8 +206,8 @@
    #+END_SRC
   
    Later, you can decode it -- even if the user adds an error or two (the 'X',
-   below), or skips a few symbols (if some were unreadable, indicated with an
-   \_, or the last few are not yet entered):
+   below), or skips a few symbols (if some were unreadable, as indicated by an
+   ='_'=, or the last few are simply not yet entered):
   
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
@@ -241,7 +247,7 @@
    You can also access the Console (right click, select Inspect Element, click
    on "Console"), and enter the above =rskey_=... API example code.
 
-** Example Node.JS: Encrypted Gift Card Redemption Codes
+** Example Node.JS: Encrypted Gift Card Codes
 
    Lets say you have an online Widget business, and generate gift cards.  You
    average about 500 unique visitors/month, with a peak of 1500 around
@@ -322,8 +328,9 @@ card_key = client.card_key_encode( card );
 
     Later on, the gift card recipient comes back to the website and enters the
     gift-card key during checkout, mistyping some symbols, and using lower-case
-    and alternative whitespace (the base-32 encoding handles the substitutions
-    z<->2, s<->5, 1<->l; the W->v is an error):
+    and alternative whitespace (the base-32 encoding handles the Z/z/2, S/s/5,
+    I/i/1 and O/o/0 substitutions (these symbols are equivalent in EZPWD
+    base-32); the W/v substitution is an error):
 
 #+BEGIN_SRC Javascript
 // Decode the customer-entered data using the same RSKEY parameters:
