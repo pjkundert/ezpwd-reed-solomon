@@ -68,10 +68,10 @@
     | Users avg. | Price | Support | Included application assistance |
     | (monthly)  |  CAD$ | CAD$/yr |                                 |
     |------------+-------+---------+---------------------------------|
-    | <10        |     0 |      25 | Interesting project? ask... :)  |
-    | 10-1K      |   100 |      25 | 1 hour                          |
-    | 1K-1M      |  1000 |     250 | 4 hours                         |
-    | 1M-        | 10000 |    2500 | 16 hours                        |
+    | <1K        |     0 |      25 | Interesting project? ask... :)  |
+    | 1K-10K     |   100 |      25 | 1 hour                          |
+    | 10K-1M     |  1000 |     250 | 4 hours                         |
+    | >1M        | 10000 |    2500 | 16 hours                        |
     |------------+-------+---------+---------------------------------|
 
     Call us at +1-780-970-8148 to discuss your application.
