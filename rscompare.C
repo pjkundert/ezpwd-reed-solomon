@@ -39,7 +39,7 @@ main()
 	    std::cout << std::vector<uint8_t>( orig.begin() + i - i % 32, orig.begin() + i + 1 ) << std::endl;
     }
 
-    // ensure that each RS encoder produces the same parity symbols; both Phil Karn's generic codec,
+    // Ensure that each RS encoder produces the same parity symbols; both Phil Karn's generic codec,
     // his CCSDS-specific implementation, and the new ezpwd/reed_solomon codec.
     void		       *grs	= init_rs_char( 8, POLY, FCR, PRIM, ROOTS, 0 );
     encode_rs_char( grs, orig.data(), orig.data() + (TOTAL-ROOTS) );
@@ -68,6 +68,7 @@ main()
 	throw std::logic_error( "EZPWD and Karn R-S decoders produced different parity" );
 
 
+    // The Schifra R-S codec
     /* Finite Field Parameters */
     const std::size_t field_descriptor                 =   8;
     const std::size_t generator_polynommial_index      = 120;
@@ -110,13 +111,13 @@ main()
     block.fec_to_string( spari_str );
     std::cout
         << "Schifra RS("
-	<< schifra::reed_solomon::encoder<code_length,fec_length>::trait::code_length << ","
-	<< schifra::reed_solomon::encoder<code_length,fec_length>::trait::data_length << ","
-	<< schifra::reed_solomon::encoder<code_length,fec_length>::trait::fec_length  << ")"
+	<< (int)schifra::reed_solomon::encoder<code_length,fec_length>::trait::code_length << ","
+	<< (int)schifra::reed_solomon::encoder<code_length,fec_length>::trait::data_length << ","
+	<< (int)schifra::reed_solomon::encoder<code_length,fec_length>::trait::fec_length  << ")"
 	<< "  parity: " << std::vector<uint8_t>( spari_str.begin(), spari_str.end() ) 
         << std::endl;
     // Schifra parity symbols will differ; I can't figure out how to configure non-default
-    // polynomial root indices...  Copy the computed data and parity back to sdata.
+    // polynomial root indices...  Copy the computed data and parity back to sdata from block.
     for ( size_t i = 0; i < sdata.size(); ++i )
 	sdata[i]			= block[i];
 

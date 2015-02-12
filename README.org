@@ -1,15 +1,11 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon
+#+TITLE: EZPWD Reed-Solomon Version 1.1.1
 
 * Reed-Solomon Loss/Error Correction Coding
 
   Error and erasure detection and correction for C++ and Javascript programs.
   Based on Phil Karn's excellent implementation (as used by the Linux kernel),
   converted to C++.
-
-  Performs R-S correction operations at about 135% (clang) - 200% (gcc) of the
-  rate of Phil's general case code, about 120% (clang) - 150% (gcc) of the rate
-  of his optimized code for 8-bit/CCSDS symbols.
 
   Several C++ and Javascript utilities implemented using Reed-Solomon are
   provided.
@@ -18,28 +14,43 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
-** Version 1.1.1 Available
+** Performance: 25-75% Faster Than Competing Codecs
+
+   The Reed-Solomon codec's performance is often a critical determinant in
+   product performance, and often influences expensive decisions such as CPU
+   selection for embedded applications.
+
+   EZPWD Reed Solomon performs R-S correction operations (using g++ on an Intel
+   i7) about 75% faster faster than Phil Karn's general case code, and about 25%
+   faster than Phil's optimized code for 8-bit/CCSDS symbols.  It also tests at
+   about 25% faster than the Shifra C++ Reed-Solomon library.  It appears that,
+   for certain applications at least, EZPWD Reed-Solomon may be the fastest
+   generally available C++ Reed-Solomon library available.
+
+** Availability
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
 
-   Production minified Javascript is served by MaxCDN, using a URL like:
-   [[https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js]].
+*** Javascript Hosted by MaxCDN
 
-   For example, to use the EZCOD position encoding API in your website, add
-   this at the end of your website template, before your application.js:
-   #+BEGIN_SRC HTML
-   <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
-   </script>
-   #+END_SRC
+    Production minified Javascript is served by MaxCDN, using a URL like:
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js]].
 
-   Note the current <VERSION> number encoded in the URI as =.../v<VERSION>/...".
+    For example, to use the EZCOD position encoding API in your website, add
+    this at the end of your website template, before your application.js:
+    #+BEGIN_SRC HTML
+    <script
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
+    </script>
+    #+END_SRC
 
-   Your application may permanently access any current or historical version of
-   the EZPWD Reed-Solomon Javascript which has a Tag in the official Git repo,
-   by encoding the <VERSION> number in the URL: 
-   : //cdn.rawgit.com/.../v<VERSION>/...
+    Note the current <VERSION> number encoded in the URI as =.../v<VERSION>/...".
+
+    Your application may permanently access any current or historical version of
+    the EZPWD Reed-Solomon Javascript which has a Tag in the official Git repo,
+    by encoding the <VERSION> number in the URL: 
+    : //cdn.rawgit.com/.../v<VERSION>/...
 
 ** Licensing
 
