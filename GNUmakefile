@@ -167,7 +167,8 @@ rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+
+rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
 rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -206,6 +207,20 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
 	make -C phil-karn all
+
+# 
+# Build Schifra R-S implementation.  Used by some tests.
+# 
+# schifra:	schifra.tgz
+#	tar xzf $<
+#	make -C schifra all
+#
+# schifra.tgz:
+#	wget -O $@ http://www.schifra.com/downloads/schifra.tgz
+#
+
+schifra:
+	git clone git@github.com:ArashPartow/schifra.git
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.
