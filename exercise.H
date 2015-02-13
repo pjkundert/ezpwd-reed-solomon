@@ -99,7 +99,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
 		/* Test up to the error correction capacity of the code */
 		switch ( errknd ) {
-		case 0:			/* no errors */
+		case 0: default:	/* no errors */
 		    tee		= 0;
 		    break;
 		case 1:			/* <= 1/2 correction capacity */	

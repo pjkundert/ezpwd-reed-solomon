@@ -1,11 +1,16 @@
 
 SHELL		= /bin/bash
-CXXFLAGS       += -I./c++ -std=c++11 -O3							\
-		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings -Wcast-align	\
+CXXFLAGS       += -I./c++ -std=c++11								\
+		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
 		    -Wsign-promo -Wswitch -Wreturn-type	
+CXXFLAGS       += -O3 # -g
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
-CXX		= g++ # clang++
+CXX		= g++ # clang++ # icc (not recommended; much slower than g++ for ezpwd::)
+
+# C compiler/flags for sub-projects (phil-karn)
+CC		= gcc # clang
+CFLAGS		= # -O3 already defined
 
 EMSDK		= ./emscripten/emsdk_portable
 EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
@@ -57,24 +62,18 @@ EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-por
 # EMXX_EXPORTS_RSPWD=
 # EMXX_EXPORTS_EZCOD=
 
-all:		js
-
-test:		testbin testjs
-
-js:		jsprod jstest
-
-jsprod:		js/ezpwd/ezcod.js				\
+JSPROD =	js/ezpwd/ezcod.js				\
 		js/ezpwd/rspwd.js				\
 		js/ezpwd/rskey.js
 
-jstest:		rsexample.js					\
+JSTEST =	rsexample.js					\
 		rssimple.js					\
 		rsexercise.js					\
 		rspwd_test.js					\
 		ezcod_test.js					\
 		rskey_test.js
 
-bintest:	rsexample					\
+EXTEST =	rsexample					\
 		rssimple					\
 		rsexercise					\
 		rscompare					\
@@ -83,23 +82,30 @@ bintest:	rsexample					\
 		ezcod_test					\
 		rskey_test
 
-testbin:	bintest
-	./rsexample
-	./rssimple
-	./rsexercise
-	./rscompare
-	./rsvalidate
-	./rspwd_test
-	./ezcod_test
-	./rskey_test
+all:		$(JSPROD)
 
-testjs:		jstest
-	node ./rsexample.js
-	node ./rssimple.js
-	node ./rsexercise.js
-	node ./rspwd_test.js
-	node ./ezcod_test.js
-	node ./rskey_test.js
+test:		testex testjs
+
+javascript:	$(JSTEST) $(JSPROD)
+executable:	$(EXTEST)
+
+valgrind:	testex-valgrind\ -v\ --leak-check=full
+
+testex:		testex-time
+testex-%:	$(EXTEST)
+	@for t in $^; do 					\
+	    echo "$* ./$$t...";					\
+	    $* ./$$t;						\
+	done
+
+testjs:		testjs-node
+testjs-%:	$(JSTEST)
+	@for t in $^; do 					\
+	    echo "$* ./$$t...";					\
+	    $* ./$$t;						\
+	done
+
+
 
 # 
 # Production Javascript targets
@@ -138,7 +144,8 @@ clean:
 	      ezcod_core.js								\
 	      rspwd_core.js								\
 	      rskey_core.js								\
-	      ezcod_test	ezcod_test.o	ezcod_test.js	ezcod_test.js.mem
+	      ezcod_test	ezcod_test.o	ezcod_test.js	ezcod_test.js.mem	\
+	      ezcod.o
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C							\
@@ -206,7 +213,7 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 # 
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
-	make -C phil-karn all
+	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
 
 # 
 # Build Schifra R-S implementation.  Used by some tests.

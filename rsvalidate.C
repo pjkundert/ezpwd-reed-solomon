@@ -138,7 +138,7 @@ int main()
 	int			err1cnt	= 0;
 	int			era1cnt	= 0;
 	switch ( std::uniform_int_distribution<int>( 0, 3 )( rnd_gen )) {
-	case 0:
+	case 0: default:
 	    // No errors.
 	    break;
 

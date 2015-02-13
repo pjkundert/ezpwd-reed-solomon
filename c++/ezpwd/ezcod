@@ -131,7 +131,7 @@ namespace ezpwd {
 	double			accuracy;		// linear accuracy radius, in meters
 	int			confidence;		// of last decode
 
-				ezcod_base(
+	explicit		ezcod_base(
 				    double	_lat	= 0,
 				    double	_lon	= 0 )
 				    : latitude( _lat )
@@ -196,7 +196,7 @@ namespace ezpwd {
 	static const parts_t	parts;
 	static const ezpwd::RS<31,31-P> rscodec;
 
-				ezcod(
+	explicit		ezcod(
 				    double	_lat	= 0,
 				    double	_lon	= 0,
 				    seper_t	_seper	= SEP_DOT,
@@ -212,7 +212,7 @@ namespace ezpwd {
 					  + std::to_string( bits.max_size() )
 					  + " location symbol may be specified" );
 	}
-				ezcod(
+	explicit		ezcod(
 				    const std::string  &str )
 				    : ezcod()
 	{
@@ -330,7 +330,7 @@ namespace ezpwd {
 	    if ( seper != SEP_NONE ) {
 		char		sep	= 0;
 		switch( seper ) {
-		case SEP_NONE:			break; // not used
+		case SEP_NONE: default:		break; // not used
 		case SEP_DOT:	sep	= '.';	break;
 		case SEP_BANG:	sep	= '!';	break;
 		case SEP_SPACE:	sep	= ' ';	break;

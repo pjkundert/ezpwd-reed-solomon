@@ -15,19 +15,17 @@
 template < size_t P, size_t N >
 inline int			rspwd_test( std::ostream &failmsgs, const char *password )
 {
-    char		        pwd[P];
-    strncpy( pwd, password, sizeof pwd );
-    if ( strlen( password ) >= P )
-	throw std::runtime_error( "password buffer has insufficient capacity" );
-    
-    char			enc[sizeof pwd + N];
     int				failures= 0;
-    
-    strncpy( enc, pwd, sizeof enc );
+
+    // Get a buffer just big enough for the password (not including NUL) plus N
+    // parity.  We'll copy the NUL-terminated password in there (the NUL using
+    // one of the parity spots).
+    char			enc[P + N];
+    strncpy( enc, password, sizeof enc );
     size_t			len	= ezpwd::corrector<N>::encode( enc, sizeof enc );
     failmsgs
 	<< "expwd::corrector<"	<< N 
-	<< ">: Password: \""	<< pwd 
+	<< ">: Password: \""	<< password 
 	<< "\" ==> \""		<< enc
 	<< "\""
 	<< std::endl;
@@ -48,7 +46,7 @@ inline int			rspwd_test( std::ostream &failmsgs, const char *password )
 	std::copy( err, err + sizeof err, fix );
 	
 	int			confidence = ezpwd::corrector<N>::decode( fix, sizeof fix );
-	bool			matched	= !strcmp( fix, pwd );
+	bool			matched	= !strcmp( fix, password );
 	bool			guessed	= confidence > 0 && matched;
 	bool			failed	= guessed != ( e <= (N-1)/2 );
 	failmsgs
@@ -85,7 +83,7 @@ inline int			rspwd_test( std::ostream &failmsgs, const char *password )
         char			fix[sizeof err];
 	std::copy( err, err + sizeof err, fix );
 	int			confidence = ezpwd::corrector<N>::decode( fix, sizeof fix );
-	bool			matched	= !strcmp( fix, pwd );
+	bool			matched	= !strcmp( fix, password );
 	bool			guessed	= confidence > 0 && matched;
 	bool			failed	= guessed != ( e < N ); // with any parity symbols, we'll get some confidence
 	failmsgs

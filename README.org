@@ -250,9 +250,9 @@
 ** Example Node.JS: Encrypted Gift Card Codes
 
    Lets say you have an online Widget business, and generate gift cards.  You
-   average about 500 unique visitors/month, with a peak of 1500 around
-   Christmas.  You want to make your gift card redemption more reliable and
-   secure.
+   average about 5000 unique visitors/month over the year, with a peak of 25000
+   around Christmas.  You want to make your gift card redemption more reliable
+   and secure, and less painful for your clients.
 
    Your RSKEY license cost would be $100, plus a $25/yr support subscription,
    and you would have access to an hour of time with a support developer to help
@@ -594,7 +594,6 @@ var server = {
 
    You can also access the Console (right click, select Inspect Element, click
    on "Console"), and enter the above =rskey_=... API example code.
-
 
 * RSPWD: Javascript Password Correction API
 

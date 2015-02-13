@@ -2,6 +2,7 @@
 #include <array>
 #include <vector>
 #include <cctype>
+#include <cmath>
 
 #include <ezpwd/rs>
 #include <ezpwd/timeofday>
@@ -179,7 +180,7 @@ main()
     std::cout 
 	<< "Phil's CCSDS corrections: "	<< ccorrs
 	<< " at "			<< ctps/1000
-	<< " kTPS ("			<< abs( ctps - gtps ) / gtps * 100
+	<< " kTPS ("			<< std::abs( ctps - gtps ) / gtps * 100
 	<< "% "				<< ( ctps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
@@ -231,7 +232,7 @@ main()
         << "Schifra    "
 	<< "  corrections: "	 	<< scorrs
 	<< " at "			<< stps/1000
-	<< " kTPS ("			<< abs( stps - gtps ) / gtps * 100
+	<< " kTPS ("			<< std::abs( stps - gtps ) / gtps * 100
 	<< "% "				<< ( stps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
@@ -266,11 +267,12 @@ main()
     std::cout 
         << nrs << "  corrections: " 	<< ncorrs
 	<< " at "			<< ntps/1000
-	<< " kTPS ("			<< abs( ntps - gtps ) / gtps * 100
+	<< " kTPS ("			<< std::abs( ntps - gtps ) / gtps * 100
 	<< "% "				<< ( ntps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
     if ( ndata != orig )
 	throw std::logic_error( "EZPWD R-S decoder produced different results" );
 
+    free_rs_char( grs );
 }

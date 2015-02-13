@@ -347,7 +347,7 @@ namespace ezpwd {
 			case ws_invalid:
 			    c		= nv;
 			    break;
-			case ws_ignored:
+			case ws_ignored: default:
 			    continue;
 			}
 		    if ( pd == c )
@@ -357,7 +357,7 @@ namespace ezpwd {
 			    break;
 			case pd_enforce:
 			    break;
-			case pd_ignored:
+			case pd_ignored: default:
 			    continue;
 			}
 		    if ( nv == c ) {

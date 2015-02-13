@@ -27,13 +27,13 @@ namespace ezpwd {
     struct hexify {
 	unsigned char		c;
 	std::streamsize		w;
-				hexify(
+	explicit		hexify(
 				    unsigned char	_c,
 				    std::streamsize	_w	= 2 )
 				    : c( _c )
 				    , w( _w )
 	{ ; }
-				hexify(
+	explicit			hexify(
 				    char		_c,
 				    std::streamsize	_w	= 2 )
 				    : c( (unsigned char)_c )
@@ -42,7 +42,7 @@ namespace ezpwd {
     };
     struct hexstr {
 	const std::string      &s;
-				hexstr(
+	explicit		hexstr(
 				    const std::string  &_s )
 				    : s( _s )
 	{ ; }
@@ -259,7 +259,7 @@ namespace ezpwd {
 	    if ( _siz > 0 )
 		*_buf		= 0;
 	}
-    			streambuf_to_buffer(
+    	explicit	streambuf_to_buffer(
 			    const buf_t	       &buf )
 			    : streambuf_to_buffer( buf.first, buf.second )
 	{

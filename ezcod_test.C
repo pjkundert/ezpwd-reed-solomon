@@ -7,6 +7,9 @@
 
 #include <cstdint>
 #include <map>
+#include <list>
+#include <vector>
+#include <memory>
 
 #include <ezpwd/rs>
 #include <ezpwd/output>
@@ -41,7 +44,7 @@ ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
     for ( int test = 0; test < 5; ++test ) {
 	std::string	manip	= ezc.encode();
 	switch ( test ) {
-	case 0: std::cout << std::endl << "no errors:" << std::endl;
+	case 0: default: std::cout << std::endl << "no errors:" << std::endl;
 	    break;
 	case 1: std::cout << std::endl << "one erasure: 1/" << P << " parity consumed" << std::endl;
 	    manip[8] = '_';
@@ -142,37 +145,40 @@ int				main( int argc, char **argv )
 					   {{1,11},     0.086726 },
 					   {{1,12},     0.019445 }};
 
-    ezpwd::ezcod_base	      *ezc[] = {
-	new ezpwd::ezcod<1, 3>( lat, lon ),
-	new ezpwd::ezcod<2, 3>( lat, lon ),
-	new ezpwd::ezcod<3, 3>( lat, lon ),
-	new ezpwd::ezcod<1, 4>( lat, lon ),
-	new ezpwd::ezcod<2, 4>( lat, lon ),
-	new ezpwd::ezcod<3, 4>( lat, lon ),
-	new ezpwd::ezcod<1, 5>( lat, lon ),
-	new ezpwd::ezcod<1, 6>( lat, lon ),
-	new ezpwd::ezcod<1, 7>( lat, lon ),
-	new ezpwd::ezcod<1, 8>( lat, lon ),
-	new ezpwd::ezcod<1, 9>( lat, lon ),
-	new ezpwd::ezcod<1,10>( lat, lon ),
-	new ezpwd::ezcod<1,11>( lat, lon ),
-	new ezpwd::ezcod<1,11>( lat, lon ),
-	new ezpwd::ezcod<1,12>( lat, lon )
-    };
+    {
+	ezpwd::ezcod_base	       *ezc[] = {
+	    new ezpwd::ezcod<1, 3>( lat, lon ),
+	    new ezpwd::ezcod<2, 3>( lat, lon ),
+	    new ezpwd::ezcod<3, 3>( lat, lon ),
+	    new ezpwd::ezcod<1, 4>( lat, lon ),
+	    new ezpwd::ezcod<2, 4>( lat, lon ),
+	    new ezpwd::ezcod<3, 4>( lat, lon ),
+	    new ezpwd::ezcod<1, 5>( lat, lon ),
+	    new ezpwd::ezcod<1, 6>( lat, lon ),
+	    new ezpwd::ezcod<1, 7>( lat, lon ),
+	    new ezpwd::ezcod<1, 8>( lat, lon ),
+	    new ezpwd::ezcod<1, 9>( lat, lon ),
+	    new ezpwd::ezcod<1,10>( lat, lon ),
+	    new ezpwd::ezcod<1,11>( lat, lon ),
+	    new ezpwd::ezcod<1,11>( lat, lon ),
+	    new ezpwd::ezcod<1,12>( lat, lon )
+	};
 
-    // Try all the practical variants of Location and Parity
-    for ( auto &e : ezc ) {
-	if ( assert.ISEQUAL( e->encode(), str[e->symbols()] ))
-	    std::cout << "On " << *e << ": " << assert;
-	try {
-	   e->decode( str[e->symbols()] );
-	   if ( assert.ISNEAR( e->accuracy, acc[e->symbols()], 1e-4 ))
-	       std::cout << "On " << *e << ": " << assert;
-	} catch ( std::exception &exc ) {
-	    assert.ISTRUE( false, exc.what() );
-	    std::cout << "On " << *e << ": " << assert;
+	// Try all the practical variants of Location and Parity
+	for ( auto e : ezc ) {
+	    if ( assert.ISEQUAL( e->encode(), str[e->symbols()] ))
+		std::cout << "On " << *e << ": " << assert;
+	    try {
+		e->decode( str[e->symbols()] );
+		if ( assert.ISNEAR( e->accuracy, acc[e->symbols()], 1e-4 ))
+		    std::cout << "On " << *e << ": " << assert;
+	    } catch ( std::exception &exc ) {
+		assert.ISTRUE( false, exc.what() );
+		std::cout << "On " << *e << ": " << assert;
+	    }
+	    std::cout << *e << std::endl;
+	    delete e;
 	}
-	std::cout << *e << std::endl;
     }
 
     ezpwd::ezcod<1>		edm1( lat, lon );
