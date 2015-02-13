@@ -10,7 +10,6 @@
  * card.customer.id, and produce/consume card.keydata.
  * 
  */
-var rskey		= require( './js/ezpwd/rskey.js' );
 var crypto		= require( "crypto" );
 var crypto_algo		= 'blowfish'; // 64-bit block cipher
 var crypto_secret	= 'not.here'; // Super secret master key; don't keep in Git...
@@ -62,6 +61,17 @@ var server = {
     }
 };
 
+/*
+ * In the client web browser, you'd use:
+ * 
+ *     <script
+ *       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
+ *     </script>
+ * 
+ * Here in this node.js demo, we'll require(...) the module
+ */
+var rskey		= require( './js/ezpwd/rskey.js' );
+
 var client = {
     // 
     // card_key_encode( card ) -- encrypt card's IDs on the server, return RSKEY
@@ -94,6 +104,10 @@ var client = {
     }
 }
 
+
+/*
+ * Test the demo interface
+ */
 card0 = {
     customer: {
         id: 0
@@ -103,21 +117,15 @@ card0 = {
 client.card_key_encode( card0 );
 console.log( card0 );
 
-card1 = {
-    customer: {
-        id: 0
-    },
-    id: 1,
-};
-client.card_key_encode( card1 );
-console.log( card1 );
-
 
 card0_dec		= client.card_key_decode( 'X'+card0.key.slice( 1 ));
 console.log( "1 Error:  ", card0_dec );
 
+cardE_dec 		= client.card_key_decode( "psxi tpv8 snfp zm7g" );
+console.log( "Example:  ", cardE_dec );
+
 try {
-    card1_dec		= client.card_key_decode( 'XX'+card0.key.slice(2));
+    client.card_key_decode( 'XX'+card0.key.slice(2));
 } catch ( exc ) {
     console.log( "2 Errors: ", exc );
 }

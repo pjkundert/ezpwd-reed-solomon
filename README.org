@@ -322,8 +322,15 @@ card = {
 
 // Encode the card IDs to RSKEY
 card_key = client.card_key_encode( card );
-
+// ==> {
+//   customer: { id: 0 },
+//   id: 0,
+//   keydata: [ 185, 124, 29, 95, 168, 45, 159, 113 ],
+//   key: 'P5X1-TPW8-5NFP-2M7G'
+// }
+//
 // "P5X1-TPW8-5NFP-2M7G" is printed/emailed on gift card
+// 
 #+END_SRC
 
     Later on, the gift card recipient comes back to the website and enters the
@@ -337,10 +344,16 @@ card_key = client.card_key_encode( card );
 //                          error:         v
 //                    equivalents:   v v      v    v
 //                       original: "P5X1-TPW8-5NFP-2M7G"
-card_dec = client.card_key_decode( "psxl tpv8 snfp zm7g" );
-
+card_dec = client.card_key_decode( "psxi tpv8 snfp zm7g" );
+// ==> {
+//   keydata: [ 185, 124, 29, 95, 168, 45, 159, 113 ],
+//   customer: { id: 0 },
+//   id: 0
+// }
+// 
 // This is gift card ID 0, purchased by our very first customer ID 0! Find out
 // what that gift card is still worth, and apply it to the order...
+// 
 #+END_SRC
 
 *** Server Node.js Encryption Implementation
@@ -364,7 +377,6 @@ card_dec = client.card_key_decode( "psxl tpv8 snfp zm7g" );
  * card.customer.id, and produce/consume card.keydata.
  * 
  */
-var rskey		= require( './js/ezpwd/rskey.js' );
 var crypto		= require( "crypto" );
 var crypto_algo		= 'blowfish'; // 64-bit block cipher
 var crypto_secret	= 'not.here'; // Super secret master key; don't keep in Git...

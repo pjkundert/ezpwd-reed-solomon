@@ -71,7 +71,8 @@ JSTEST =	rsexample.js					\
 		rsexercise.js					\
 		rspwd_test.js					\
 		ezcod_test.js					\
-		rskey_test.js
+		rskey_test.js					\
+		rskey_node.js
 
 EXTEST =	rsexample					\
 		rssimple					\
