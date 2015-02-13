@@ -466,7 +466,7 @@ var server = {
     Customer aggravation due to mis-typed codes is reduced, increasing the
     likelihood of return visits and positive reviews.
 
-* EXCOD: Javascript Location Code API
+* EZCOD: Javascript Location Code API
 
   To specify the location of something on the surface of the earth, a Latitude,
   Longitude pair is typically used.   To get within +/-3m, a Latitude, Longitude
@@ -529,8 +529,8 @@ var server = {
        accuracy: 0.020401379521588606}
    #+END_SRC
   
-   Try it at [[http://ezcod.com][ezcod.com]].  Switch to "EXCOD 3:12", and enter "mmf-bbf-Xc1-a16.1vd"
-   as the EXCOD.  You will see a computed accuracy of 20.4mm, and observe that
+   Try it at [[http://ezcod.com][ezcod.com]].  Switch to "EZCOD 3:12", and enter "mmf-bbf-Xc1-a16.1vd"
+   as the EZCOD.  You will see a computed accuracy of 20.4mm, and observe that
    the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
    precision, so it will re-encode the position, discarding the extra
    precision.)
