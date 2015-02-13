@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 #+TITLE: EZPWD Reed-Solomon Version 1.1.1
 
-* Reed-Solomon Loss/Error Correction Coding
+* Reed-Solomon Loss/Error Correction
 
   Error and erasure detection and correction for C++ and Javascript programs.
   Based on Phil Karn's excellent implementation (as used by the Linux kernel),
@@ -14,23 +14,39 @@
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
 
-** Performance: 25-75% Faster Than Competing Codecs
+** Performance
 
    The Reed-Solomon codec's performance is often a critical determinant in
    product performance, and often influences expensive decisions such as CPU
    selection for embedded applications.
 
-   EZPWD Reed Solomon performs R-S correction operations (using g++ on an Intel
-   i7) about 75% faster faster than Phil Karn's general case code, and about 25%
-   faster than Phil's optimized code for 8-bit/CCSDS symbols.  It also tests at
-   about 25% faster than the Shifra C++ Reed-Solomon library.  It appears that,
-   for certain applications at least, EZPWD Reed-Solomon may be the fastest
-   generally available C++ Reed-Solomon library available.
+   The =ezpwd::RS<...>= codec corrects data in-place to avoid unnecessary
+   copying, using shared data tables between RS instances with compatible size,
+   parity and Galois field parameters.  The use of C++ template parameters for
+   size-related Reed Solomon parameters enables the compiler to emit optimal
+   code for all internal table lookups, sometimes dramatically improving
+   performance.
+
+*** 25-75% Faster Than Competing Codecs
+
+    EZPWD Reed Solomon performs R-S correction operations (using g++ on an Intel
+    i7) about 75% faster faster than Phil Karn's general case code, and about
+    25% faster than Phil's optimized code for 8-bit/CCSDS symbols.  It also
+    tests at about 25% faster than the Shifra C++ Reed-Solomon library.  It
+    appears that, for certain applications at least, EZPWD Reed-Solomon may be
+    the fastest Open Source general-purpose C++ Reed-Solomon library presently
+    available.
 
 ** Availability
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
+
+*** C++ Build Requires Header Source Only
+
+    Carefully implemented as C++11 standard inline code, to require no C++
+    object-code or library build procedure.  As a result, integration into
+    existing C++ code-bases and build systems is extremely simple.
 
 *** Javascript Hosted by MaxCDN
 
@@ -73,8 +89,8 @@
 
     If you use any of the EZPWD Reed-Solomon based APIs in your product but you
     don't wish to make your product's or website's source code available, then a
-    Commercial license is appropriate.  The pricing breakdown is as follows (in
-    CAD$):
+    Commercial license from [[http://hardconsulting.com/products/13-reed-solomon][Hard Consulting Corporation (hardconsulting.com)]] is
+    available.  The pricing breakdown is as follows (in CAD$):
 
     |------------+-------+---------+---------------------------------|
     | Users avg. | Price | Support | Included application assistance |
@@ -86,11 +102,12 @@
     | >1M        | 10000 |    2500 | 16 hours                        |
     |------------+-------+---------+---------------------------------|
 
-    Use of EZCOD is free, forever, for any application.  It is available under
-    both GPLv3 and free Commercial licenses, and may even be reimplemented in
-    any language, so long as it remains compatible (includes the Reed-Solomon
-    error correction, and equivalent encoding and decoding of Latitude and
-    Longitude coordinates).
+    Use of the EZCOD robust geolocation encoding module of EZPWD Reed-Solomon is
+    free, forever, for any application.  It is available under both GPLv3 and
+    free Commercial licenses, and may even be re-implemented freely in any
+    language, so long as it remains compatible (includes the Reed-Solomon error
+    correction, and equivalent encoding and decoding of Latitude and Longitude
+    coordinates).
 
     Call us at +1-780-970-8148 or email us at info@hardconsulting.com to discuss
     your application.
