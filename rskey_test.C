@@ -107,6 +107,26 @@ void				test_rskey_simple( ezpwd::asserter &assert )
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( decres, 50 ))
 	std::cout << assert << std::endl;
+
+    // 2 erasures (not yet entered)
+    const char		       *mag	= "9MGNE-BHHCD-MVY00-00000-MVRFN";
+    std::copy( mag, mag+strlen(mag), dec );
+    decres				= rskey_5_decode( 12, dec, strlen( mag )-2, sizeof dec );
+    if ( assert.ISEQUAL( decres, 60 ))
+	std::cout << assert << std::endl;
+    // one error == 2 erasures
+    std::copy( mag, mag+strlen(mag), dec );
+    dec[20]='X';
+    decres				= rskey_5_decode( 12, dec, strlen( mag ), sizeof dec );
+    if ( assert.ISEQUAL( decres, 60 ))
+	std::cout << assert << std::endl;
+    // use '_' to indicate erasures
+    std::copy( mag, mag+strlen(mag), dec );
+    dec[20]='_';
+    dec[21]='_';
+    decres				= rskey_5_decode( 12, dec, strlen( mag ), sizeof dec );
+    if ( assert.ISEQUAL( decres, 60 ))
+	std::cout << assert << std::endl;
 }
 
 // 

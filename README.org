@@ -224,14 +224,16 @@
   
    Later, you can decode it -- even if the user adds an error or two (the 'X',
    below), or skips a few symbols (if some were unreadable, as indicated by an
-   ='_'=, or the last few are simply not yet entered):
+   '\_', or the last few are simply not yet entered).  Each error consumes 2
+   parity symbols, each erasure or missing symbol uses 1, therefore 1 error + 2
+   erasures results in 20% of parity remaining for validation:
   
    #+BEGIN_SRC Javascript
    > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00000-MVRFN" )
    {confidence: 100, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
-   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" ) // not yet entered
+   > rskey_5_decode( 12, "9MGNE-BHHCD-MVY00-00X00-MVR" ) // 1 error, 2 not yet entered
    {confidence: 20, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
-   > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" ) // or unreable w/ _
+   > rskey_5_decode( 12, "9_GNE-BHH_D-MVY00-00X00-MVRFN" ) // 1 error, 2 unreadable w/ '_'
    {confidence: 20, data: ArrayBuffer, utf8: "Mag.1ckπ", hex: "0x4D61672E31636BCF80000000"}
    #+END_SRC
   
