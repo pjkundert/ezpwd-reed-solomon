@@ -1290,7 +1290,7 @@ namespace ezpwd {
     // @FCR:		The first consecutive root of the Reed-Solomon generator polynomial
     // @PRIM:		The primitive root of the generator polynomial
     // 
-#   define __RS( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
+#   define __RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
 	ezpwd::reed_solomon<						\
 	    TYPE,							\
 	    ezpwd::log_< (SYMBOLS) + 1 >::value,			\
@@ -1299,10 +1299,11 @@ namespace ezpwd {
 		ezpwd::log_< (SYMBOLS) + 1 >::value,			\
 		POLY >>
 
-#   define __RS_DEF( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
-	__RS( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM ) {		\
-	    RS()							\
-		: __RS( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )() {;}	\
+#   define __RS( NAME, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )	\
+	__RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM ) {		\
+	    NAME()							\
+		: __RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )()	\
+	    {;}								\
 	}
 
     //
@@ -1313,25 +1314,28 @@ namespace ezpwd {
     // FCR and PRM values are provided for various SYMBOL sizes, along with appropriate basic types
     // capable of holding all internal Reed-Solomon tabular data.
     // 
+    //     In order to provide "default initialization" of const RS<...> types, a user-provided
+    // default constructor must be provided.
+    // 
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS;
-    template < size_t PAYLOAD > struct RS<    3, PAYLOAD> : public __RS_DEF( uint8_t,      3, PAYLOAD,     0x7,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<    7, PAYLOAD> : public __RS_DEF( uint8_t,      7, PAYLOAD,     0xb,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   15, PAYLOAD> : public __RS_DEF( uint8_t,     15, PAYLOAD,    0x13,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   31, PAYLOAD> : public __RS_DEF( uint8_t,     31, PAYLOAD,    0x25,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   63, PAYLOAD> : public __RS_DEF( uint8_t,     63, PAYLOAD,    0x43,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  127, PAYLOAD> : public __RS_DEF( uint8_t,    127, PAYLOAD,    0x89,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  255, PAYLOAD> : public __RS_DEF( uint8_t,    255, PAYLOAD,   0x11d,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  511, PAYLOAD> : public __RS_DEF( uint16_t,   511, PAYLOAD,   0x211,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 1023, PAYLOAD> : public __RS_DEF( uint16_t,  1023, PAYLOAD,   0x409,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 2047, PAYLOAD> : public __RS_DEF( uint16_t,  2047, PAYLOAD,   0x805,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 4095, PAYLOAD> : public __RS_DEF( uint16_t,  4095, PAYLOAD,  0x1053,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 8191, PAYLOAD> : public __RS_DEF( uint16_t,  8191, PAYLOAD,  0x201b,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<16383, PAYLOAD> : public __RS_DEF( uint16_t, 16383, PAYLOAD,  0x4443,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<32767, PAYLOAD> : public __RS_DEF( uint16_t, 32767, PAYLOAD,  0x8003,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<65535, PAYLOAD> : public __RS_DEF( uint16_t, 65535, PAYLOAD, 0x1100b,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<    3, PAYLOAD> : public __RS( RS, uint8_t,      3, PAYLOAD,     0x7,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<    7, PAYLOAD> : public __RS( RS, uint8_t,      7, PAYLOAD,     0xb,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<   15, PAYLOAD> : public __RS( RS, uint8_t,     15, PAYLOAD,    0x13,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<   31, PAYLOAD> : public __RS( RS, uint8_t,     31, PAYLOAD,    0x25,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<   63, PAYLOAD> : public __RS( RS, uint8_t,     63, PAYLOAD,    0x43,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<  127, PAYLOAD> : public __RS( RS, uint8_t,    127, PAYLOAD,    0x89,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<  255, PAYLOAD> : public __RS( RS, uint8_t,    255, PAYLOAD,   0x11d,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<  511, PAYLOAD> : public __RS( RS, uint16_t,   511, PAYLOAD,   0x211,	 1,  1 );
+    template < size_t PAYLOAD > struct RS< 1023, PAYLOAD> : public __RS( RS, uint16_t,  1023, PAYLOAD,   0x409,	 1,  1 );
+    template < size_t PAYLOAD > struct RS< 2047, PAYLOAD> : public __RS( RS, uint16_t,  2047, PAYLOAD,   0x805,	 1,  1 );
+    template < size_t PAYLOAD > struct RS< 4095, PAYLOAD> : public __RS( RS, uint16_t,  4095, PAYLOAD,  0x1053,	 1,  1 );
+    template < size_t PAYLOAD > struct RS< 8191, PAYLOAD> : public __RS( RS, uint16_t,  8191, PAYLOAD,  0x201b,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<16383, PAYLOAD> : public __RS( RS, uint16_t, 16383, PAYLOAD,  0x4443,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<32767, PAYLOAD> : public __RS( RS, uint16_t, 32767, PAYLOAD,  0x8003,	 1,  1 );
+    template < size_t PAYLOAD > struct RS<65535, PAYLOAD> : public __RS( RS, uint16_t, 65535, PAYLOAD, 0x1100b,	 1,  1 );
     
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS_CCSDS;
-    template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD> : public __RS( uint8_t,    255, PAYLOAD,   0x187, 112,11 ) { };
+    template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD> : public __RS( RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 112, 11 );
 
 
     // 
