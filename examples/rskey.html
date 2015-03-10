@@ -22,11 +22,17 @@
     </head>
     <body>
         <h2>RSKEY Data Encoding with Error Correction.</h2>
-        <p>Change the Parity to increase or decrease the error detection and
-        correction capacity of the RSKEY.  It takes 1 parity symbol to correct
-        any other missing symbol (eg. one not yet entered on the end of the
-        RSKEY, or one replaced by an '_' or some other invalid character), and
-        it uses 2 parity symbols to correct any erroneous symbol.</p>
+        <ul>
+	  <li>
+	    Change Parity to increase or decrease the error detection and correction capacity of
+            the RSKEY.  It takes 1 parity symbol to correct any other missing symbol (eg. one not
+            yet entered on the end of the RSKEY, or one replaced by an '_' or some other invalid
+            character), and it uses 2 parity symbols to correct any erroneous symbol.
+	  </li>
+	  <li>
+	    Change Data to regenerate the RSKEY.  Provide either 0x... (hex), or Unicode text.
+	  </li>
+	</ul>
         
         <table>
             <tr>
