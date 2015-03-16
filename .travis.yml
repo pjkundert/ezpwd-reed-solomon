@@ -2,4 +2,4 @@ language: cpp
 compiler:
   - clang
   - gcc
-script: testex
+script: make testex
