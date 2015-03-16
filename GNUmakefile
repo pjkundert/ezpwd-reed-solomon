@@ -231,7 +231,7 @@ phil-karn/librs.a:
 #
 
 schifra:
-	git clone git@github.com:ArashPartow/schifra.git
+	git clone https://github.com/ArashPartow/schifra.git
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.
