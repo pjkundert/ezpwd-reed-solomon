@@ -1,15 +1,18 @@
 
 SHELL		= /bin/bash
+
+# Defaults to system c++; define CXX to use a specific C++ compiler
+#CXX		= g++ # clang++ # icc (not recommended; much slower than g++ for ezpwd::)
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       += -O3 # -g
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
-CXX		= g++ # clang++ # icc (not recommended; much slower than g++ for ezpwd::)
 
 # C compiler/flags for sub-projects (phil-karn)
-CC		= gcc # clang
+# Default to system cc; define CC to use a specific C compiler
+#CC		= gcc # clang
 CFLAGS		= # -O3 already defined
 
 EMSDK		= ./emscripten/emsdk_portable
@@ -228,7 +231,7 @@ phil-karn/librs.a:
 #
 
 schifra:
-	git clone git@github.com:ArashPartow/schifra.git
+	git clone https://github.com/ArashPartow/schifra.git
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.
