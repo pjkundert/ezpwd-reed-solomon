@@ -25,7 +25,7 @@ CHEERP_EMXX	= /opt/cheerp/bin/clang++
 # Emscripten
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 # -s ASSERTIONS=2
+EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s ASSERTIONS=2
 
 EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
 			'_ezcod_3_10_encode',			\
@@ -34,13 +34,14 @@ EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
 			'_ezcod_3_11_decode',			\
 			'_ezcod_3_12_encode',			\
 			'_ezcod_3_12_decode',			\
-			'_malloc', '_free' ]"
+			'_free' ]"
 EMXX_EXPORTS_RSPWD = -s EXPORTED_FUNCTIONS="[			\
 			'_rspwd_encode_1',			\
 			'_rspwd_encode_2',			\
 			'_rspwd_encode_3',			\
 			'_rspwd_encode_4',			\
-			'_rspwd_encode_5' ]"
+			'_rspwd_encode_5',			\
+			'_free' ]"
 EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS="[			\
 			'_rskey_2_encode',			\
 			'_rskey_2_decode',			\
@@ -49,7 +50,8 @@ EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS="[			\
 			'_rskey_4_encode',			\
 			'_rskey_4_decode',			\
 			'_rskey_5_encode',			\
-			'_rskey_5_decode' ]"
+			'_rskey_5_decode',			\
+			'_free' ]"
 EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS="[ '_main' ]"
 
 
@@ -69,15 +71,17 @@ JSPROD =	js/ezpwd/ezcod.js				\
 		js/ezpwd/rspwd.js				\
 		js/ezpwd/rskey.js
 
-JSTEST =	rsexample.js					\
+
+JSCOMP =	rsexample.js					\
 		rssimple.js					\
 		rsexercise.js					\
 		rspwd_test.js					\
 		ezcod_test.js					\
-		rskey_test.js					\
-		rskey_node.js
+		rskey_test.js
 
-EXTEST =	rsexample					\
+JSTEST =	$(JSCOMP) rskey_node.js
+
+EXCOMP =	rsexample					\
 		rssimple					\
 		rsexercise					\
 		rscompare					\
@@ -85,6 +89,8 @@ EXTEST =	rsexample					\
 		rspwd_test					\
 		ezcod_test					\
 		rskey_test
+
+EXTEST =	$(EXCOMP)
 
 all:		$(JSPROD)
 
@@ -109,46 +115,39 @@ testjs-%:	$(JSTEST)
 	    $* ./$$t;						\
 	done
 
-
+COPYRIGHT:	VERSION
+	echo "/*! v$$( cat $< ) | (c) 2014 Hard Consulting Corporation | https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/LICENSE */"\
+		> $@
 
 # 
 # Production Javascript targets
 # 
-rspwd_core.js: rspwd.C rspwd.h								\
+js/ezpwd/rspwd.js: rspwd.C rspwd.h COPYRIGHT rspwd_wrap.js				\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD) $< -o $@
-js/ezpwd/rspwd.js: COPYRIGHT rspwd_core.js rspwd_wrap.js
-	    cat $^ > $@
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD)				\
+		--post-js rspwd_wrap.js $< -o $@					\
+	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
-rskey_core.js:	rskey.C rskey.h								\
+js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js				\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY) $< -o $@
-js/ezpwd/rskey.js: COPYRIGHT rskey_core.js rskey_wrap.js
-	    cat $^ > $@
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY)				\
+		--post-js rskey_wrap.js $< -o $@					\
+	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
-ezcod_core.js:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
+js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod		\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD) $< -o $@
-js/ezpwd/ezcod.js: COPYRIGHT ezcod_core.js ezcod_wrap.js
-	    cat $^ > $@
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD)				\
+		--post-js ezcod_wrap.js $< -o $@					\
+	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 clean:
-	rm -f rsexample		rsexample.o	rsexample.js	rsexample.js.mem	\
-	      rssimple		rssimple.o	rssimple.js	rssimple.js.mem		\
-	      rsexercise	rsexercise.o	rsexercise.js	rsexercise.js.mem	\
-	      rspwd_test	rspwd_test.o	rspwd_test.js	rspwd_test.js.mem	\
-	      rskey_test	rskey_test.o	rskey_test.js	rskey_test.js.mem	\
-	      rscompare		rscompare.o						\
-	      rsvalidate	rsvalidate.o						\
-	      ezcod_core.js								\
-	      rspwd_core.js								\
-	      rskey_core.js								\
-	      ezcod_test	ezcod_test.o	ezcod_test.js	ezcod_test.js.mem	\
+	rm -f $(EXCOMP) $(EXCOMP:=.o)							\
+	      $(JSCOMP) $(JSCOMP:=.mem)							\
 	      ezcod.o
 	make -C phil-karn clean
 

@@ -5,7 +5,6 @@
 /auto
 /emscripten/*
 /ezcod
-/ezcod_core.js
 /ezcod_test
 /ezcod_test.js
 /phil-karn/ccsds_tab.c
@@ -20,10 +19,8 @@
 /rsexample.js
 /rsexercise
 /rsexercise.js
-/rskey_core.js
 /rskey_test
 /rskey_test.js
-/rspwd_core.js
 /rspwd_test
 /rspwd_test.js
 /rssimple

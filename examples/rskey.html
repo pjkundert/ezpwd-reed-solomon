@@ -85,11 +85,23 @@
             </tr>
         </table>
     </body>
-<!--<script src="../js/ezpwd/rskey.js"></script>-->   <!-- for development testing -->
-    <script src="https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js"></script>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
     <script type="text/javascript">
-
+        // Bindings for Emscripten initialization detection.  Will not be run 'til jQuery is loaded
+        //console.log( "Emscripten blocking jQuery on( 'ready', ..." );
+        $.holdReady(true);		// force delay of triggering jQuery.on( 'ready', ...
+        var Module = {
+            onRuntimeInitialized: function() {
+                //console.log( "Emscripten ready" );
+                $.holdReady(false);	// ... 'til Emscripten code runtime is initialized
+            }
+        };
+    </script>
+    <script src="../js/ezpwd/rskey.js"></script>   <!-- for development testing -->
+<!-- <script src="https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js"></script> -->
+    <script type="text/javascript">
+    $( document ).on( 'ready', function(){
+        // Deferred 'til Emscripten runtime initialization is complete
         $('#data').on( 'blur change paste input', function() {
             var data		= $('#data').val();
             var rawsiz		= $('#rawsiz').val();
@@ -124,5 +136,6 @@
 
         // And finally, decode the provided key to start things off
         $('#key').blur();
+    });
     </script>
 </html>

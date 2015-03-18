@@ -19,7 +19,7 @@
 
 #include "ezcod.h"		// C API declarations
 
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG > 2
 extern "C" {
 #include <rs.h> // Phil Karn's implementation
 }
@@ -243,7 +243,7 @@ int				main( int argc, char **argv )
 	<< " @" << pos2
 	<< std::endl;
 
-#if defined ( DEBUG )
+#if defined( DEBUG ) && DEBUG > 2
     // Try Phil Karn's R-S codec over RS(31,29), with 2 parity, a capacity of 29 and payload of 9.
     // May compute error positions in "pad" (unused portion), not in supplied data or parity!
     void	       	       *rs_31_29= ::init_rs_char( 5, 0x25, 1, 1, 2, 29-9 );
@@ -264,6 +264,18 @@ int				main( int argc, char **argv )
 	<< std::endl;
 #endif // DEBUG
 
+    // Test the C EZCOD API beyond correction capacity.  Should return -'ve value, and put an error
+    // description in the supplied buffer.
+    {
+	char			dec[1024];
+	*std::copy( err2.begin(), err2.end(), dec ) = 0; // copy into dec and NUL-terminate
+	double			lat, lon, acc;
+	int			res	= ezcod_3_10_decode( dec, sizeof dec, &lat, &lon, &acc );
+	if ( assert.ISTRUE( res < 0, "ezcod_3_10_decode should have failed due to error overload" ))
+	    std::cout << assert << std::endl;
+	std::cout << "2 errors (ezcod_3_10_decode): " << dec << std::endl;
+    }
+    
 
     // Test the actual precision of ezcod for various lat/lon positions.  The returned value should
     // always be within the given accuracy radius.

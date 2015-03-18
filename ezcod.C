@@ -64,8 +64,8 @@ int				ezcod_3_decode(
 {
     int				confidence;
     std::string			location( buf );
-    ezpwd::ezcod<P,L>		decoder( location );
     try {
+	ezpwd::ezcod<P,L>	decoder( location );
 	confidence			= decoder.confidence;
 #if defined( DEBUG ) && DEBUG > 1
 	std::cout
