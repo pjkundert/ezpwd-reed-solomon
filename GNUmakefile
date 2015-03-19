@@ -25,7 +25,7 @@ CHEERP_EMXX	= /opt/cheerp/bin/clang++
 # Emscripten
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s ASSERTIONS=2
+EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s NO_EXIT_RUNTIME=1 #-s ASSERTIONS=2
 
 EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
 			'_ezcod_3_10_encode',			\

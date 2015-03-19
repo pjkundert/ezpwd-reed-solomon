@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.1.1
+#+TITLE: EZPWD Reed-Solomon Version 1.2.0
 
 * Reed-Solomon Loss/Error Correction
 
@@ -51,13 +51,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -208,7 +208,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -298,7 +298,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -520,7 +520,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -553,6 +553,51 @@ var server = {
    the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
    precision, so it will re-encode the position, discarding the extra
    precision.)
+
+*** Asynchronous Loading
+
+    Emscripten-generated code must have its run-time initialized before it can
+    be called.  If you get Javascript resources normally, they will load
+    asynchronously, but be run in the order you load them so the Emscripten
+    run-time will be safely initialized before your applivation's Javascript
+    runs.
+ 
+    If you load other Javascript libraries like jQuery and your application.js,
+    and you load ezcod.js asynchronously, you must ensure that they do not use
+    any Emscripten libraries (such as ezcod.js) until their run-time
+    initialization is complete.  Our Emscripten-based libraries are completely
+    self-contained, so you can use the =<script onload...>= to signal jQuery to
+    trigger its =on( 'ready', ... )= event.  Regardless of whether
+    =jquery.min.js= or =ezcod.js= loads first, this code will ensure that your
+    =app.js= =on( 'ready', ... )= event will not fire until =ezcod.js= has its
+    Emscripten run-time initialized:
+ 
+    #+BEGIN_SRC HTML
+    <script type="text/javascript">
+       // Bindings for Emscripten initialization detection.
+       var jquery_release = function() {
+           console.log( "Emscripten run-time initialized before jQuery loaded" );
+           jquery_loaded = function() {}; // nothing left to do after jquery loads
+       };
+       var jquery_loaded = function() {
+           console.log( "Emscripten run-time initialize blocking jQuery..." );
+           $.holdReady(true);		// force delay of jQuery.on( 'ready', ...
+           jquery_release = function() {
+               console.log( "Emscripten run-time initialized; jQuery released" );
+               $.holdReady(false);	// ... 'til Emscripten runtime initialized
+           };
+       };
+    </script>
+    <script async onload="jquery_release()"
+        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
+    </script>
+    <script defer onload="jquery_loaded()"
+        src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
+    </script>
+    <script defer
+        src="js/app.js">
+    </script>
+    #+END_SRC
 
 ** Robustness
 
