@@ -65,7 +65,7 @@ var server = {
  * In the client web browser, you'd use:
  * 
  *     <script
- *       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js">
+ *       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
  *     </script>
  * 
  * Here in this node.js demo, we'll require(...) the module

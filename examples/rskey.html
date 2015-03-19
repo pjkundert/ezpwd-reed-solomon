@@ -1,128 +1,147 @@
 <!DOCTYPE html>
 <html lang="en">
-    <head>
-        <meta charset="utf-8" />
-	<meta http-equiv="X-UA-Compatible" content="IE=edge;" />
-        <title>RSKEY Example</title>
-        <style>
-            html,body {
-                height:100%;
-                background:lightgray;
-                font-family:arial,sans-serif;
-            }
-            table {
-                width: 100%;
-            }
-            td:last-child {
-                width: 100%;
-            }
-            table input {
-                width: 100%;
-            }
-        </style>
-    </head>
-    <body>
-        <h3>RSKEY Encoding and Correction.</h3>
-        <ul>
-	  <li>
-	    Change Parity to increase or decrease the error detection and correction capacity of
-            the RSKEY.  It takes 1 parity symbol to correct any other missing symbol (eg. one not
-            yet entered on the end of the RSKEY, or one replaced by an '_' or some other invalid
-            character), and it uses 2 parity symbols to correct any erroneous symbol.
-	  </li>
-	  <li>
-	    Change Data to regenerate the RSKEY.  Provide either 0x... (hex), or Unicode text.
-	  </li>
-	</ul>
-        <table>
-            <tr>
-                <td>
-                    Parity:
-                </td>
-                <td>
-                    <input type='number' id='parity' value='3' min='2' max='5' />
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Data Size:
-                </td>
-                <td>
-                    <input type='number' id='rawsiz' value='8' min='0' />
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Data:
-                </td>
-                <td>
-                    <input type='text'   id='data' />
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Separators:
-                </td>
-                <td>
-                    <input type='number' id='sepers' value='4' min='0' />
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Key:
-                </td>
-                <td>
-                    <input type='text'   id='key' value='89JP-4VKR-437Q-0GAF' />
-                </td>
-            </tr>
-            <tr>
-                <td>
-                    Confidence:
-                </td>
-                <td>
-                    <div id='confidence' />
-                </td>
-            </tr>
-        </table>
-    </body>
-<!--<script src="../js/ezpwd/rskey.js"></script>-->   <!-- for development testing -->
-    <script src="https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.1.1/js/ezpwd/rskey.js"></script>
-    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge;" />
+    <title>RSKEY Example</title>
+    <style>
+	html,body {
+	    height:100%;
+	    background:lightgray;
+	    font-family:arial,sans-serif;
+	}
+	table {
+	    width: 100%;
+	}
+	td:last-child {
+	    width: 100%;
+	}
+	table input {
+	    width: 100%;
+	}
+    </style>
     <script type="text/javascript">
-
-        $('#data').on( 'blur change paste input', function() {
-            var data		= $('#data').val();
-            var rawsiz		= $('#rawsiz').val();
-            var sepers		= $('#sepers').val();
-            console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
-            var rskey_encode	= 'rskey_' + $('#parity').val() + "_encode"
-            $('#key').val( window[rskey_encode]( rawsiz|0, data, sepers|0 ));
-        });
-
-        $('#key').on( 'blur', function() {
-            var key		= $('#key').val();
-            var rawsiz		= $('#rawsiz').val();
-            console.log( "decoding rawsiz == ", rawsiz, ",  key == ", key );
-            try {
-                var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
-                var dec		= window[rskey_decode]( rawsiz|0, key );
-                console.log( "decoded: ", dec );
-                $('#confidence').text( dec.confidence );
-                var str		= dec.hex;
-                if ( dec.utf8 )
-                    str	       += ": " + dec.utf8;
-                $('#data').val( str ).blur(); // and regenerate the key (fixing errors/erasures)
-            } catch ( exc ) {
-                $('#data').val( "Exception: " + exc );
-            }                
-        });
-
-        // regenerate the key from data on parity, rawsiz change
-        $('#parity').on( 'change', function(){ $('#data').blur(); } );
-        $('#rawsiz').on( 'change', function(){ $('#data').blur(); } );
-        $('#sepers').on( 'change', function(){ $('#data').blur(); } );
-
-        // And finally, decode the provided key to start things off
-        $('#key').blur();
+        // Bindings for Emscripten initialization detection.
+        var jquery_release = function() {
+            console.log( "Emscripten run-time initialization completed before jQuery loaded" );
+            jquery_loaded = function() {}; // nothing left to do after jquery loads.
+        };
+        var jquery_loaded = function() {
+            console.log( "Emscripten run-time initialization blocking jQuery..." );
+            $.holdReady(true);		// force delay of triggering jQuery.on( 'ready', ...
+            jquery_release = function() {
+                console.log( "Emscripten run-time initialization completed; jQuery released" );
+                $.holdReady(false);	// ... 'til Emscripten code run-time is initialized
+            };
+        };
     </script>
+    <script type="text/javascript" async onload="jquery_release()"
+            src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js"
+            ></script>
+</head>
+<body>
+    <h3>RSKEY Encoding and Correction.</h3>
+    <ul>
+      <li>
+        Change Parity to increase or decrease the error detection and correction capacity of
+        the RSKEY.  It takes 1 parity symbol to correct any missing symbol (eg. one not
+        yet entered on the end of the RSKEY, or one replaced by an '_' or other invalid
+        character).  2 parity symbols are consumed to correct any erroneous symbol.
+      </li>
+      <li>
+        Change Data to regenerate the RSKEY.  Provide either 0x... (hex), or Unicode text.
+      </li>
+    </ul>
+    <table>
+        <tr>
+            <td>
+                Parity:
+            </td>
+            <td>
+                <input type='number' id='parity' value='3' min='2' max='5' />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Data Size:
+            </td>
+            <td>
+                <input type='number' id='rawsiz' value='8' min='0' />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Data:
+            </td>
+            <td>
+                <input type='text'   id='data' />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Separators:
+            </td>
+            <td>
+                <input type='number' id='sepers' value='4' min='0' />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Key:
+            </td>
+            <td>
+                <input type='text'   id='key' value='89JP-4VKR-437Q-0GAF' />
+            </td>
+        </tr>
+        <tr>
+            <td>
+                Confidence:
+            </td>
+            <td>
+                <div id='confidence' />
+            </td>
+        </tr>
+    </table>
+    <script type="text/javascript" onload="jquery_loaded()"
+            src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" defer>
+    $( document ).on( 'ready', function(){
+	// Deferred 'til Emscripten run-time initialization is complete
+	$('#data').on( 'blur change paste input', function() {
+	    var data		= $('#data').val();
+	    var rawsiz		= $('#rawsiz').val();
+	    var sepers		= $('#sepers').val();
+	    console.log( "encoding rawsiz == ", rawsiz, ", data == ", data );
+	    var rskey_encode	= 'rskey_' + $('#parity').val() + "_encode"
+	    $('#key').val( window[rskey_encode]( rawsiz|0, data, sepers|0 ));
+	});
+
+	$('#key').on( 'blur', function() {
+	    var key		= $('#key').val();
+	    var rawsiz		= $('#rawsiz').val();
+	    console.log( "decoding rawsiz == ", rawsiz, ",  key == ", key );
+	    try {
+		var rskey_decode= 'rskey_' + $('#parity').val() + "_decode"
+		var dec		= window[rskey_decode]( rawsiz|0, key );
+		console.log( "decoded: ", dec );
+		$('#confidence').text( dec.confidence );
+		var str		= dec.hex;
+		if ( dec.utf8 )
+		    str	       += ": " + dec.utf8;
+		$('#data').val( str ).blur(); // and regenerate the key (fixing errors/erasures)
+	    } catch ( exc ) {
+		$('#data').val( "Exception: " + exc );
+	    }		     
+	});
+
+	// regenerate the key from data on parity, rawsiz change
+	$('#parity').on( 'change', function(){ $('#data').blur(); } );
+	$('#rawsiz').on( 'change', function(){ $('#data').blur(); } );
+	$('#sepers').on( 'change', function(){ $('#data').blur(); } );
+
+	// And finally, decode the provided key to start things off
+	$('#key').blur();
+    });
+    </script>
+</body>
 </html>
