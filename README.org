@@ -307,8 +307,8 @@ var client = {
     // card_key_decode( key )  -- recover RSKEY, decrypt IDs on server, return card
     // 
     //     These are run in the browser, and expect to call server methods that
-    // run under node.js back on the server.  For this demo, we'll all just run
-    // here in node.js...
+    // run under Node.js back on the server.  For this demo, we'll all just run
+    // here in Node.js...
     // 
     card_key_encode: function( card ) {
         // Get the server to encrypt the card IDs
@@ -386,11 +386,11 @@ card_dec = client.card_key_decode( "psxi tpv8 snfp zm7g" );
 #+BEGIN_SRC Javascript
 
 /*
- * rskey_node.js -- Demonstrate use of rskey in node application
+ * rskey_node.js -- Demonstrate use of rskey in Node.js application
  * 
- *     Node "crypto" uses the Buffer type to manipulate binary data.  The rskey
- * library uses ArrayBuffer, because it is intended to be used in both Node and
- * Browser Javascript applications.
+ *     Node.js "crypto" uses the Buffer type to manipulate binary data.  The
+ * rskey library uses ArrayBuffer, because it is intended to be used in both
+ * Node.js and Browser Javascript applications.
  * 
  *    The server will expect an Object containing (at least) card.id and
  * card.customer.id, and produce/consume card.keydata.
@@ -422,7 +422,7 @@ var server = {
         ]);
 
         // Return card w/ encrypted IDs as plain Javascript Array in .keydata
-        card.keydata	= enc.toJSON();
+        card.keydata	= enc.toJSON().data; // {type: 'Buffer', data: [1,2,...]}
         return card;
     },
 

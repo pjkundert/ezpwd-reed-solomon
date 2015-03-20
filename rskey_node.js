@@ -1,10 +1,10 @@
 
 /*
- * rskey_node.js -- Demonstrate use of rskey in node application
+ * rskey_node.js -- Demonstrate use of rskey in Node.js application
  * 
- *     Node "crypto" uses the Buffer type to manipulate binary data.  The rskey
- * library uses ArrayBuffer, because it is intended to be used in both Node and
- * Browser Javascript applications.
+ *     Node.js "crypto" uses the Buffer type to manipulate binary data.  The
+ * rskey library uses ArrayBuffer, because it is intended to be used in both
+ * Node.js and Browser Javascript applications.
  * 
  *    The server will expect an Object containing (at least) card.id and
  * card.customer.id, and produce/consume card.keydata.
@@ -36,7 +36,7 @@ var server = {
         ]);
 
         // Return card w/ encrypted IDs as plain Javascript Array in .keydata
-        card.keydata	= enc.toJSON();
+        card.keydata	= enc.toJSON().data; // {type: 'Buffer', data: [1,2,...]}
         return card;
     },
 
@@ -68,7 +68,7 @@ var server = {
  *       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
  *     </script>
  * 
- * Here in this node.js demo, we'll require(...) the module
+ * Here in this Node.js demo, we'll require(...) the module
  */
 var rskey		= require( './js/ezpwd/rskey.js' );
 
@@ -78,8 +78,8 @@ var client = {
     // card_key_decode( key )  -- recover RSKEY, decrypt IDs on server, return card
     // 
     //     These are run in the browser, and expect to call server methods that
-    // run under node.js back on the server.  For this demo, we'll all just run
-    // here in node.js...
+    // run under Node.js back on the server.  For this demo, we'll all just run
+    // here in Node.js...
     // 
     card_key_encode: function( card ) {
         // Get the server to encrypt the card IDs

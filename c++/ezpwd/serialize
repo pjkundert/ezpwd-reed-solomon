@@ -482,16 +482,20 @@ namespace ezpwd {
 	//     The char values [0,32) are mapped by base<32>::encode onto something like
 	// 
 	//         0123456789ABCDEFGHJKLMNPQRTUVWXY 	TABLES=ezpwd<32> (default)
-	//         0123456789ABCDEFGHJKMNPQRSTVWXYZ     TABLEs=crockford<32>
+	//         0123456789ABCDEFGHJKMNPQRSTVWXYZ 	TABLES=crockford<32>
 	//         ABCDEFGHIJKLMNOPQRSTUVWXYZ234567 	TABLES=standard<32>
 	// 
 	// and base<32>::decode performs the inverse.  In addition to folding lower-case to
-	// upper-case, the following mappings occurin the ezpwd<32>::decoder table:
+	// upper-case, the following mappings occur in the ezpwd<32>::decoder table:
 	// 
 	//    O -> 0
 	//    Z -> 2
 	//    S -> 5
 	//    I -> 1
+	// 
+	//    B -> 8 could not be included due to the limited size of the capitalized alpha-numeric
+	// symbol pool, unfortunately, but the other substitutions were prioritized as they are
+	// more likely to occur in standard printed text.
 	// 
 	//    Any characters encountered outside [0,32) by encode and outside the above set by
 	// decode raise an exception, unless an erasure vector is provided, in which case we supply
