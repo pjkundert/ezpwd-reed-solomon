@@ -34,9 +34,14 @@ ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 
     std::cout
 	<< std::endl << std::endl
-	<< "Testing EZLOC location coding w/ " << ezc.rscodec.nroots()
+	<< "Testing ezcod<"
+	<< int(ezc.symbols().first) << "," << int(ezc.symbols().second)
+	<< "> location coding"
+#if defined( DEBUG )
+	<< " w/ " << ezc.rscodec.nroots()
 	<< " parity; " << ezc.rscodec
 	<< " error correction over " << ezc.rscodec.symbol() << "-bit symbols"
+#endif
 	<< std::endl
 	<< ezc
 	<< std::endl;
@@ -226,10 +231,10 @@ int				main( int argc, char **argv )
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in
     // data we *know* is correct -- the effective block of zero data in the pad (unused) area of the
     // R-S codeword's capacity!
-
     // Correct encoding w/2 parity:        R3U 08M PVT GY
     //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
+#if defined( DEBUG )
     std::string			fix2	= err2;
     ezpwd::serialize::base32::decode( fix2 );
     std::vector<int>		pos2;
@@ -242,6 +247,7 @@ int				main( int argc, char **argv )
 	<< "; detected " << cor2 << " errors"
 	<< " @" << pos2
 	<< std::endl;
+#endif // DEBUG
 
 #if defined( DEBUG ) && DEBUG > 2
     // Try Phil Karn's R-S codec over RS(31,29), with 2 parity, a capacity of 29 and payload of 9.

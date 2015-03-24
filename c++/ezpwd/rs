@@ -1378,7 +1378,7 @@ namespace ezpwd {
 
 	// Any erasures that don't turn out to contain errors are not returned as fixed positions.
 	// However, they have consumed parity resources.  Search for each erasure location in
-	// positions, and if not reflected, add to the 
+	// positions, and if not reflected, add to the corrected/missed counters.
 	int			missed	= 0;
 	for ( auto e : erasures ) {
 	    if ( std::find( positions.begin(), positions.end(), e ) == positions.end() ) {

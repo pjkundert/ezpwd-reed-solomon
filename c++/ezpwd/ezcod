@@ -177,6 +177,21 @@ namespace ezpwd {
     template < size_t P=1, size_t L=9 >			// 1 parity + 9 location symbols
     class ezcod
 	: public ezcod_base {
+
+    private:
+	typedef ezpwd::array<symbols_t, 12>
+				bits_t;
+	static const bits_t	bits;
+	typedef ezpwd::array<std::pair<uint32_t, uint32_t>, 12>
+				parts_t;
+	static const parts_t	parts;
+
+#if defined( DEBUG )
+    public:
+#endif
+	static const ezpwd::RS<31,31-P>
+				rscodec;
+
     public:
 	enum 			seper_t {
 	    SEP_NONE,
@@ -187,14 +202,6 @@ namespace ezpwd {
 
 	seper_t			seper;
 	size_t			chunk;			// White space between location symbol chunks
-
-	typedef ezpwd::array<symbols_t, 12>
-				bits_t;
-	static const bits_t	bits;
-	typedef ezpwd::array<std::pair<uint32_t, uint32_t>, 12>
-				parts_t;
-	static const parts_t	parts;
-	static const ezpwd::RS<31,31-P> rscodec;
 
 	explicit		ezcod(
 				    double	_lat	= 0,
@@ -299,7 +306,11 @@ namespace ezpwd {
 	    unsigned int	lon_mult= lon_parts;
 
 	    std::string		res;
-	    res.reserve( precision + ( chunk ? precision / chunk - 1 : 0 ) + 1 + P ); // approximate result length
+	    res.reserve( precision			// approximate result length
+			 + (( chunk && chunk < precision )
+			    ? precision / chunk - 1
+			    : 0 )
+			 + 1 + P );
 	    for ( auto &b : bits ) {
 		unsigned char	lat_bits= b.first;
 		unsigned char	lon_bits= b.second;
