@@ -10,7 +10,7 @@ execfile( os.path.join( here, "version.py" ))
 install_requires		= open( os.path.join( here, "requirements.txt" )).readlines()
 
 ezcod_module			= Extension(
-    "ezcod",
+    "_ezcod",
     sources			= [
         "ezcod/ezcod.i",
     ],
@@ -30,6 +30,7 @@ setup(
     description			= """Python bindings for ezpwd_reed_solomon ezcod""",
     ext_modules			= [ ezcod_module ],
     packages			= [
+        "ezpwd_reed_solomon",
         "ezpwd_reed_solomon/ezcod"
     ],
     package_dir			= {

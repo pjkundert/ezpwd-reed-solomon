@@ -22,3 +22,5 @@ __email__                       = "perry@hardconsulting.com"
 __copyright__                   = "Copyright (c) 2015 Hard Consulting Corporation"
 __license__                     = "Dual License: GPLv3 (or later) and Commercial (see LICENSE)"
 
+# These modules form the public interface of ezpwd_reed_solomon.ezcod
+from .ezcod import *

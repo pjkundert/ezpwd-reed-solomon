@@ -3,9 +3,9 @@
 
 * Reed-Solomon Loss/Error Correction
 
-  Error and erasure detection and correction for C++ and Javascript programs.
-  Based on Phil Karn's excellent implementation (as used by the Linux kernel),
-  converted to C++.
+  Error and erasure detection and correction for C++, Javascript and Python
+  programs.  Based on Phil Karn's excellent implementation (as used by the Linux
+  kernel), converted to C++.
 
   Several C++ and Javascript utilities implemented using Reed-Solomon are
   provided.
@@ -67,6 +67,18 @@
     the EZPWD Reed-Solomon Javascript which has a Tag in the official Git repo,
     by encoding the <VERSION> number in the URL: 
     : //cdn.rawgit.com/.../v<VERSION>/...
+
+*** Python Interface using Swig
+
+    A high-performance Python interface is provided, using [[http://www.swig.org/][Swig]] (requires at
+    least Swig Version 3.0.5 for C++11 support).  Since the Python module is
+    generated from the C++ interface, it must be generated and compiled using
+    the appropriate target OS, Python and C++ compiler implementation.
+    Therefore, there is no =pip install ezpwd_reed_solomon= available.
+
+    To build the =ezpwd_reed_solomon= package, obtain the source from
+    https://github.com/pjkundert/ezpwd-reed-solomon, and:
+    : $ ( cd ezpwd-reed-solomon/swig/python; python setup.py install )
 
 ** Licensing
 
@@ -170,7 +182,7 @@
    int fixed = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
    #+END_SRC
 
-* RSKEY: Javascript Data Key API
+* RSKEY: Data Key API
 
   Asking a user to reliably enter even a few bytes of data (eg. a product key
   or a redemption code) is, well, basically impossible.  It is not reasonable
@@ -485,7 +497,7 @@ var server = {
     Customer aggravation due to mis-typed codes is reduced, increasing the
     likelihood of return visits and positive reviews.
 
-* EZCOD: Javascript Location Code API
+* EZCOD: Location Code API
 
   To specify the location of something on the surface of the earth, a Latitude,
   Longitude pair is typically used.   To get within +/-3m, a Latitude, Longitude
@@ -553,6 +565,29 @@ var server = {
    the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
    precision, so it will re-encode the position, discarding the extra
    precision.)
+
+** Python Library: ezpwd\_reed\_solomon.ezcod
+
+   The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module:
+   : $ python
+   : >>> from ezpwd_reed_solomon import ezcod
+   : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+   : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+   : >>> print EZCOD
+   : R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+   : >>> print EZCOD.encode( 12 )
+   : R3U 06B MJ3 EDD.K56
+   : >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
+   : 100
+   : >>> EZCOD.latitude
+   : 53.49999999627471
+   : >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
+   : 67
+   : >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
+   : 34
+   : >>> print EZCOD
+   : R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
+   : >>>
 
 *** Asynchronous Loading
 
@@ -671,7 +706,7 @@ var server = {
    You can also access the Console (right click, select Inspect Element, click
    on "Console"), and enter the above =rskey_=... API example code.
 
-* RSPWD: Javascript Password Correction API
+* RSPWD: Password Correction API
 
   Javascript implementation of Reed-Solomon codec based password error
   detection and correction.
