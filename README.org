@@ -80,6 +80,26 @@
     https://github.com/pjkundert/ezpwd-reed-solomon, and:
     : $ ( cd ezpwd-reed-solomon/swig/python; python setup.py install )
 
+    Presently, only =ezpwd_reed_solomon.ezcod= is available; see the [[EZCOD:
+    Location Code API]] section for Python API details.
+
+**** Swig 3.0.5+
+
+     To install the Python API, you'll need a modern Swig.
+
+     On Mac, use homebrew:
+     : $ brew install swig
+     
+     On Linux Debian or Ubuntu Linux systems, you should be able to use
+     something like this (other Linux variants should have similar package
+     installation facilities):
+     : $ apt-get -u install autoconf autogen libpcre3-dev bison yodl
+     : $ git clone git@github.com:swig/swig.git
+     : $ cd swig
+     : $ autoconf
+     : $ ./autogen.sh
+     : $ ./configure && make && make install
+
 ** Licensing
 
    All ezpwd-reed-solomon code is available under both GPLv3 and Commercial
@@ -566,28 +586,56 @@ var server = {
    precision, so it will re-encode the position, discarding the extra
    precision.)
 
-** Python Library: ezpwd\_reed\_solomon.ezcod
+** Python Library: ezpwd\_reed\_solomon
 
    The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module:
-   : $ python
-   : >>> from ezpwd_reed_solomon import ezcod
-   : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
-   : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
-   : >>> print EZCOD
-   : R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
-   : >>> print EZCOD.encode( 12 )
-   : R3U 06B MJ3 EDD.K56
-   : >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
-   : 100
-   : >>> EZCOD.latitude
-   : 53.49999999627471
-   : >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
-   : 67
-   : >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
-   : 34
-   : >>> print EZCOD
-   : R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
-   : >>>
+
+*** =ezpwd_reed_solomon.ezcod=
+
+    Classes are provided to produce three variants of EZCOD by default: 3m (9
+    symbols) of location accuracy, plus 1, 2 or 3 Reed-Solomon parity symbols.
+    They are named =ezcod_3_10=, =ezcod_3_11= and =ezcod_3_12=, respectively,
+    indicating the default 3m accuracy, and the total number of symbols.
+    : $ python
+    : >>> from ezpwd_reed_solomon import ezcod
+
+**** =ezcod_3_{10,11,12}( "<EZCOD>" | [lat, [lon, [seper, [chunk]]]] )=
+
+     Creates an <ezcod> instance containing the specified geolocation (defaults
+     to latitude 0.0, longitude 0.0, '.' separator and chunk 3).  If a string is
+     supplied, it is decoded (if possible; an Exception is raised if the
+     provided EZCOD is invalid).
+     : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+     : >>> print EZCOD
+     : R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+
+**** =ezcod_3_{10,11,12}.encode( [precision] )=
+
+     Encodes the current ezcod_3_{10,11,12}'s =.latitude= and =.longitude= to
+     the given number of symbols of precision (default: 9, or 3m).  The accuracy
+     may be anywhere from 1 to 12 (20mm accuracy) symbols.
+     : >>> print EZCOD.encode( 12 )
+     : R3U 06B MJ3 EDD.K56
+
+**** =ezcod_3_{10,11,12}.decode( "<EZCOD>" )=
+
+     Any variant of ezcod_3_{10,11,12} can decode a valid EZCOD, so long as it
+     contains a '.' or '!' to separate the position and R-S parity symbols.  The
+     percentage certainty is returned -- the proportion of R-S parity symbols
+     that remain unused after error detection and correction.  A value of 0
+     indicates that the EZCOD's R-S decoding did not fail, but no parity symbols
+     remain in excess to verify its validity.
+     : >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
+     : 100
+     : >>> EZCOD.latitude
+     : 53.49999999627471
+     : >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
+     : 67
+     : >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
+     : 34
+     : >>> print EZCOD
+     : R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
+     : >>>
 
 *** Asynchronous Loading
 
