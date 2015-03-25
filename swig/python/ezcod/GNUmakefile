@@ -1,11 +1,15 @@
+# 
+# Development build of ezcod Python wrapper
+# - Production build is done using setuptools (see: ../setup.py)
+# 
 ROOT		= ../../..
 
 include $(ROOT)/GNUmakefile
 
 # 
-# Swig interfaces
+# Swig interfaces.  Requires Swig >= 3.0.5
 # 
-# Find Python.h
+# Find Python.h, libraries
 # 
 # On Mac:
 #   /usr/local/Cellar/python/2.7.9/Frameworks/Python.framework/Versions/2.7/include/python2.7/Python.h
@@ -24,23 +28,23 @@ PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep )
 PYTHON_COMP	= -I$(PYTHON_INC) -I$(ROOT)/c++ -fPIC
 PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -dynamiclib
 
-ezcod-test:		_ezcod.so
+python-ezcod:		_ezcod.so
 
-ezcod-test:		runme.py ezcod-test ezcod_python
-	./ezcod_python
+python-ezcod-test:	runme.py python-ezcod
 	python $<
 
-ezcod-clean:
-	rm -f *.cxx *.o *.so *.pyc ezcod.py ezcod_python
+python-ezcod-clean:
+	rm -f *.o *.so *.pyc
 
-ezcod_wrap.cxx:		ezcod.i
-	swig -verbose -c++ -I$(ROOT)/c++ -python $<
+# Forces re-build of Swig-generated code (if desired)
+python-ezcod-pristine: python-ezcod-clean
+	rm -f ezcod_wrap.cpp ezcod.py
 
-ezcod_wrap.o:		ezcod_wrap.cxx
+ezcod_wrap.cpp:		ezcod.i $(ROOT)/c++/ezpwd/ezcod
+	swig -verbose -c++ -I$(ROOT)/c++ -python $< -o $@
+
+ezcod_wrap.o:		ezcod_wrap.cpp
 	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) -c $<
-
-ezcod_python:		ezcod_python.C ezcod_python.h
-	$(CXX) $(CXXFLAGS) -I$(ROOT)/c++ $< -o $@
 
 _ezcod.so:		ezcod_wrap.o
 	$(CXX) $(CXXFLAGS) $(PYTHON_LINK) -o $@ $<
