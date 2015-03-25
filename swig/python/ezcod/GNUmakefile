@@ -41,7 +41,7 @@ python-ezcod-pristine: python-ezcod-clean
 	rm -f ezcod_wrap.cpp ezcod.py
 
 ezcod_wrap.cpp:		ezcod.i $(ROOT)/c++/ezpwd/ezcod
-	swig -verbose -c++ -I$(ROOT)/c++ -python $< -o $@
+	swig -verbose -c++ -I$(ROOT)/c++ -python -o $@ $<
 
 ezcod_wrap.o:		ezcod_wrap.cpp
 	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) -c $<
