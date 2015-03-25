@@ -34,9 +34,14 @@ ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 
     std::cout
 	<< std::endl << std::endl
-	<< "Testing EZLOC location coding w/ " << ezc.rscodec.nroots()
+	<< "Testing ezcod<"
+	<< int(ezc.symbols().first) << "," << int(ezc.symbols().second)
+	<< "> location coding"
+#if defined( DEBUG )
+	<< " w/ " << ezc.rscodec.nroots()
 	<< " parity; " << ezc.rscodec
 	<< " error correction over " << ezc.rscodec.symbol() << "-bit symbols"
+#endif
 	<< std::endl
 	<< ezc
 	<< std::endl;
@@ -220,16 +225,40 @@ int				main( int argc, char **argv )
 	    std::cout << "For " << e5p12 << ": " << assert << std::endl;
     }
 
+    // Ensure that various chunk sizes work
+    std::map<int,std::string>	chunks = {
+	{ 0, "R3U08MPXT31N.71K3E" },
+	{ 1, "R 3 U 0 8 M P X T 3 1 N.71K3E" },
+	{ 2, "R3 U0 8M PX T3 1N.71K3E" },
+	{ 3, "R3U 08M PXT 31N.71K3E" },
+	{ 4, "R3U0 8MPX T31N.71K3E" },
+	{ 5, "R3U08 MPXT31N.71K3E" },
+	{ 6, "R3U08M PXT31N.71K3E" },
+	{ 7, "R3U08MPXT31N.71K3E" },
+	{ 8, "R3U08MPXT31N.71K3E" },
+	{ 9, "R3U08MPXT31N.71K3E" },
+	{10, "R3U08MPXT31N.71K3E" },
+	{11, "R3U08MPXT31N.71K3E" },
+	{12, "R3U08MPXT31N.71K3E" },
+	{13, "R3U08MPXT31N.71K3E" },
+	{14, "R3U08MPXT31N.71K3E" },
+    };
+
+    for ( int c = 0; c < 15; ++c ) {
+	edm5.chunk		= c;
+	if ( assert.ISEQUAL( edm5.encode( 12 ), chunks[c] ))
+	    std::cout << "For " << edm5 << " w/ chunk == " << c << ": " << assert << std::endl;
+    }
 
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in
     // data we *know* is correct -- the effective block of zero data in the pad (unused) area of the
     // R-S codeword's capacity!
-
     // Correct encoding w/2 parity:        R3U 08M PVT GY
     //                              errors: v      v
     std::string			err2	= "R0U 08M 0VT GY";
+#if defined( DEBUG )
     std::string			fix2	= err2;
     ezpwd::serialize::base32::decode( fix2 );
     std::vector<int>		pos2;
@@ -242,6 +271,7 @@ int				main( int argc, char **argv )
 	<< "; detected " << cor2 << " errors"
 	<< " @" << pos2
 	<< std::endl;
+#endif // DEBUG
 
 #if defined( DEBUG ) && DEBUG > 2
     // Try Phil Karn's R-S codec over RS(31,29), with 2 parity, a capacity of 29 and payload of 9.

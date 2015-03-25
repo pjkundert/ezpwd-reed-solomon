@@ -209,6 +209,7 @@ rskey_test:	rskey_test.o
 rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
+
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 

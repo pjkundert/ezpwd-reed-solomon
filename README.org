@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.2.0
+#+TITLE: EZPWD Reed-Solomon Version 1.3.0
 
 * Reed-Solomon Loss/Error Correction
 
-  Error and erasure detection and correction for C++ and Javascript programs.
-  Based on Phil Karn's excellent implementation (as used by the Linux kernel),
-  converted to C++.
+  Error and erasure detection and correction for C++, Javascript and Python
+  programs.  Based on Phil Karn's excellent implementation (as used by the Linux
+  kernel), converted to C++.
 
   Several C++ and Javascript utilities implemented using Reed-Solomon are
   provided.
@@ -51,13 +51,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -67,6 +67,40 @@
     the EZPWD Reed-Solomon Javascript which has a Tag in the official Git repo,
     by encoding the <VERSION> number in the URL: 
     : //cdn.rawgit.com/.../v<VERSION>/...
+
+*** Python Interface using Swig
+
+    A high-performance Python 2/3 interface is provided, using [[http://www.swig.org/][Swig]] (requires at
+    least Swig Version 3.0.5 for C++11 support).  Since the Python module is
+    generated from the C++ interface, it must be generated and compiled using
+    the appropriate target OS, Python and C++ compiler implementation.
+    Therefore, there is no =pip install ezpwd_reed_solomon= available.
+
+    To build the =ezpwd_reed_solomon= package, obtain the source from
+    https://github.com/pjkundert/ezpwd-reed-solomon, and build with the version
+    of Python you wish to support:
+    : $ cd ezpwd-reed-solomon/swig/python
+    : $ python setup.py install
+
+    Presently, only =ezpwd_reed_solomon.ezcod= is available; see the [[EZCOD:
+    Location Code API]] section for Python API details.
+
+**** Swig 3.0.5+
+
+     To install the Python API, you'll need a modern Swig.
+
+     On Mac, use homebrew:
+     : $ brew install swig
+     
+     On Linux Debian or Ubuntu Linux systems, you should be able to use
+     something like this (other Linux variants should have similar package
+     installation facilities):
+     : $ apt-get -u install autoconf autogen libpcre3-dev bison yodl
+     : $ git clone git@github.com:swig/swig.git
+     : $ cd swig
+     : $ autoconf
+     : $ ./autogen.sh
+     : $ ./configure && make && make install
 
 ** Licensing
 
@@ -170,7 +204,7 @@
    int fixed = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
    #+END_SRC
 
-* RSKEY: Javascript Data Key API
+* RSKEY: Data Key API
 
   Asking a user to reliably enter even a few bytes of data (eg. a product key
   or a redemption code) is, well, basically impossible.  It is not reasonable
@@ -208,7 +242,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -298,7 +332,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -485,7 +519,7 @@ var server = {
     Customer aggravation due to mis-typed codes is reduced, increasing the
     likelihood of return visits and positive reviews.
 
-* EZCOD: Javascript Location Code API
+* EZCOD: Location Code API
 
   To specify the location of something on the surface of the earth, a Latitude,
   Longitude pair is typically used.   To get within +/-3m, a Latitude, Longitude
@@ -520,7 +554,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -553,6 +587,109 @@ var server = {
    the 'X' (error) is corrected to "G".  (The website defaults to 9 digits of
    precision, so it will re-encode the position, discarding the extra
    precision.)
+
+** Python Library: ezpwd\_reed\_solomon
+
+   The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module:
+
+*** =ezpwd_reed_solomon.ezcod=
+
+    Classes are provided to produce three variants of EZCOD by default: 3m (9
+    symbols) of location accuracy, plus 1, 2 or 3 Reed-Solomon parity symbols.
+    They are named =ezcod_3_10=, =ezcod_3_11= and =ezcod_3_12=, respectively,
+    indicating the default 3m accuracy, and the total number of symbols.
+    #+BEGIN_EXAMPLE
+    $ python
+    >>> from ezpwd_reed_solomon import ezcod
+    #+END_EXAMPLE
+
+    The API supports the following methods and attributes:
+
+**** =ezcod_3_{10,11,12}( "<EZCOD>"|[lat,[lon,[seper,[chunk]]]] )=
+
+     Creates an <ezcod> instance containing the specified geolocation (defaults
+     to latitude 0.0, longitude 0.0, '.' separator and chunk 3).  If a string is
+     supplied, it is decoded (if possible; an Exception is raised if the
+     provided EZCOD is invalid).
+     #+BEGIN_EXAMPLE
+     >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+     >>> print EZCOD
+     R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+     #+END_EXAMPLE
+
+**** =ezcod_3_{10,11,12}.encode( [precision] )=
+
+     Encodes the current ezcod_3_{10,11,12}'s =.latitude= and =.longitude= to
+     the given number of symbols of precision (default: 9, or 3m).  The accuracy
+     may be anywhere from 1 to 12 (20mm accuracy) symbols.
+     #+BEGIN_EXAMPLE
+     >>> print EZCOD.encode( 12 )
+     R3U 06B MJ3 EDD.K56
+     #+END_EXAMPLE
+
+**** =ezcod_3_{10,11,12}.decode( "<EZCOD>" )=
+
+     Any variant of ezcod_3_{10,11,12} can decode a valid EZCOD, so long as it
+     contains a '.' or '!' to separate the position and R-S parity symbols.  The
+     percentage certainty is returned -- the proportion of R-S parity symbols
+     that remain unused after error detection and correction.  A value of 0
+     indicates that the EZCOD's R-S decoding did not fail, but no parity symbols
+     remain in excess to verify its validity.
+     #+BEGIN_EXAMPLE
+     >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
+     100
+     >>> EZCOD.latitude
+     53.49999999627471
+     >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
+     67
+     >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
+     34
+     >>> print EZCOD
+     R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
+     >>>
+     #+END_EXAMPLE
+
+     If any symbols are unknown, replace them with either =_= or =?= to
+     indicate that they are erasures (and consume only a single symbol of R-S
+     parity to correct).  Any undetected erroneous symbol corrected by the R-S
+     codec consumes 2 parity symbols.  A failure to decode (too many errors or
+     erasures) will raise a =RuntimeError= exception:
+     #+BEGIN_EXAMPLE
+     >>> EZCOD.decode( "r3u 06b mj3 __d.__6" )
+     Traceback (most recent call last):
+       File "<stdin>", line 1, in <module>
+         ...
+     RuntimeError: ezpwd::ezcod::decode: Error correction failed; too many erasures
+     >>> EZCOD.decode( "r3u 06b mj3 eXd.__6" )
+     Traceback (most recent call last):
+       File "<stdin>", line 1, in <module>
+         ...
+     RuntimeError: ezpwd::ezcod::decode: Error correction failed; R-S decode failed
+     #+END_EXAMPLE
+
+**** =ezcod_3_{10,11,12}= Instance Attributes
+
+     The following attributes are available in each =ezcod_3_{10,11,12}=
+     instance:
+
+     | Attribute       | Type  | Range       | Description                             |
+     |-----------------+-------+-------------+-----------------------------------------|
+     | latitude        | float | [-90,90]    | Geographical position in degrees        |
+     | longitude       | float | [-180,180]  | ''                                      |
+     | latitude_error  | float | [0,inf]     | Axis error in meters                    |
+     | longitude_error | float | [0,inf]     | ''                                      |
+     | accuracy        | float | [0,inf]     | Average of error ellipse axes in meters |
+     | confidence      | int   | [0,100]     | Percentage of parity symbols remaining  |
+     | chunk           | int   | [0,6]       | Spaces every 'chunk' position symbols   |
+     | seper           | int   | [0,3]       | SEP_NONE, SEP_DOT, SEP_BANG, SEP_SPACE  |
+     | SEP\_NONE       | int   | 0           | Output no position/parity separator     |
+     | SEP\_DOT        | int   | 1 (default) | Output a '.' position/parity separator  |
+     | SEP\_BANG       | int   | 2           | Output a '!' position/parity separator  |
+     | SEP\_SPACE      | int   | 3           | Output a ' ' position/parity separator  |
+
+     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG=, so that
+     the EZCOD parser can unambiguously determine the total EZCOD size, and the
+     number of parity symbols to expect.
 
 *** Asynchronous Loading
 
@@ -589,7 +726,7 @@ var server = {
        };
     </script>
     <script async onload="jquery_release()"
-        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.2.0/js/ezpwd/ezcod.js">
+        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
     </script>
     <script defer onload="jquery_loaded()"
         src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
@@ -671,7 +808,7 @@ var server = {
    You can also access the Console (right click, select Inspect Element, click
    on "Console"), and enter the above =rskey_=... API example code.
 
-* RSPWD: Javascript Password Correction API
+* RSPWD: Password Correction API
 
   Javascript implementation of Reed-Solomon codec based password error
   detection and correction.

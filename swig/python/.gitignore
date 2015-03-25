@@ -1,0 +1,6 @@
+*.pyc
+*.so
+ezcod_python
+*.egg-info
+build/
+dist/
