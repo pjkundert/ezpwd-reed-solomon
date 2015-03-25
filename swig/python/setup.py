@@ -5,7 +5,7 @@ here				= os.path.abspath( os.path.dirname( __file__ ))
 
 __version__			= None
 __version_info__		= None
-execfile( os.path.join( here, "version.py" ))
+exec( open( 'version.py', 'r' ).read() )
 
 install_requires		= open( os.path.join( here, "requirements.txt" )).readlines()
 

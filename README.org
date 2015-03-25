@@ -70,15 +70,17 @@
 
 *** Python Interface using Swig
 
-    A high-performance Python interface is provided, using [[http://www.swig.org/][Swig]] (requires at
+    A high-performance Python 2/3 interface is provided, using [[http://www.swig.org/][Swig]] (requires at
     least Swig Version 3.0.5 for C++11 support).  Since the Python module is
     generated from the C++ interface, it must be generated and compiled using
     the appropriate target OS, Python and C++ compiler implementation.
     Therefore, there is no =pip install ezpwd_reed_solomon= available.
 
     To build the =ezpwd_reed_solomon= package, obtain the source from
-    https://github.com/pjkundert/ezpwd-reed-solomon, and:
-    : $ ( cd ezpwd-reed-solomon/swig/python; python setup.py install )
+    https://github.com/pjkundert/ezpwd-reed-solomon, and build with the version
+    of Python you wish to support:
+    : $ cd ezpwd-reed-solomon/swig/python
+    : $ python setup.py install
 
     Presently, only =ezpwd_reed_solomon.ezcod= is available; see the [[EZCOD:
     Location Code API]] section for Python API details.
@@ -596,26 +598,34 @@ var server = {
     symbols) of location accuracy, plus 1, 2 or 3 Reed-Solomon parity symbols.
     They are named =ezcod_3_10=, =ezcod_3_11= and =ezcod_3_12=, respectively,
     indicating the default 3m accuracy, and the total number of symbols.
-    : $ python
-    : >>> from ezpwd_reed_solomon import ezcod
+    #+BEGIN_EXAMPLE
+    $ python
+    >>> from ezpwd_reed_solomon import ezcod
+    #+END_EXAMPLE
 
-**** =ezcod_3_{10,11,12}( "<EZCOD>" | [lat, [lon, [seper, [chunk]]]] )=
+    The API supports the following methods and attributes:
+
+**** =ezcod_3_{10,11,12}( "<EZCOD>"|[lat,[lon,[seper,[chunk]]]] )=
 
      Creates an <ezcod> instance containing the specified geolocation (defaults
      to latitude 0.0, longitude 0.0, '.' separator and chunk 3).  If a string is
      supplied, it is decoded (if possible; an Exception is raised if the
      provided EZCOD is invalid).
-     : >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
-     : >>> print EZCOD
-     : R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+     #+BEGIN_EXAMPLE
+     >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+     >>> print EZCOD
+     R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+     #+END_EXAMPLE
 
 **** =ezcod_3_{10,11,12}.encode( [precision] )=
 
      Encodes the current ezcod_3_{10,11,12}'s =.latitude= and =.longitude= to
      the given number of symbols of precision (default: 9, or 3m).  The accuracy
      may be anywhere from 1 to 12 (20mm accuracy) symbols.
-     : >>> print EZCOD.encode( 12 )
-     : R3U 06B MJ3 EDD.K56
+     #+BEGIN_EXAMPLE
+     >>> print EZCOD.encode( 12 )
+     R3U 06B MJ3 EDD.K56
+     #+END_EXAMPLE
 
 **** =ezcod_3_{10,11,12}.decode( "<EZCOD>" )=
 
@@ -625,17 +635,61 @@ var server = {
      that remain unused after error detection and correction.  A value of 0
      indicates that the EZCOD's R-S decoding did not fail, but no parity symbols
      remain in excess to verify its validity.
-     : >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
-     : 100
-     : >>> EZCOD.latitude
-     : 53.49999999627471
-     : >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
-     : 67
-     : >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
-     : 34
-     : >>> print EZCOD
-     : R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
-     : >>>
+     #+BEGIN_EXAMPLE
+     >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
+     100
+     >>> EZCOD.latitude
+     53.49999999627471
+     >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
+     67
+     >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
+     34
+     >>> print EZCOD
+     R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
+     >>>
+     #+END_EXAMPLE
+
+     If any symbols are unknown, replace them with either =_= or =?= to
+     indicate that they are erasures (and consume only a single symbol of R-S
+     parity to correct).  Any undetected erroneous symbol corrected by the R-S
+     codec consumes 2 parity symbols.  A failure to decode (too many errors or
+     erasures) will raise a =RuntimeError= exception:
+     #+BEGIN_EXAMPLE
+     >>> EZCOD.decode( "r3u 06b mj3 __d.__6" )
+     Traceback (most recent call last):
+       File "<stdin>", line 1, in <module>
+         ...
+     RuntimeError: ezpwd::ezcod::decode: Error correction failed; too many erasures
+     >>> EZCOD.decode( "r3u 06b mj3 eXd.__6" )
+     Traceback (most recent call last):
+       File "<stdin>", line 1, in <module>
+         ...
+     RuntimeError: ezpwd::ezcod::decode: Error correction failed; R-S decode failed
+     #+END_EXAMPLE
+
+**** =ezcod_3_{10,11,12}= Instance Attributes
+
+     The following attributes are available in each =ezcod_3_{10,11,12}=
+     instance:
+
+     | Attribute       | Type  | Range       | Description                             |
+     |-----------------+-------+-------------+-----------------------------------------|
+     | latitude        | float | [-90,90]    | Geographical position in degrees        |
+     | longitude       | float | [-180,180]  | ''                                      |
+     | latitude_error  | float | [0,inf]     | Axis error in meters                    |
+     | longitude_error | float | [0,inf]     | ''                                      |
+     | accuracy        | float | [0,inf]     | Average of error ellipse axes in meters |
+     | confidence      | int   | [0,100]     | Percentage of parity symbols remaining  |
+     | chunk           | int   | [0,6]       | Spaces every 'chunk' position symbols   |
+     | seper           | int   | [0,3]       | SEP_NONE, SEP_DOT, SEP_BANG, SEP_SPACE  |
+     | SEP\_NONE       | int   | 0           | Output no position/parity separator     |
+     | SEP\_DOT        | int   | 1 (default) | Output a '.' position/parity separator  |
+     | SEP\_BANG       | int   | 2           | Output a '!' position/parity separator  |
+     | SEP\_SPACE      | int   | 3           | Output a ' ' position/parity separator  |
+
+     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG=, so that
+     the EZCOD parser can unambiguously determine the total EZCOD size, and the
+     number of parity symbols to expect.
 
 *** Asynchronous Loading
 
