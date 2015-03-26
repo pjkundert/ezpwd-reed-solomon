@@ -126,11 +126,11 @@ class ezcod_base(_object):
     __swig_destroy__ = _ezcod.delete_ezcod_base
     __del__ = lambda self: None
 
-    def encode(self, precision=0):
-        return _ezcod.ezcod_base_encode(self, precision)
+    def encode(self, _preci=0):
+        return _ezcod.ezcod_base_encode(self, _preci)
 
-    def decode(self, str):
-        return _ezcod.ezcod_base_decode(self, str)
+    def decode(self, _ezcod):
+        return _ezcod.ezcod_base_decode(self, _ezcod)
 ezcod_base_swigregister = _ezcod.ezcod_base_swigregister
 ezcod_base_swigregister(ezcod_base)
 
@@ -143,19 +143,34 @@ class ezcod_3_10(ezcod_base):
     for _s in [ezcod_base]:
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, ezcod_3_10, name)
-    __repr__ = _swig_repr
+    PARITY = _ezcod.ezcod_3_10_PARITY
+    PRECISION = _ezcod.ezcod_3_10_PRECISION
+    CHUNK = _ezcod.ezcod_3_10_CHUNK
     SEP_NONE = _ezcod.ezcod_3_10_SEP_NONE
+    SEP_DEFAULT = _ezcod.ezcod_3_10_SEP_DEFAULT
     SEP_DOT = _ezcod.ezcod_3_10_SEP_DOT
     SEP_BANG = _ezcod.ezcod_3_10_SEP_BANG
     SEP_SPACE = _ezcod.ezcod_3_10_SEP_SPACE
-    __swig_setmethods__["seper"] = _ezcod.ezcod_3_10_seper_set
-    __swig_getmethods__["seper"] = _ezcod.ezcod_3_10_seper_get
+    CHK_NONE = _ezcod.ezcod_3_10_CHK_NONE
+    CHK_DEFAULT = _ezcod.ezcod_3_10_CHK_DEFAULT
+    CHK_DASH = _ezcod.ezcod_3_10_CHK_DASH
+    CHK_SPACE = _ezcod.ezcod_3_10_CHK_SPACE
+    __swig_setmethods__["precision"] = _ezcod.ezcod_3_10_precision_set
+    __swig_getmethods__["precision"] = _ezcod.ezcod_3_10_precision_get
     if _newclass:
-        seper = _swig_property(_ezcod.ezcod_3_10_seper_get, _ezcod.ezcod_3_10_seper_set)
+        precision = _swig_property(_ezcod.ezcod_3_10_precision_get, _ezcod.ezcod_3_10_precision_set)
     __swig_setmethods__["chunk"] = _ezcod.ezcod_3_10_chunk_set
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_10_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_10_chunk_get, _ezcod.ezcod_3_10_chunk_set)
+    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_10_seperator_set
+    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_10_seperator_get
+    if _newclass:
+        seperator = _swig_property(_ezcod.ezcod_3_10_seperator_get, _ezcod.ezcod_3_10_seperator_set)
+    __swig_setmethods__["space"] = _ezcod.ezcod_3_10_space_set
+    __swig_getmethods__["space"] = _ezcod.ezcod_3_10_space_get
+    if _newclass:
+        space = _swig_property(_ezcod.ezcod_3_10_space_get, _ezcod.ezcod_3_10_space_set)
 
     def __init__(self, *args):
         this = _ezcod.new_ezcod_3_10(*args)
@@ -166,11 +181,14 @@ class ezcod_3_10(ezcod_base):
     __swig_destroy__ = _ezcod.delete_ezcod_3_10
     __del__ = lambda self: None
 
-    def encode(self, precision=0):
-        return _ezcod.ezcod_3_10_encode(self, precision)
+    def encode(self, _preci=0):
+        return _ezcod.ezcod_3_10_encode(self, _preci)
 
     def decode(self, str):
         return _ezcod.ezcod_3_10_decode(self, str)
+
+    def __repr__(self):
+        return _ezcod.ezcod_3_10___repr__(self)
 
     def __str__(self):
         return _ezcod.ezcod_3_10___str__(self)
@@ -186,19 +204,34 @@ class ezcod_3_11(ezcod_base):
     for _s in [ezcod_base]:
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, ezcod_3_11, name)
-    __repr__ = _swig_repr
+    PARITY = _ezcod.ezcod_3_11_PARITY
+    PRECISION = _ezcod.ezcod_3_11_PRECISION
+    CHUNK = _ezcod.ezcod_3_11_CHUNK
     SEP_NONE = _ezcod.ezcod_3_11_SEP_NONE
+    SEP_DEFAULT = _ezcod.ezcod_3_11_SEP_DEFAULT
     SEP_DOT = _ezcod.ezcod_3_11_SEP_DOT
     SEP_BANG = _ezcod.ezcod_3_11_SEP_BANG
     SEP_SPACE = _ezcod.ezcod_3_11_SEP_SPACE
-    __swig_setmethods__["seper"] = _ezcod.ezcod_3_11_seper_set
-    __swig_getmethods__["seper"] = _ezcod.ezcod_3_11_seper_get
+    CHK_NONE = _ezcod.ezcod_3_11_CHK_NONE
+    CHK_DEFAULT = _ezcod.ezcod_3_11_CHK_DEFAULT
+    CHK_DASH = _ezcod.ezcod_3_11_CHK_DASH
+    CHK_SPACE = _ezcod.ezcod_3_11_CHK_SPACE
+    __swig_setmethods__["precision"] = _ezcod.ezcod_3_11_precision_set
+    __swig_getmethods__["precision"] = _ezcod.ezcod_3_11_precision_get
     if _newclass:
-        seper = _swig_property(_ezcod.ezcod_3_11_seper_get, _ezcod.ezcod_3_11_seper_set)
+        precision = _swig_property(_ezcod.ezcod_3_11_precision_get, _ezcod.ezcod_3_11_precision_set)
     __swig_setmethods__["chunk"] = _ezcod.ezcod_3_11_chunk_set
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_11_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_11_chunk_get, _ezcod.ezcod_3_11_chunk_set)
+    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_11_seperator_set
+    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_11_seperator_get
+    if _newclass:
+        seperator = _swig_property(_ezcod.ezcod_3_11_seperator_get, _ezcod.ezcod_3_11_seperator_set)
+    __swig_setmethods__["space"] = _ezcod.ezcod_3_11_space_set
+    __swig_getmethods__["space"] = _ezcod.ezcod_3_11_space_get
+    if _newclass:
+        space = _swig_property(_ezcod.ezcod_3_11_space_get, _ezcod.ezcod_3_11_space_set)
 
     def __init__(self, *args):
         this = _ezcod.new_ezcod_3_11(*args)
@@ -209,11 +242,14 @@ class ezcod_3_11(ezcod_base):
     __swig_destroy__ = _ezcod.delete_ezcod_3_11
     __del__ = lambda self: None
 
-    def encode(self, precision=0):
-        return _ezcod.ezcod_3_11_encode(self, precision)
+    def encode(self, _preci=0):
+        return _ezcod.ezcod_3_11_encode(self, _preci)
 
     def decode(self, str):
         return _ezcod.ezcod_3_11_decode(self, str)
+
+    def __repr__(self):
+        return _ezcod.ezcod_3_11___repr__(self)
 
     def __str__(self):
         return _ezcod.ezcod_3_11___str__(self)
@@ -229,19 +265,34 @@ class ezcod_3_12(ezcod_base):
     for _s in [ezcod_base]:
         __swig_getmethods__.update(getattr(_s, '__swig_getmethods__', {}))
     __getattr__ = lambda self, name: _swig_getattr(self, ezcod_3_12, name)
-    __repr__ = _swig_repr
+    PARITY = _ezcod.ezcod_3_12_PARITY
+    PRECISION = _ezcod.ezcod_3_12_PRECISION
+    CHUNK = _ezcod.ezcod_3_12_CHUNK
     SEP_NONE = _ezcod.ezcod_3_12_SEP_NONE
+    SEP_DEFAULT = _ezcod.ezcod_3_12_SEP_DEFAULT
     SEP_DOT = _ezcod.ezcod_3_12_SEP_DOT
     SEP_BANG = _ezcod.ezcod_3_12_SEP_BANG
     SEP_SPACE = _ezcod.ezcod_3_12_SEP_SPACE
-    __swig_setmethods__["seper"] = _ezcod.ezcod_3_12_seper_set
-    __swig_getmethods__["seper"] = _ezcod.ezcod_3_12_seper_get
+    CHK_NONE = _ezcod.ezcod_3_12_CHK_NONE
+    CHK_DEFAULT = _ezcod.ezcod_3_12_CHK_DEFAULT
+    CHK_DASH = _ezcod.ezcod_3_12_CHK_DASH
+    CHK_SPACE = _ezcod.ezcod_3_12_CHK_SPACE
+    __swig_setmethods__["precision"] = _ezcod.ezcod_3_12_precision_set
+    __swig_getmethods__["precision"] = _ezcod.ezcod_3_12_precision_get
     if _newclass:
-        seper = _swig_property(_ezcod.ezcod_3_12_seper_get, _ezcod.ezcod_3_12_seper_set)
+        precision = _swig_property(_ezcod.ezcod_3_12_precision_get, _ezcod.ezcod_3_12_precision_set)
     __swig_setmethods__["chunk"] = _ezcod.ezcod_3_12_chunk_set
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_12_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_12_chunk_get, _ezcod.ezcod_3_12_chunk_set)
+    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_12_seperator_set
+    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_12_seperator_get
+    if _newclass:
+        seperator = _swig_property(_ezcod.ezcod_3_12_seperator_get, _ezcod.ezcod_3_12_seperator_set)
+    __swig_setmethods__["space"] = _ezcod.ezcod_3_12_space_set
+    __swig_getmethods__["space"] = _ezcod.ezcod_3_12_space_get
+    if _newclass:
+        space = _swig_property(_ezcod.ezcod_3_12_space_get, _ezcod.ezcod_3_12_space_set)
 
     def __init__(self, *args):
         this = _ezcod.new_ezcod_3_12(*args)
@@ -252,11 +303,14 @@ class ezcod_3_12(ezcod_base):
     __swig_destroy__ = _ezcod.delete_ezcod_3_12
     __del__ = lambda self: None
 
-    def encode(self, precision=0):
-        return _ezcod.ezcod_3_12_encode(self, precision)
+    def encode(self, _preci=0):
+        return _ezcod.ezcod_3_12_encode(self, _preci)
 
     def decode(self, str):
         return _ezcod.ezcod_3_12_decode(self, str)
+
+    def __repr__(self):
+        return _ezcod.ezcod_3_12___repr__(self)
 
     def __str__(self):
         return _ezcod.ezcod_3_12___str__(self)

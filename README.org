@@ -124,11 +124,11 @@
     If you use any of the EZPWD Reed-Solomon based APIs in your product but you
     don't wish to make your product's or website's source code available, then a
     Commercial license from [[http://hardconsulting.com/products/13-reed-solomon][Hard Consulting Corporation (hardconsulting.com)]] is
-    available.  The pricing breakdown is as follows (in CAD$):
+    available.  The pricing breakdown is as follows (in USD$):
 
     |------------+-------+---------+---------------------------------|
     | Users avg. | Price | Support | Included application assistance |
-    | (monthly)  |  CAD$ | CAD$/yr |                                 |
+    | (monthly)  |  USD$ | USD$/yr |                                 |
     |------------+-------+---------+---------------------------------|
     | <1K        |     0 |      25 | Interesting project? ask... :)  |
     | 1K-10K     |   100 |      25 | 1 hour                          |
@@ -613,8 +613,8 @@ var server = {
      provided EZCOD is invalid).
      #+BEGIN_EXAMPLE
      >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
-     >>> print EZCOD
-     R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm
+     >>> print repr( EZCOD )
+     <R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm>
      #+END_EXAMPLE
 
 **** =ezcod_3_{10,11,12}.encode( [precision] )=
@@ -644,8 +644,8 @@ var server = {
      67
      >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
      34
-     >>> print EZCOD
-     R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm
+     >>> print repr( EZCOD )
+     <R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm>
      >>>
      #+END_EXAMPLE
 
@@ -672,20 +672,28 @@ var server = {
      The following attributes are available in each =ezcod_3_{10,11,12}=
      instance:
 
-     | Attribute       | Type  | Range       | Description                             |
-     |-----------------+-------+-------------+-----------------------------------------|
-     | latitude        | float | [-90,90]    | Geographical position in degrees        |
-     | longitude       | float | [-180,180]  | ''                                      |
-     | latitude_error  | float | [0,inf]     | Axis error in meters                    |
-     | longitude_error | float | [0,inf]     | ''                                      |
-     | accuracy        | float | [0,inf]     | Average of error ellipse axes in meters |
-     | confidence      | int   | [0,100]     | Percentage of parity symbols remaining  |
-     | chunk           | int   | [0,6]       | Spaces every 'chunk' position symbols   |
-     | seper           | int   | [0,3]       | SEP_NONE, SEP_DOT, SEP_BANG, SEP_SPACE  |
-     | SEP\_NONE       | int   | 0           | Output no position/parity separator     |
-     | SEP\_DOT        | int   | 1 (default) | Output a '.' position/parity separator  |
-     | SEP\_BANG       | int   | 2           | Output a '!' position/parity separator  |
-     | SEP\_SPACE      | int   | 3           | Output a ' ' position/parity separator  |
+     | Attribute        | Type  | Range         | Description                             |
+     |------------------+-------+---------------+-----------------------------------------|
+     | latitude         | float | [-90,90]      | Geographical position in degrees        |
+     | longitude        | float | [-180,180]    | ''                                      |
+     | latitude\_error  | float | [0,inf]       | Axis error in meters                    |
+     | longitude\_error | float | [0,inf]       | ''                                      |
+     | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters |
+     | precision        | int   | [1,12]        | Desired number of location symbols      |
+     | confidence       | int   | [0,100]       | Percentage of parity symbols remaining  |
+     | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols   |
+     | seperator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE        |
+     | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH            |
+     | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator     |
+     | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator     |
+     | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator  |
+     | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator  |
+     | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator  |
+     | CHK\_NONE        | char  | '\xff'        | Output no space between chunks          |
+     | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks       |
+     | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks       |
+     | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks       |
+
 
      It is recommended to use either =SEP_DOT= (default) or =SEP_BANG=, so that
      the EZCOD parser can unambiguously determine the total EZCOD size, and the

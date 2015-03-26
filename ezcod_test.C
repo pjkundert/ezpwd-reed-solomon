@@ -26,7 +26,7 @@ extern "C" {
 #endif // DEBUG
 
 
-template < size_t P, size_t L > void
+template < unsigned P, unsigned L > void
 ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 {
     // Does location precision scale linearly with the number of symbols provided?  Are errors
@@ -66,7 +66,7 @@ ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 	    manip[1] = ( manip[1] == '0' ? '1' : '0' );
 	    break;
 	}
-	for ( size_t i = 0; i <= manip.size(); ++i ) {
+	for ( unsigned i = 0; i <= manip.size(); ++i ) {
 	    std::string		trunc( manip.begin(), manip.begin() + i );
 	    if ( trunc.back() == ' ' )
 		continue;
@@ -118,7 +118,7 @@ int				main( int argc, char **argv )
 
     double			lat	=   53.555556;
     double			lon	= -113.873889;
-    std::map<std::pair<size_t,size_t>,std::string>
+    std::map<std::pair<unsigned,unsigned>,std::string>
 				str	= {
 	{{1, 3},"R3U.9"},
 	{{2, 3},"R3U.WD"},
@@ -134,7 +134,7 @@ int				main( int argc, char **argv )
 	{{1,10},"R3U 08M PVTQ.F"},
 	{{1,11},"R3U 08M PVTQJ.Y"},
 	{{1,12},"R3U 08M PVT QJQ.E"}};
-    std::map<std::pair<size_t,size_t>,double>
+    std::map<std::pair<unsigned,unsigned>,double>
    				acc	= {{{1, 3}, 90611.067453 },
 					   {{2, 3}, 90611.067453 },
 					   {{3, 3}, 90611.067453 },

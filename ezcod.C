@@ -14,20 +14,20 @@
 // 
 // Encode lat/lon with default worst-case 3m. accuracy: 1 part in 2^22 Latitude, 2^23 Longitude.
 // 
-template < size_t P=1, size_t L=9 >
+template < size_t P=1 >
 int				ezcod_3_encode(
 				    double		lat,
 				    double		lon,
 				    char	       *enc,
 				    size_t		siz,
-				    size_t		pre	= 0 ) // default precision: L symbols
+				    size_t		pre	= 0 ) // precision (0 --> default 9)
 {
 #if defined( DEBUG ) && DEBUG > 1
     std::cout
-	<< "ezcod_3_encode<"	<< P << "," << L << ">("
+	<< "ezcod_3_encode<"	<< P << ">("
 	<< " lat == "		<< lat
 	<< ", lon == "		<< lon
-	<< ", w/ "		<< pre ? pre : L << " symbols precision"
+	<< ", w/ "		<< pre << " symbols precision"
 #if DEBUG > 2
 	<< ", buf[" << siz << "] == " << std::vector<uint8_t>( (uint8_t*)enc, (uint8_t*)enc + siz )
 #endif
@@ -35,16 +35,16 @@ int				ezcod_3_encode(
 #endif
     int				res;
     try {
-	const std::string      &str( ezpwd::ezcod<P,L>( lat, lon ).encode( pre ));
+	const std::string      &str( ezpwd::ezcod<P>( lat, lon ).encode( pre ));
 	if ( str.size() + 1 > siz )
 	    throw std::runtime_error( "insufficient buffer provided" );
 	std::copy( str.begin(), str.end(), enc );
+	enc[str.size()]			= 0;
 	res				= str.size();
-	enc[res]			= 0;
     } catch ( std::exception &exc ) {
 	ezpwd::streambuf_to_buffer sbf( enc, siz );
 	std::ostream( &sbf )
-	    << "ezcod_3_encode<" << P << "," << L << ">(" << lat << ", " << lon << ") failed: "
+	    << "ezcod_3_encode<" << P << ">(" << lat << ", " << lon << ") failed: "
 	    << exc.what();
 	res				= -1;
     }
@@ -54,22 +54,21 @@ int				ezcod_3_encode(
 // 
 // Decode lat/lon position in degrees and (optionally) accuracy in m, returning confidence in %.
 // 
-template < size_t P=1, size_t L=9 >
+template < size_t P=1 >
 int				ezcod_3_decode(
-				    char	       *buf,
+				    char	       *dec,
 				    size_t		siz,
 				    double	       *lat	= 0,
 				    double	       *lon	= 0,
 				    double	       *acc	= 0 )
 {
     int				confidence;
-    std::string			location( buf );
     try {
-	ezpwd::ezcod<P,L>	decoder( location );
+	ezpwd::ezcod<P>		decoder( dec );
 	confidence			= decoder.confidence;
 #if defined( DEBUG ) && DEBUG > 1
 	std::cout
-	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location
+	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << dec
 	    << "\") == " << confidence << "% confidence: "
 	    << " lat (" << (void *)lat << ") == " << decoder.latitude
 	    << ", lon (" << (void *)lon << ") == " << decoder.longitude
@@ -83,9 +82,10 @@ int				ezcod_3_decode(
 	if ( acc )
 	    *acc			= decoder.accuracy;
     } catch ( std::exception &exc ) {
-	ezpwd::streambuf_to_buffer	sbf( buf, siz );
+	std::string		location( dec );
+	ezpwd::streambuf_to_buffer sbf( dec, siz );
 	std::ostream( &sbf )
-	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << location << "\") failed: "
+	    << "ezcod_3_decode<" << P << ">(\"" << location << "\") failed: "
 	    << exc.what();
 	confidence			= -1;
     }
