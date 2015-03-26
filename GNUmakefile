@@ -5,7 +5,7 @@ SHELL		= /bin/bash
 #CXX		= g++ # clang++ # icc (not recommended; much slower than g++ for ezpwd::)
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
-		    -Wpointer-arith -Wcast-qual -Wnon-virtual-dtor -Woverloaded-virtual		\
+		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       += -O3 # -g
 CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB

@@ -26,7 +26,7 @@ PYTHON_INC	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep )
 PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-1]+["config"] )' )
 
 PYTHON_COMP	= -I$(PYTHON_INC) -I$(ROOT)/c++ -fPIC
-PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -dynamiclib
+PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -shared
 
 python-ezcod:		_ezcod.so
 
