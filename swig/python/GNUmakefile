@@ -3,13 +3,16 @@ BINDINGS	= ezcod
 
 all:
 	@echo "Python Bindings: $(BINDINGS)"
-	@echo "  test     -- test bindings"
-	@echo "  install  -- install ezpwd_reed_solomon w/ all bindings"
+	@echo "  install	-- install ezpwd_reed_solomon w/ all bindings"
+	@echo "  binding-	-- Run on all bindings..."
+	@echo "    clean	-- "
+	@echo "    pristine	-- Force rebuild of binding"
+	@echo "    test		-- Internal binding self-test"
 
-test:			FORCE
+binding-%:		FORCE
 	@for binding in $(BINDINGS); do				\
-	    echo "Testing binding: $$binding";			\
-	    make -C $$binding python-$$binding-test;		\
+	    echo "Running python-binding-$* on $$binding";	\
+	    make -C $$binding python-$$binding-$*;		\
 	done
 
 install:		version.py FORCE

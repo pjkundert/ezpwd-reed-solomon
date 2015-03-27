@@ -74,7 +74,7 @@ ezcod_3_N_encode_wrap = function( func_name ) {
                                                  ,'number'	// lon
                                                  ,'number'	// array (buf allocated here)
                                                  ,'number'	// array size
-                                                 ,'number'] );	// precision (0 --> default)
+                                                 ,'number'] );	// precision (0 --> default 9)
     return function( lat, lon, pre ) {
         if ( typeof pre == 'undefined' )
             pre			= 0;	// the default precision (9 symbols)

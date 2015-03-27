@@ -1233,6 +1233,22 @@ namespace ezpwd {
 	    if ( count > NROOTS )
 		std::cout << "ERROR: Number of corrections: " << count << " exceeds NROOTS: " << NROOTS << std::endl;
 #endif
+#if defined( DEBUG ) && DEBUG > 1
+	    std::cout << "data      x" << std::setw( 3 ) << len    << ": " << std::vector<uint8_t>( data, data + len ) << std::endl;
+	    std::cout << "parity    x" << std::setw( 3 ) << NROOTS << ": " << std::string(  len * 2, ' ' ) << std::vector<uint8_t>( parity, parity + NROOTS ) << std::endl;
+	    if ( count > 0 ) {
+		std::string errors( 2 * ( len + NROOTS ), ' ' );
+		for ( int i = 0; i < count; ++i ) {
+		    errors[2*(loc[i]-pad)+0] = 'E';
+		    errors[2*(loc[i]-pad)+1] = 'E';
+		}
+		for ( int i = 0; i < no_eras; ++i ) {
+		    errors[2*(eras_pos[i])+0] = 'e';
+		    errors[2*(eras_pos[i])+1] = 'e';
+		}
+		std::cout << "e)ra,E)rr x" << std::setw( 3 ) << count  << ": " << errors << std::endl;
+	    }
+#endif
 	    if ( eras_pos != NULL ) {
 		for ( int i = 0; i < count; i++)
 		    eras_pos[i]		= loc[i] - pad;
