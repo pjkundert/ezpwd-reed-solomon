@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.3.0
+#+TITLE: EZPWD Reed-Solomon Version 1.4.0
 
 * Reed-Solomon Loss/Error Correction
 
@@ -51,13 +51,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -242,7 +242,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -332,7 +332,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -554,7 +554,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -590,7 +590,18 @@ var server = {
 
 ** Python Library: ezpwd\_reed\_solomon
 
-   The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module:
+   The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module.
+   While fully functional, it is designed to be simple to augment, should your
+   geolocation encoding needs be unique.
+
+   It is extremely simple to add new EZCOD APIs to the Python binding.  Simply
+   edit the =swig/python/ezcod/ezcod.i= file, and re-install the Python binding.
+   For example, to add a new binding class called =ezcod.ezcod_20mm_15= (with
+   20mm accuracy in 12 location encoding symbols + .99997 certainty in 3 parity
+   symbols), add the following to the bottom of =ezcod.i=:
+   #+BEGIN_EXAMPLE
+   %template(ezcod_20mm_15)	ezpwd::ezcod<3,12>;
+   #+END_EXAMPLE
 
 *** =ezpwd_reed_solomon.ezcod=
 
@@ -734,7 +745,7 @@ var server = {
        };
     </script>
     <script async onload="jquery_release()"
-        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.3.0/js/ezpwd/ezcod.js">
+        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
     </script>
     <script defer onload="jquery_loaded()"
         src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
