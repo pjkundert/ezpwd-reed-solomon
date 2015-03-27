@@ -116,6 +116,46 @@ int				main( int argc, char **argv )
     if ( assert.ISEQUAL( enc, std::string( "0123ABC2" )))
 	std::cout << assert << std::endl;
 
+    // Ensure that EZCOD codec with various parity sizes do not erroneously accept EZCODs of
+    // different parity sizes.  For example, an ezcod<1,9> codec could parse an EZCOD with any
+    // number of location precision symbols, but only with 1 parity symbol -- it doesn't have an R-S
+    // codec capable of validating the R-S codeword containing (say) 2 or 3 parity symbols.
+    // However, an R-S codeword with X symbols and Y parity is also an R-S codeword with X-1 symbols
+    // and Y+1 parity!  So, we can validate the codeword with TOO MANY parity symbols for the R-S
+    // codec, by treating the leading excess parity symbols as part of the data.  Of course, we'll
+    // only be able to recover from the (lower) error/erasure capacity of our smaller R-S codec.
+    ezpwd::ezcod<1,9>		ec3m_10(   53.555518, -113.873530 ); // RS<31,30> ==> 1 parity
+    ezpwd::ezcod<3,12>		ec20mm_15( 53.555518, -113.873530 ); // RS<31,28> ==> 3 parity
+    ezpwd::ezcod<5,12>		ec20mm_17( 53.555518, -113.873530 ); // RS<31,26> ==> 5 parity
+    if ( assert.ISEQUAL( ec3m_10.encode(),   std::string( "R3U 08M PXT.5" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ec20mm_15.encode(), std::string( "R3U 08M PXT 31N.L2H" )))
+	std::cout << assert << std::endl;
+    if ( assert.ISEQUAL( ec20mm_17.encode(), std::string( "R3U 08M PXT 31N.71K3E" )))
+	std::cout << assert << std::endl;
+    try {
+	ezpwd::ezcod<3,12>	dc20mm_15_2;
+	int 			validity = dc20mm_15_2.decode( "R3U 08M PXT 3xN.71K3E" );
+	if ( assert.ISEQUAL( validity, 34 ))
+	    std::cout << assert << std::endl;
+	//std::cout << dc20mm_15_2 << ": After decode of 5-parity EZCOD by 3-parity codec" << std::endl;
+	validity 			= dc20mm_15_2.decode( "R3U 08M PXT 3x_.71K3E" );
+	if ( assert.ISEQUAL( validity, 0 )) // all R-S parity of RS<31,28> ==> 3 parity codec consumed!
+	    std::cout << assert << std::endl;
+	//std::cout << dc20mm_15_2 << ": After decode of 5-parity EZCOD by 3-parity codec" << std::endl;
+	// OK, try a higher-parity codeword in a lower-parity R-S codec...
+	std::string		ec12_5( "R3U 08M PXT 31N-71K3E" );
+	ezpwd::serialize::base32::decode( ec12_5 );
+	ezpwd::RS<31,26>	rs_31_26;
+	if ( assert.ISEQUAL( rs_31_26.decode( ec12_5 ), 0 )) // No corrections; should be valid 12+5 codeword
+	    std::cout << assert << std::endl;
+	ezpwd::RS<31,28>	rs_31_28;
+	if ( assert.ISEQUAL( rs_31_28.decode( ec12_5 ), 0 )) // No corrections; should ALSO be  14+3 codeword!
+	    std::cout << assert << std::endl;
+    } catch ( std::exception &exc ) {
+	std::cout << "R-S aliasing tests failed: " << exc.what() << std::endl;
+    }
+
     double			lat	=   53.555556;
     double			lon	= -113.873889;
     std::map<std::pair<unsigned,unsigned>,std::string>
@@ -250,6 +290,7 @@ int				main( int argc, char **argv )
 	    std::cout << "For " << edm5 << " w/ chunk == " << c << ": " << assert << std::endl;
     }
 
+   
     // Excercise the R-S codecs beyond their correction capability.  This test used to report -'ve
     // error correction positions.  Now, computing -'ve correctly fails the R-S decode, as it
     // indicates that the supplied data's R-S Galois field polynomial solution inferred errors in

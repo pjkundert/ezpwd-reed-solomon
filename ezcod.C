@@ -68,7 +68,7 @@ int				ezcod_3_decode(
 	confidence			= decoder.confidence;
 #if defined( DEBUG ) && DEBUG > 1
 	std::cout
-	    << "ezcod_3_decode<" << P << "," << L << ">(\"" << dec
+	    << "ezcod_3_decode<" << P << ">(\"" << dec
 	    << "\") == " << confidence << "% confidence: "
 	    << " lat (" << (void *)lat << ") == " << decoder.latitude
 	    << ", lon (" << (void *)lon << ") == " << decoder.longitude

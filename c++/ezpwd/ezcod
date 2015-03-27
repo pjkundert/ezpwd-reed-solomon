@@ -399,8 +399,9 @@ namespace ezpwd {
 	}
 
 	// 
-	// validate(<string>)	-- remove base-32 encoding, validate and remove parity, returning confidence
-	// decode(<string>)	-- attempt to decode a lat/lon, returning the confidence percentage
+	// deserialize	-- Extract base-32, skip whitespace, mark invalid symbols as erasures
+	// validate	-- Remove base-32 encoding, validate and remove parity, returning confidence
+	// decode	-- Attempt to decode a lat/lon, returning the confidence percentage
 	// 
 	//     If data but no parity symbols are supplied, no error checking is performed, and the
 	// confidence returned will be 0%.  No erasures within the supplied data are allowed (as
@@ -411,7 +412,7 @@ namespace ezpwd {
 	// parity symbols to fill in the erasures), and the returned confidence will reflect the
 	// amount of unused parity capacity.  Each erasure consumes one parity symbol to repair.
 	// 
-	//     We'll allow question-mark or any of the stroke characters: "_/\?" to indicate an
+	//     We'll allow question-mark or any of the slash characters: "_/\?" to indicate an
 	// erasure.  Either of the "!."  symbol may be used to indicates the split between location
 	// symbols and parity symbols, and must be in a position that corresponds to the indicated
 	// number of location (this->precision) and parity 'P' symbols.  Whitespace symbols and dash
@@ -426,27 +427,37 @@ namespace ezpwd {
 	//     If an explicit "!" or "." separator IS provided, then we will attempt to decode the
 	// position with the given number of position symbols, and up to P parity symbols.
 	// 
+	// NOTE
+	// 
+	//     Due to a perhaps unexpected feature of R-S codewords, a codeword with MORE parity
+	// can be successfully decoded by an R-S codec specifying LESS parity symbols.  It so
+	// happens that the data plus (excess) parity + (remaining) parity is STILL a valid codeword
+	// (so long as the R-S Galois parameters are identical).
+	// 
+	//     Therefore, EZCODs with more parity are accepted by EZCOD parsers configured for less
+	// parity.  Of course, they will have less error/erasure correction strength -- using the
+	// correctly configured EZCOD codec expecting more R-S parity will maximize the value of all
+	// the supplied parity.
+	// 
+	//    The full amount of parity (ie. everything after the location/parity separator) is
+	// discarded in all cases, before the EZCOD location is decoded.
+	// 
     private:
-	int			validate(
-				    std::string	       &dec )
+
+	unsigned		deserialize(
+				    std::string	       &dec,
+				    std::vector<int>   &erasure,
+				    std::vector<char>  &invalid )
 	    const
 	{
-	    // Compute and return validity (which may later be assigned to this->confidence)
-	    int			validity = 0;		// if no R-S parity provided
-
-#if defined( DEBUG ) && DEBUG >= 1
-	    std::cout << *this << " validate( " << dec << " ) ";
-#endif
-	    // Extract base-32, skipping whitespace, and marking invalid symbols as erasures.
-	    // However, the special symbol '!' or '.' indicates the end of the EZCOD location
-	    // symbols and the beginning of parity: ensure the symbol counts are consistent with the
-	    // encoding.  By default the parity symbols begin at offset precision.  If we see more than precision
-	    // symbols, we assume that the Lth and subsequent symbols are parity.  If a
-	    // location/parity separator is provided, it must be at position this->precision!
-	    std::vector<int>	erasure;
-	    std::vector<char>	invalid;
 	    serialize::base32::decode( dec, &erasure, &invalid );
 
+	    // The special symbol '!' or '.' indicates the end of the EZCOD location symbols and the
+	    // beginning of parity: ensure the symbol counts are consistent with the encoding.  By
+	    // default the parity symbols begin at offset precision.  If we see more than precision
+	    // symbols, we assume that the Lth and subsequent symbols are parity.  If a
+	    // location/parity separator is provided, it must be at position this->precision!
+	    // Return offset of start of parity in codeword.
 	    unsigned		parbeg	= this->precision;	// Parity begins after Location, by default
 	    for ( unsigned i = 0; i < invalid.size(); ++i ) {
 		switch ( invalid[i] ) {
@@ -469,11 +480,27 @@ namespace ezpwd {
 		}
 	    }
 #if defined( DEBUG ) && DEBUG >= 1
-	    std::cout << " --> 0x" << std::vector<uint8_t>( dec.begin(), dec.begin() + std::min( parbeg, dec.length()) )
-		      << " + 0x" << std::vector<uint8_t>( dec.begin() + std::min( parbeg, dec.length()),
+	    std::cout << " --> 0x" << std::vector<uint8_t>( dec.begin(), dec.begin() + std::min( size_t( parbeg ), dec.length()) )
+		      << " + 0x" << std::vector<uint8_t>( dec.begin() + std::min( size_t( parbeg ), dec.length()),
 							  dec.begin() + dec.length() )
 		      << " parity" << std::endl;
 #endif
+	    return parbeg;
+	}
+
+	int			validate(
+				    std::string	       &dec )
+	    const
+	{
+	    // Compute and return validity (which may later be assigned to this->confidence)
+	    int			validity = 0;		// if no R-S parity provided
+
+#if defined( DEBUG ) && DEBUG >= 1
+	    std::cout << *this << " validate( " << dec << " ) ";
+#endif
+	    std::vector<int>	erasure;
+	    std::vector<char>	invalid;
+	    unsigned		parbeg	= deserialize( dec, erasure, invalid );
 
 	    if ( dec.size() > parbeg || erasure.size() > 0 ) {
 		// Some R-S parity symbol(s) were provided (or erasures were marked).  See if we can
@@ -488,6 +515,10 @@ namespace ezpwd {
 		    erasure.push_back( dec.size() );
 		    dec.resize( dec.size() + 1 );
 		}
+#if defined( DEBUG ) && DEBUG >= 2
+		std::cout << " --> erasures: " << erasure.size() << " vs. parity: " << parity
+			  << ": " << std::vector<uint8_t>( dec.begin(), dec.end() ) << std::endl;
+#endif
 		if ( erasure.size() > parity ) {
 		    // We cannot do R-S decoding; not enough parity symbols to even cover erasures.
 		    // If parity symbol(s) were provided ('parity' > 0), and all erasures were due the
@@ -509,7 +540,7 @@ namespace ezpwd {
 			throw std::runtime_error( "ezpwd::ezcod::decode: Error correction failed; too many erasures" );
 		} else {
 		    // We can try R-S decoding; we have (at least) enough parity to try to recover
-		    // missing symbol(s).
+		    // any missing symbol(s).
 		    std::vector<int>position;
 		    int		corrects= rscodec.decode( dec, erasure, &position );
 		    if ( corrects < 0 )
