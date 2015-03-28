@@ -41,6 +41,9 @@
 
    Source code is hosted at [[https://github.com/pjkundert/ezpwd-reed-solomon]].  It
    is heavily tested under both g++ and clang++, with full optimization enabled.
+   Get details at [[http://hardconsulting.com/products/13-reed-solomon][Hard Consulting Corporation (hardconsulting.com/products)]], and
+   learn about competing geolocation encoding and why [[http://hardconsulting.com/research/15-geolocation-encoding][EZCOD Geolocation Encoding
+   (hardconsulting.com/research)]] is necessary.
 
 *** C++ Build Requires Header Source Only
 
