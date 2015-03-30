@@ -123,6 +123,10 @@ class ezcod_base(_object):
     __swig_getmethods__["confidence"] = _ezcod.ezcod_base_confidence_get
     if _newclass:
         confidence = _swig_property(_ezcod.ezcod_base_confidence_get, _ezcod.ezcod_base_confidence_set)
+    __swig_setmethods__["certainty"] = _ezcod.ezcod_base_certainty_set
+    __swig_getmethods__["certainty"] = _ezcod.ezcod_base_certainty_get
+    if _newclass:
+        certainty = _swig_property(_ezcod.ezcod_base_certainty_get, _ezcod.ezcod_base_certainty_set)
     __swig_destroy__ = _ezcod.delete_ezcod_base
     __del__ = lambda self: None
 
@@ -163,10 +167,10 @@ class ezcod_3_10(ezcod_base):
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_10_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_10_chunk_get, _ezcod.ezcod_3_10_chunk_set)
-    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_10_seperator_set
-    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_10_seperator_get
+    __swig_setmethods__["separator"] = _ezcod.ezcod_3_10_separator_set
+    __swig_getmethods__["separator"] = _ezcod.ezcod_3_10_separator_get
     if _newclass:
-        seperator = _swig_property(_ezcod.ezcod_3_10_seperator_get, _ezcod.ezcod_3_10_seperator_set)
+        separator = _swig_property(_ezcod.ezcod_3_10_separator_get, _ezcod.ezcod_3_10_separator_set)
     __swig_setmethods__["space"] = _ezcod.ezcod_3_10_space_set
     __swig_getmethods__["space"] = _ezcod.ezcod_3_10_space_get
     if _newclass:
@@ -224,10 +228,10 @@ class ezcod_3_11(ezcod_base):
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_11_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_11_chunk_get, _ezcod.ezcod_3_11_chunk_set)
-    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_11_seperator_set
-    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_11_seperator_get
+    __swig_setmethods__["separator"] = _ezcod.ezcod_3_11_separator_set
+    __swig_getmethods__["separator"] = _ezcod.ezcod_3_11_separator_get
     if _newclass:
-        seperator = _swig_property(_ezcod.ezcod_3_11_seperator_get, _ezcod.ezcod_3_11_seperator_set)
+        separator = _swig_property(_ezcod.ezcod_3_11_separator_get, _ezcod.ezcod_3_11_separator_set)
     __swig_setmethods__["space"] = _ezcod.ezcod_3_11_space_set
     __swig_getmethods__["space"] = _ezcod.ezcod_3_11_space_get
     if _newclass:
@@ -285,10 +289,10 @@ class ezcod_3_12(ezcod_base):
     __swig_getmethods__["chunk"] = _ezcod.ezcod_3_12_chunk_get
     if _newclass:
         chunk = _swig_property(_ezcod.ezcod_3_12_chunk_get, _ezcod.ezcod_3_12_chunk_set)
-    __swig_setmethods__["seperator"] = _ezcod.ezcod_3_12_seperator_set
-    __swig_getmethods__["seperator"] = _ezcod.ezcod_3_12_seperator_get
+    __swig_setmethods__["separator"] = _ezcod.ezcod_3_12_separator_set
+    __swig_getmethods__["separator"] = _ezcod.ezcod_3_12_separator_get
     if _newclass:
-        seperator = _swig_property(_ezcod.ezcod_3_12_seperator_get, _ezcod.ezcod_3_12_seperator_set)
+        separator = _swig_property(_ezcod.ezcod_3_12_separator_get, _ezcod.ezcod_3_12_separator_set)
     __swig_setmethods__["space"] = _ezcod.ezcod_3_12_space_set
     __swig_getmethods__["space"] = _ezcod.ezcod_3_12_space_get
     if _newclass:

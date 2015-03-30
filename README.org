@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.4.0
+#+TITLE: EZPWD Reed-Solomon Version 1.5.0
 
 * Reed-Solomon Loss/Error Correction
 
@@ -54,13 +54,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -245,7 +245,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -335,7 +335,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -557,7 +557,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -617,7 +617,7 @@ var server = {
     >>> from ezpwd_reed_solomon import ezcod
     #+END_EXAMPLE
 
-    The API supports the following methods and attributes:
+    The API supports the following classes, methods and attributes:
 
 **** =ezcod_3_{10,11,12}( "<EZCOD>"|[lat,[lon,[seper,[chunk]]]] )=
 
@@ -643,12 +643,14 @@ var server = {
 
 **** =ezcod_3_{10,11,12}.decode( "<EZCOD>" )=
 
-     Any variant of ezcod_3_{10,11,12} can decode a valid EZCOD, so long as it
-     contains a '.' or '!' to separate the position and R-S parity symbols.  The
-     percentage certainty is returned -- the proportion of R-S parity symbols
-     that remain unused after error detection and correction.  A value of 0
-     indicates that the EZCOD's R-S decoding did not fail, but no parity symbols
-     remain in excess to verify its validity.
+     Any variant of ezcod_3_{10,11,12} can decode a valid EZCOD with the
+     expected amount (or more) parity, so long as it contains a '.' or '!' to
+     separate the position and R-S parity symbols.
+
+     The percentage certainty is returned -- the proportion of expected R-S
+     parity symbols that remain unused after error detection and correction.  A
+     value of 0 indicates that the EZCOD's R-S decoding did not fail, but no
+     parity symbols remain in excess to verify its validity.
      #+BEGIN_EXAMPLE
      >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
      100
@@ -681,37 +683,65 @@ var server = {
      RuntimeError: ezpwd::ezcod::decode: Error correction failed; R-S decode failed
      #+END_EXAMPLE
 
+     If an EZCOD codec expecting fewer R-S parity symbols (eg. an EZCOD 3:10
+     codec) is used to decode an EZCOD with more parity (eg. an EZCOD 3:12 code
+     w/ 3 parity), it will only decode with the "strength" of the shorter codec.
+
+     For example, even though an EZCOD 3:12 offers almost 5-nines probability of
+     correctness (1-1/32^3 == P(.99997)), if you use an EZCOD 3:10 codec to
+     decode it, it will only use one of the R-S parity symbols, and thus only be
+     able to correct 1 erasure (instead of 1 error and 1 erasure).  Furthermore,
+     it will only be able to provide 1-nines probability of correctness (1-1/32
+     == P(.96875))
+     #+BEGIN_EXAMPLE
+     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 edd.k56")
+     100
+     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 edd.k56")
+     100
+     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 ed_.k56") # even though 3 parity available
+     67
+     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 ed_.k56") # all codec parity capacity used!
+     0
+     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 e__.k56")
+     34
+     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 e__.k56")
+     Traceback (most recent call last):
+       File "<stdin>", line 1, in <module>
+         ...
+     RuntimeError: reed-solomon: number of erasures exceeds capacity (number of roots)
+     #+END_EXAMPLE
+
 **** =ezcod_3_{10,11,12}= Instance Attributes
 
      The following attributes are available in each =ezcod_3_{10,11,12}=
      instance:
 
-     | Attribute        | Type  | Range         | Description                             |
-     |------------------+-------+---------------+-----------------------------------------|
-     | latitude         | float | [-90,90]      | Geographical position in degrees        |
-     | longitude        | float | [-180,180]    | ''                                      |
-     | latitude\_error  | float | [0,inf]       | Axis error in meters                    |
-     | longitude\_error | float | [0,inf]       | ''                                      |
-     | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters |
-     | precision        | int   | [1,12]        | Desired number of location symbols      |
-     | confidence       | int   | [0,100]       | Percentage of parity symbols remaining  |
-     | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols   |
-     | seperator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE        |
-     | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH            |
-     | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator     |
-     | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator     |
-     | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator  |
-     | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator  |
-     | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator  |
-     | CHK\_NONE        | char  | '\xff'        | Output no space between chunks          |
-     | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks       |
-     | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks       |
-     | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks       |
+     | Attribute        | Type  | Range         | Description                              |
+     |------------------+-------+---------------+------------------------------------------|
+     | latitude         | float | [-90,90]      | Geographical position in degrees         |
+     | longitude        | float | [-180,180]    | ''                                       |
+     | latitude\_error  | float | [0,inf]       | Axis error in meters                     |
+     | longitude\_error | float | [0,inf]       | ''                                       |
+     | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters  |
+     | precision        | int   | [1,12]        | Desired number of location symbols       |
+     | confidence       | int   | [0,100]       | Percentage of parity symbols remaining   |
+     | certainty        | float | [0.0,1.0]     | Certainty that EZCOD decoded was correct |
+     | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols    |
+     | separator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE         |
+     | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH             |
+     | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator      |
+     | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator      |
+     | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator   |
+     | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator   |
+     | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator   |
+     | CHK\_NONE        | char  | '\xff'        | Output no space between chunks           |
+     | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks        |
+     | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks        |
+     | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks        |
 
-
-     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG=, so that
-     the EZCOD parser can unambiguously determine the total EZCOD size, and the
-     number of parity symbols to expect.
+     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG= (avoid
+     =SEP_NONE=) for =separator=, so that the EZCOD parser can unambiguously
+     determine the total EZCOD size, and the number of parity symbols to expect.
 
 *** Asynchronous Loading
 
@@ -748,7 +778,7 @@ var server = {
        };
     </script>
     <script async onload="jquery_release()"
-        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js">
+        src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.0/js/ezpwd/ezcod.js">
     </script>
     <script defer onload="jquery_loaded()"
         src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
@@ -764,7 +794,8 @@ var server = {
    symbol can recover one known erasure; every two R-S symbols can detect and
    correct one other erroneous symbol.  If any R-S symbols remains unused in
    excess of all erasures and errors, then the entire sequence can be confirmed
-   as an R-S "codeword", and its validity is assured, to a probability of:
+   as an R-S "codeword", and its validity is assured, to a certainty probability
+   of:
    : P(1-1/2^(5*excess))
 
    For example, with one R-S symbol remaining, the probability that the EZCOD

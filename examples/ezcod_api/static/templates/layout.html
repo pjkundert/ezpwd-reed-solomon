@@ -1,0 +1,132 @@
+$def with ( content )
+<!DOCTYPE html>
+<html>
+<head>
+    <title>EZCOD - Easy Geolocation Code</title>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge;" />
+    <meta name="viewport" content="initial-scale=1, width=device-width, user-scalable=no" />
+    <link rel="stylesheet" href="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/css/bootstrap.min.css">
+    <link rel="stylesheet" href="/static/css/app.css">
+
+    <!--
+     == Icons
+     -->
+    <link rel="apple-touch-icon" sizes="57x57" href="/static/icons/apple-icon-57x57.png">
+    <link rel="apple-touch-icon" sizes="60x60" href="/static/icons/apple-icon-60x60.png">
+    <link rel="apple-touch-icon" sizes="72x72" href="/static/icons/apple-icon-72x72.png">
+    <link rel="apple-touch-icon" sizes="76x76" href="/static/icons/apple-icon-76x76.png">
+    <link rel="apple-touch-icon" sizes="114x114" href="/static/icons/apple-icon-114x114.png">
+    <link rel="apple-touch-icon" sizes="120x120" href="/static/icons/apple-icon-120x120.png">
+    <link rel="apple-touch-icon" sizes="144x144" href="/static/icons/apple-icon-144x144.png">
+    <link rel="apple-touch-icon" sizes="152x152" href="/static/icons/apple-icon-152x152.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/icons/apple-icon-180x180.png">
+    <link rel="icon" type="image/png" sizes="192x192" href="/static/icons/android-icon-192x192.png">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/icons/favicon-32x32.png">
+    <link rel="icon" type="image/png" sizes="96x96" href="/static/icons/favicon-96x96.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/icons/favicon-16x16.png">
+    <link rel="manifest" href="/static/icons/manifest.json">
+    <meta name="msapplication-TileColor" content="#ffffff">
+    <meta name="msapplication-TileImage" content="/static/icons/ms-icon-144x144.png">
+    <meta name="theme-color" content="#ffffff">
+
+    <!--
+      == Begin loading of all Javascript resources early, and execute as asynchronously as possible.
+      -->
+    <script type="text/javascript">
+        // Bindings for Emscripten initialization detection.
+        var jquery_release = function() {
+            console.log( "Emscripten run-time initialization completed before jQuery loaded" );
+            jquery_loaded = function() {}; // nothing left to do after jquery loads.
+        };
+        var jquery_loaded = function() {
+            console.log( "Emscripten run-time initialization blocking jQuery..." );
+            $$.holdReady(true);		// force delay of triggering jQuery.on( 'ready', ...
+            jquery_release = function() {
+                console.log( "Emscripten run-time initialization completed; jQuery released" );
+                $$.holdReady(false);	// ... 'til Emscripten code runtime is initialized
+            };
+        };
+    </script>
+    <script type="text/javascript" async onload="jquery_release()"
+            src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.4.0/js/ezpwd/ezcod.js"></script>
+    <script type="text/javascript" defer onload="jquery_loaded()"
+            src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script type="text/javascript" defer
+            src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+
+    $if analytics:
+        <script>
+            (function(i,s,o,g,r,a,m){i['GoogleAnalyticsObject']=r;i[r]=i[r]||function(){
+            (i[r].q=i[r].q||[]).push(arguments)},i[r].l=1*new Date();a=s.createElement(o),
+            m=s.getElementsByTagName(o)[0];a.async=1;a.src=g;m.parentNode.insertBefore(a,m)
+            })(window,document,'script','//www.google-analytics.com/analytics.js','ga');
+
+            ga('create', '$analytics["id"]', 'auto');
+            ga('send', 'pageview');
+        </script>
+</head>
+<body>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#ezcod-navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+
+                <form class="navbar-form navbar-left form-inline header-form">
+                    <div class="input-group">
+                        <span class="input-group-btn">
+                            <button id="home" type="button" class="btn btn-default">
+                                <span class="glyphicon glyphicon-home"></span>
+                            </button>
+                        </span>
+                        <input class="form-control ezcod-input-10"        type="text" id="EZCOD_3:10" placeholder="EZCOD 3:10">
+                        <input class="form-control ezcod-input-11 hidden" type="text" id="EZCOD_3:11" placeholder="EZCOD 3:11">
+                        <input class="form-control ezcod-input-12 hidden" type="text" id="EZCOD_3:12" placeholder="EZCOD 3:12">
+                    </div>
+                </form>
+            </div>
+
+            <div class="collapse navbar-collapse" id="ezcod-navbar-collapse">
+                <form class="navbar-form form-inline">
+                    <ul class="nav navbar-nav">
+                        <li>
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                                    data-toggle="dropdown"><span id="parity-button-text">EZCOD 3:10</span> <span class="caret"></span></button>
+                            <ul class="dropdown-menu" role="menu" id="parity">
+                                <li>3:10</li>
+                                <li>3:11</li>
+                                <li>3:12</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Lat:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_lat" placeholder="Latitude">
+                            </div>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Lon:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_lon" placeholder="Longitude">
+                            </div>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Acc:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_acc" placeholder="Accuracy" disabled>
+                            </div>
+                        </li>
+                    </ul>
+                </form>
+            </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+    $:content
+</body>
+</html>
+

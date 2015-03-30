@@ -12,7 +12,6 @@
 %ignore *::output;
 %ignore *::symbols;
 
-
 %include "exception.i"
 
 %exception {
@@ -36,7 +35,7 @@
     }
     std::string		        __str__()
     {
-	return $self->encode();
+	return $self->encode( $self->precision ); // default to same precision as supplied
     }
 };
 

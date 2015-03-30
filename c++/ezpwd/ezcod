@@ -129,7 +129,8 @@ namespace ezpwd {
 	double			longitude;		// [-180,180]
 	double			longitude_error;	// total error bar, in meters
 	double			accuracy;		// linear accuracy radius, in meters
-	int			confidence;		// of last decode
+	int			confidence;		// % parity in excess of last decode
+	double			certainty;		//   and the associated probability
 
 	explicit		ezcod_base(
 				    double	_lat	= 0,
@@ -140,6 +141,7 @@ namespace ezpwd {
 				    , longitude_error( 0 )
 				    , accuracy( 0 )
 				    , confidence( 100 )
+				    , certainty( 1 )
 	{
 	    ;
 	}
@@ -216,7 +218,7 @@ namespace ezpwd {
 
 	unsigned		precision;
 	unsigned		chunk;			// Location symbol chunk sizes
-	char			seperator;		// Separator between location and parity symbols
+	char			separator;		// Separator between location and parity symbols
 	char			space;			// Fill space between location symbol chunks
 
 	// 
@@ -232,7 +234,7 @@ namespace ezpwd {
 				    : ezcod_base( _lat, _lon )
 				    , precision( _preci ? _preci : PRECISION )
 				    , chunk( _chunk ? _chunk : CHUNK )
-				    , seperator( _seper )
+				    , separator( _seper )
 				    , space( _space )
 	{
 	    if ( P < 1 )
@@ -290,7 +292,7 @@ namespace ezpwd {
 	    else if ( acc >= 10 )
 		dec			= 1;
 
-	    lhs << encode()
+	    lhs << encode( precision )
 		<< " ("		<< std::setw( 3 ) << confidence
 		<< "%)  == "	<< std::showpos   << std::fixed << std::setprecision(  10 ) << std::setw( 15 ) << latitude
 		<< ", "		<< std::showpos   << std::fixed << std::setprecision(  10 ) << std::setw( 15 ) << longitude
@@ -366,10 +368,10 @@ namespace ezpwd {
 		res		       += char( ( lat_val << lon_bits ) | lon_val );
 	    }
 
-	    // Add the R-S parity symbols and base-32 encode, add parity seperator and chunk
+	    // Add the R-S parity symbols and base-32 encode, add parity separator and chunk
 	    rscodec.encode( res );
 	    serialize::base32::encode( res );
-	    switch( seperator ) {
+	    switch( separator ) {
 	    case SEP_NONE:
 		break;
 	    case SEP_DOT: default:
@@ -377,7 +379,7 @@ namespace ezpwd {
 		break;
 	    case SEP_BANG:
 	    case SEP_SPACE:
-		res.insert( _preci, 1, seperator );
+		res.insert( _preci, 1, separator );
 		break;
 	    }
 	    if ( space != CHK_NONE && chunk && chunk < _preci ) {
@@ -422,7 +424,7 @@ namespace ezpwd {
 	// the "!" or ".", it could be an ezcod<P=2> w/precision == 8 -- there's no way to know for
 	// sure.  If no explicit position-parity separator is given, then we assume the default:
 	// this->precision location symbols, then up to P parity symbols.  If additional parity
-	// symbols are supplied after the seperator, then However, an ezcod...<P=3>
+	// symbols are supplied after the separator, then However, an ezcod...<P=3>
 	// 
 	//     If an explicit "!" or "." separator IS provided, then we will attempt to decode the
 	// position with the given number of position symbols, and up to P parity symbols.
@@ -458,7 +460,7 @@ namespace ezpwd {
 	    // symbols, we assume that the Lth and subsequent symbols are parity.  If a
 	    // location/parity separator is provided, it must be at position this->precision!
 	    // Return offset of start of parity in codeword.
-	    unsigned		parbeg	= this->precision;	// Parity begins after Location, by default
+	    unsigned		parbeg	= this->PRECISION;	// Parity begins after Location, by default
 	    for ( unsigned i = 0; i < invalid.size(); ++i ) {
 		switch ( invalid[i] ) {
 		case '!': case '.':
@@ -608,10 +610,19 @@ namespace ezpwd {
 	    // then we must now be within [0,25m) of the original point.
 	    double		lat_err	= 1.0 / lat_mult;
 	    double		lon_err	= 1.0 / lon_mult;
-
-	    confidence			= validity;
 	    latitude			= 180 * ( double( lat_tot ) / lat_mult + lat_err / 2 ) -  90;
 	    longitude			= 360 * ( double( lon_tot ) / lon_mult + lon_err / 2 ) - 180;
+
+	    // Remember the decoded location precision for future encoding (overrides the default).
+	    // Compute the certainty probability (0.0,1.0] given the number of parity symbols in
+	    // excess: Given a base-32 symbol: 1 - 1 / ( 32 ^ P ) where P is the number of
+	    // unconsumed parity.
+	    precision			= decoded.size();
+	    confidence			= validity;
+	    certainty			= 0.0;
+	    if ( PARITY * confidence / 100 )
+		certainty		= 1.0 - 1.0 / std::pow( double( 32.0 ),
+								double( PARITY * confidence / 100 ));
 
 	    // Compute the resolution error (in m.) of the decoded lat/lon and compute the minimum
 	    // accuracy -- the radius of the circle around the computed latitude/longitude, inside

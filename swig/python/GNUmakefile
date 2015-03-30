@@ -15,6 +15,11 @@ binding-%:		FORCE
 	    make -C $$binding python-$$binding-$*;		\
 	done
 
+clean:			binding-clean
+	rm -rf build dist
+
+pristine:		clean binding-pristine
+
 install:		version.py FORCE
 	python setup.py install
 
