@@ -19,7 +19,7 @@ print( ec, "lat. error: %r" % ec.latitude_error )
 print( ec, "lon. error: %r" % ec.longitude_error )
 print( ec, "accuracy:   %r" % ec.accuracy )
 print( ec, "precision:  %r" % ec.precision )
-print( ec, "seperator:  %r" % ec.seperator )
+print( ec, "separator:  %r" % ec.separator )
 print( ec, "chunk:      %r" % ec.chunk )
 print( ec, "space:      %r" % ec.space )
 

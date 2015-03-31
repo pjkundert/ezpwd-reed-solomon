@@ -3519,7 +3519,7 @@ SWIGINTERN std::string ezpwd_ezcod_Sl_1_Sc_9_Sg____repr__(ezpwd::ezcod< 1,9 > *s
 	return oss.str();
     }
 SWIGINTERN std::string ezpwd_ezcod_Sl_1_Sc_9_Sg____str__(ezpwd::ezcod< 1,9 > *self){
-	return self->encode();
+	return self->encode( self->precision ); // default to same precision as supplied
     }
 SWIGINTERN std::string ezpwd_ezcod_Sl_2_Sc_9_Sg____repr__(ezpwd::ezcod< 2,9 > *self){
 	std::ostringstream	oss;
@@ -3529,7 +3529,7 @@ SWIGINTERN std::string ezpwd_ezcod_Sl_2_Sc_9_Sg____repr__(ezpwd::ezcod< 2,9 > *s
 	return oss.str();
     }
 SWIGINTERN std::string ezpwd_ezcod_Sl_2_Sc_9_Sg____str__(ezpwd::ezcod< 2,9 > *self){
-	return self->encode();
+	return self->encode( self->precision ); // default to same precision as supplied
     }
 SWIGINTERN std::string ezpwd_ezcod_Sl_3_Sc_9_Sg____repr__(ezpwd::ezcod< 3,9 > *self){
 	std::ostringstream	oss;
@@ -3539,7 +3539,7 @@ SWIGINTERN std::string ezpwd_ezcod_Sl_3_Sc_9_Sg____repr__(ezpwd::ezcod< 3,9 > *s
 	return oss.str();
     }
 SWIGINTERN std::string ezpwd_ezcod_Sl_3_Sc_9_Sg____str__(ezpwd::ezcod< 3,9 > *self){
-	return self->encode();
+	return self->encode( self->precision ); // default to same precision as supplied
     }
 #ifdef __cplusplus
 extern "C" {
@@ -3856,6 +3856,58 @@ fail:
 }
 
 
+SWIGINTERN PyObject *_wrap_ezcod_base_certainty_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  ezpwd::ezcod_base *arg1 = (ezpwd::ezcod_base *) 0 ;
+  double arg2 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  double val2 ;
+  int ecode2 = 0 ;
+  PyObject * obj0 = 0 ;
+  PyObject * obj1 = 0 ;
+  
+  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_base_certainty_set",&obj0,&obj1)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcod_base, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_base_certainty_set" "', argument " "1"" of type '" "ezpwd::ezcod_base *""'"); 
+  }
+  arg1 = reinterpret_cast< ezpwd::ezcod_base * >(argp1);
+  ecode2 = SWIG_AsVal_double(obj1, &val2);
+  if (!SWIG_IsOK(ecode2)) {
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_base_certainty_set" "', argument " "2"" of type '" "double""'");
+  } 
+  arg2 = static_cast< double >(val2);
+  if (arg1) (arg1)->certainty = arg2;
+  resultobj = SWIG_Py_Void();
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
+SWIGINTERN PyObject *_wrap_ezcod_base_certainty_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+  PyObject *resultobj = 0;
+  ezpwd::ezcod_base *arg1 = (ezpwd::ezcod_base *) 0 ;
+  void *argp1 = 0 ;
+  int res1 = 0 ;
+  PyObject * obj0 = 0 ;
+  double result;
+  
+  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_base_certainty_get",&obj0)) SWIG_fail;
+  res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcod_base, 0 |  0 );
+  if (!SWIG_IsOK(res1)) {
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_base_certainty_get" "', argument " "1"" of type '" "ezpwd::ezcod_base *""'"); 
+  }
+  arg1 = reinterpret_cast< ezpwd::ezcod_base * >(argp1);
+  result = (double) ((arg1)->certainty);
+  resultobj = SWIG_From_double(static_cast< double >(result));
+  return resultobj;
+fail:
+  return NULL;
+}
+
+
 SWIGINTERN PyObject *_wrap_delete_ezcod_base(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod_base *arg1 = (ezpwd::ezcod_base *) 0 ;
@@ -4147,7 +4199,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_10_seperator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_10_separator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 1,9 > *arg1 = (ezpwd::ezcod< 1,9 > *) 0 ;
   char arg2 ;
@@ -4158,18 +4210,18 @@ SWIGINTERN PyObject *_wrap_ezcod_3_10_seperator_set(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_10_seperator_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_10_separator_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_1_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_10_seperator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 1,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_10_separator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 1,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 1,9 > * >(argp1);
   ecode2 = SWIG_AsVal_char(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_10_seperator_set" "', argument " "2"" of type '" "char""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_10_separator_set" "', argument " "2"" of type '" "char""'");
   } 
   arg2 = static_cast< char >(val2);
-  if (arg1) (arg1)->seperator = arg2;
+  if (arg1) (arg1)->separator = arg2;
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -4177,7 +4229,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_10_seperator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_10_separator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 1,9 > *arg1 = (ezpwd::ezcod< 1,9 > *) 0 ;
   void *argp1 = 0 ;
@@ -4185,13 +4237,13 @@ SWIGINTERN PyObject *_wrap_ezcod_3_10_seperator_get(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   char result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_10_seperator_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_10_separator_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_1_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_10_seperator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 1,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_10_separator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 1,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 1,9 > * >(argp1);
-  result = (char) ((arg1)->seperator);
+  result = (char) ((arg1)->separator);
   resultobj = SWIG_From_char(static_cast< char >(result));
   return resultobj;
 fail:
@@ -5468,7 +5520,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_11_seperator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_11_separator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 2,9 > *arg1 = (ezpwd::ezcod< 2,9 > *) 0 ;
   char arg2 ;
@@ -5479,18 +5531,18 @@ SWIGINTERN PyObject *_wrap_ezcod_3_11_seperator_set(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_11_seperator_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_11_separator_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_2_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_11_seperator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 2,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_11_separator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 2,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 2,9 > * >(argp1);
   ecode2 = SWIG_AsVal_char(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_11_seperator_set" "', argument " "2"" of type '" "char""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_11_separator_set" "', argument " "2"" of type '" "char""'");
   } 
   arg2 = static_cast< char >(val2);
-  if (arg1) (arg1)->seperator = arg2;
+  if (arg1) (arg1)->separator = arg2;
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -5498,7 +5550,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_11_seperator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_11_separator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 2,9 > *arg1 = (ezpwd::ezcod< 2,9 > *) 0 ;
   void *argp1 = 0 ;
@@ -5506,13 +5558,13 @@ SWIGINTERN PyObject *_wrap_ezcod_3_11_seperator_get(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   char result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_11_seperator_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_11_separator_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_2_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_11_seperator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 2,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_11_separator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 2,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 2,9 > * >(argp1);
-  result = (char) ((arg1)->seperator);
+  result = (char) ((arg1)->separator);
   resultobj = SWIG_From_char(static_cast< char >(result));
   return resultobj;
 fail:
@@ -6789,7 +6841,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_12_seperator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_12_separator_set(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 3,9 > *arg1 = (ezpwd::ezcod< 3,9 > *) 0 ;
   char arg2 ;
@@ -6800,18 +6852,18 @@ SWIGINTERN PyObject *_wrap_ezcod_3_12_seperator_set(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   PyObject * obj1 = 0 ;
   
-  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_12_seperator_set",&obj0,&obj1)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"OO:ezcod_3_12_separator_set",&obj0,&obj1)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_3_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_12_seperator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 3,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_12_separator_set" "', argument " "1"" of type '" "ezpwd::ezcod< 3,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 3,9 > * >(argp1);
   ecode2 = SWIG_AsVal_char(obj1, &val2);
   if (!SWIG_IsOK(ecode2)) {
-    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_12_seperator_set" "', argument " "2"" of type '" "char""'");
+    SWIG_exception_fail(SWIG_ArgError(ecode2), "in method '" "ezcod_3_12_separator_set" "', argument " "2"" of type '" "char""'");
   } 
   arg2 = static_cast< char >(val2);
-  if (arg1) (arg1)->seperator = arg2;
+  if (arg1) (arg1)->separator = arg2;
   resultobj = SWIG_Py_Void();
   return resultobj;
 fail:
@@ -6819,7 +6871,7 @@ fail:
 }
 
 
-SWIGINTERN PyObject *_wrap_ezcod_3_12_seperator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
+SWIGINTERN PyObject *_wrap_ezcod_3_12_separator_get(PyObject *SWIGUNUSEDPARM(self), PyObject *args) {
   PyObject *resultobj = 0;
   ezpwd::ezcod< 3,9 > *arg1 = (ezpwd::ezcod< 3,9 > *) 0 ;
   void *argp1 = 0 ;
@@ -6827,13 +6879,13 @@ SWIGINTERN PyObject *_wrap_ezcod_3_12_seperator_get(PyObject *SWIGUNUSEDPARM(sel
   PyObject * obj0 = 0 ;
   char result;
   
-  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_12_seperator_get",&obj0)) SWIG_fail;
+  if (!PyArg_ParseTuple(args,(char *)"O:ezcod_3_12_separator_get",&obj0)) SWIG_fail;
   res1 = SWIG_ConvertPtr(obj0, &argp1,SWIGTYPE_p_ezpwd__ezcodT_3_9_t, 0 |  0 );
   if (!SWIG_IsOK(res1)) {
-    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_12_seperator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 3,9 > *""'"); 
+    SWIG_exception_fail(SWIG_ArgError(res1), "in method '" "ezcod_3_12_separator_get" "', argument " "1"" of type '" "ezpwd::ezcod< 3,9 > *""'"); 
   }
   arg1 = reinterpret_cast< ezpwd::ezcod< 3,9 > * >(argp1);
-  result = (char) ((arg1)->seperator);
+  result = (char) ((arg1)->separator);
   resultobj = SWIG_From_char(static_cast< char >(result));
   return resultobj;
 fail:
@@ -8020,6 +8072,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"ezcod_base_accuracy_get", _wrap_ezcod_base_accuracy_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_base_confidence_set", _wrap_ezcod_base_confidence_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_base_confidence_get", _wrap_ezcod_base_confidence_get, METH_VARARGS, NULL},
+	 { (char *)"ezcod_base_certainty_set", _wrap_ezcod_base_certainty_set, METH_VARARGS, NULL},
+	 { (char *)"ezcod_base_certainty_get", _wrap_ezcod_base_certainty_get, METH_VARARGS, NULL},
 	 { (char *)"delete_ezcod_base", _wrap_delete_ezcod_base, METH_VARARGS, NULL},
 	 { (char *)"ezcod_base_encode", _wrap_ezcod_base_encode, METH_VARARGS, NULL},
 	 { (char *)"ezcod_base_decode", _wrap_ezcod_base_decode, METH_VARARGS, NULL},
@@ -8028,8 +8082,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"ezcod_3_10_precision_get", _wrap_ezcod_3_10_precision_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_10_chunk_set", _wrap_ezcod_3_10_chunk_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_10_chunk_get", _wrap_ezcod_3_10_chunk_get, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_10_seperator_set", _wrap_ezcod_3_10_seperator_set, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_10_seperator_get", _wrap_ezcod_3_10_seperator_get, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_10_separator_set", _wrap_ezcod_3_10_separator_set, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_10_separator_get", _wrap_ezcod_3_10_separator_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_10_space_set", _wrap_ezcod_3_10_space_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_10_space_get", _wrap_ezcod_3_10_space_get, METH_VARARGS, NULL},
 	 { (char *)"new_ezcod_3_10", _wrap_new_ezcod_3_10, METH_VARARGS, NULL},
@@ -8043,8 +8097,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"ezcod_3_11_precision_get", _wrap_ezcod_3_11_precision_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_11_chunk_set", _wrap_ezcod_3_11_chunk_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_11_chunk_get", _wrap_ezcod_3_11_chunk_get, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_11_seperator_set", _wrap_ezcod_3_11_seperator_set, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_11_seperator_get", _wrap_ezcod_3_11_seperator_get, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_11_separator_set", _wrap_ezcod_3_11_separator_set, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_11_separator_get", _wrap_ezcod_3_11_separator_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_11_space_set", _wrap_ezcod_3_11_space_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_11_space_get", _wrap_ezcod_3_11_space_get, METH_VARARGS, NULL},
 	 { (char *)"new_ezcod_3_11", _wrap_new_ezcod_3_11, METH_VARARGS, NULL},
@@ -8058,8 +8112,8 @@ static PyMethodDef SwigMethods[] = {
 	 { (char *)"ezcod_3_12_precision_get", _wrap_ezcod_3_12_precision_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_12_chunk_set", _wrap_ezcod_3_12_chunk_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_12_chunk_get", _wrap_ezcod_3_12_chunk_get, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_12_seperator_set", _wrap_ezcod_3_12_seperator_set, METH_VARARGS, NULL},
-	 { (char *)"ezcod_3_12_seperator_get", _wrap_ezcod_3_12_seperator_get, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_12_separator_set", _wrap_ezcod_3_12_separator_set, METH_VARARGS, NULL},
+	 { (char *)"ezcod_3_12_separator_get", _wrap_ezcod_3_12_separator_get, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_12_space_set", _wrap_ezcod_3_12_space_set, METH_VARARGS, NULL},
 	 { (char *)"ezcod_3_12_space_get", _wrap_ezcod_3_12_space_get, METH_VARARGS, NULL},
 	 { (char *)"new_ezcod_3_12", _wrap_new_ezcod_3_12, METH_VARARGS, NULL},

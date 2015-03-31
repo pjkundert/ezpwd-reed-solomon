@@ -1,0 +1,21 @@
+$def with ( content )
+<div class="container theme-showcase" role="main">
+    <h1 class="page-header">
+        $content["title"]
+    </h1>
+    <div class="row-fluid">
+        <table class="table table-striped table-condensed table-bordered">
+            <thead>
+               $for key in content["keys"]:
+                  <th>$key</th>
+            </thead>
+            <tbody>
+              $for item in content["list"]:
+                <tr>
+                  $for key in content["keys"]:
+                      <td>$item[key]</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>

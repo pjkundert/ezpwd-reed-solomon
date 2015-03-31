@@ -1,0 +1,64 @@
+$def with ( content )
+    <script type="text/javascript" defer
+            src="/static/js/app.js"></script>
+    <nav class="navbar navbar-default navbar-fixed-top">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <button type="button" class="navbar-toggle" data-toggle="collapse" data-target="#ezcod-navbar-collapse">
+                    <span class="sr-only">Toggle navigation</span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                    <span class="icon-bar"></span>
+                </button>
+
+                <form class="navbar-form navbar-left form-inline header-form">
+                    <div class="input-group">
+                        <span class="input-group-btn">
+                            <button id="home" type="button" class="btn btn-default">
+                                <span class="glyphicon glyphicon-home"></span>
+                            </button>
+                        </span>
+                        <input class="form-control ezcod-input-10"        type="text" id="EZCOD_3:10" placeholder="EZCOD 3:10">
+                        <input class="form-control ezcod-input-11 hidden" type="text" id="EZCOD_3:11" placeholder="EZCOD 3:11">
+                        <input class="form-control ezcod-input-12 hidden" type="text" id="EZCOD_3:12" placeholder="EZCOD 3:12">
+                    </div>
+                </form>
+            </div>
+
+            <div class="collapse navbar-collapse" id="ezcod-navbar-collapse">
+                <form class="navbar-form form-inline">
+                    <ul class="nav navbar-nav">
+                        <li>
+                            <button type="button" class="btn btn-default dropdown-toggle"
+                                    data-toggle="dropdown"><span id="parity-button-text">EZCOD 3:10</span> <span class="caret"></span></button>
+                            <ul class="dropdown-menu" role="menu" id="parity">
+                                <li>3:10</li>
+                                <li>3:11</li>
+                                <li>3:12</li>
+                            </ul>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Lat:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_lat" placeholder="Latitude">
+                            </div>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Lon:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_lon" placeholder="Longitude">
+                            </div>
+                        </li>
+                        <li>
+                            <div class="input-group">
+                                <span class="input-group-addon latlon-input-addon">Acc:</span>
+                                <input class="form-control latlon-input" type="text" id="pos_acc" placeholder="Accuracy" disabled>
+                            </div>
+                        </li>
+                    </ul>
+                </form>
+            </div><!--/.nav-collapse -->
+        </div>
+    </nav>
+    <div id="error-bar"></div>
+    <div id="map-canvas"></div>
