@@ -130,7 +130,7 @@ def http_exception( framework, status, message ):
 
 
 def ezcod_to_dict( codec ):
-    d				= dict( (k,getattr( codec, k )) for k in [
+    dct				= dict( (k,getattr( codec, k )) for k in [
         'latitude',
         'latitude_error',
         'longitude',
@@ -140,29 +140,49 @@ def ezcod_to_dict( codec ):
         'certainty',
         'precision',
     ] )
-    d['ezcod']			= str( codec )
-    return d
+    dct['ezcod']		= str( codec )
+    return dct
 
-def ezcod_decode( cod, parity=None ):
+
+def ezcod_decode( cod, parity=None, precision=None ):
     """Convert an "EZCOD" string w/1-3 parity into a dict containing its decoded details.  Will raise
-    Exception on failure to decode the supplied EZCOD.
+    Exception on failure to decode the supplied EZCOD.  The desired parity and precision are then
+    used to produce the response (allowing us to convert an incoming EZCOD to another parity or
+    precision -- with the side-effect of losing any EZCOD decoding accuracy and certainty details,
+    of course).
 
     """
+    if precision is None:
+        precision		= 0
+    precision			= int( precision )
+    if parity is None:
+        parity			= 0
+    parity			= int( parity )
+    if not parity:
+        parity			= 1
+
     match			= re.match( r'[- a-zA-Z0-9_?]+(?:[.!]([- a-zA-Z0-9_?]+))?', cod )
     assert match, \
         "Invalid ezcod=%s; must be 1-12 [0-9A-Z] symbols w/ [ -] space and [_?] erasures, w/ one [.!] separator" % e
 
     # Try to identify the number of R-S parity symbols supplied.  If not known (no [.!]) assume one.
-    # We could support longer EZCODs (more parity) by defaulting to the longest supported codec...
+    # We could support longer EZCODs (more parity) by defaulting to using longest supported codec...
+    ezcod_parity		= 1
     if match.group( 1 ):
-        parity			= len( match.group( 1 ))
+        ezcod_parity		= len( match.group( 1 ))
     codecs			= {
         1: ezcod.ezcod_3_10,
         2: ezcod.ezcod_3_11,
         3: ezcod.ezcod_3_12,
     }
-    assert parity in codecs, "Unsupported EZCOD w/ %d parity symbols" % parity
-    return ezcod_to_dict( codecs[parity or 1]( str( match.group() )))
+    assert ezcod_parity in codecs, "Unsupported EZCOD supplied w/ %d parity symbols" % ezcod_parity
+    assert parity in codecs, "Unsupported EZCOD desired w/ %d parity symbols" % parity
+    cdc				= codecs[ezcod_parity]( str( match.group() ))
+    if ( ezcod_parity != parity ) or ( precision and precision != cdc.precision ):
+        # A different parity desired, and possibly a different precision
+        cdc			= codecs[parity]( cdc.latitude, cdc.longitude,
+                                                  precision or cdc.precision )
+    return ezcod_to_dict( cdc )
 
 
 def latlon_encode( latlon=None, lat=None, lon=None, precision=None, parity=None ):
@@ -172,22 +192,32 @@ def latlon_encode( latlon=None, lat=None, lon=None, precision=None, parity=None 
     """
     if precision is None:
         precision		= 0
+    precision			= int( precision )
     if parity is None:
         parity			= 0
+    parity			= int( parity )
+    if not parity:
+        parity			= 1
+        
     if latlon:
         assert lat is None and lon is None, \
-            """Cannot supply bot lat, lon and "lat,long" string"""
-        match			= re.match( r'(-?[0-9]+(?:.[0-9]*)?)\s*,\s*(-?[0-9]+(?:.[0-9]*)?', latlon )
+            """Cannot supply both lat, lon and "lat,long" string"""
+        match			= re.match( r'(-?[0-9]+(?:.[0-9]*)?)\s*,\s*(-?[0-9]+(?:.[0-9]*))?', latlon )
         assert match, \
             "Invalid latlon=%s; must be two simple float values separated by [,] " % latlon
-        lat,lon			= float( match.group( 1 )),float( match.group( 2 ))
+        lat,lon			= match.group( 1, 2 )
+    assert lat is not None and lon is not None, \
+        "Must supply both latitude and longitude"
+    lat				= float( lat )
+    lon				= float( lon )
     codecs			= {
         1: ezcod.ezcod_3_10,
         2: ezcod.ezcod_3_11,
         3: ezcod.ezcod_3_12,
     }
     assert parity in codecs, "Unsupported EZCOD w/ %d parity symbols" % parity
-    return ezcod_to_dict( codecs[parity or 1]( float( lat ), float( lon ), int( precision )))
+    cdc				= codecs[parity]( lat, lon, precision )
+    return ezcod_to_dict( cdc )
 
 
 def api_request( version, path, queries, environ, accept, data=None, framework=web ):
@@ -230,17 +260,17 @@ def api_request( version, path, queries, environ, accept, data=None, framework=w
         if data:
             # POST payload JSON: get either lat_var, lon or ezcod_var from data
             json_data		= json.loads( data )
-            assert 'ezcod' in json_data ^ ( 'latitude' in json_data and 'longitude' in json_data ), \
-                "API POST body JSON must supply either ezcod or latitude/longitude"
+            assert ( 'ezcod' in json_data ) ^ ( 'latitude' in json_data and 'longitude' in json_data ), \
+                "API POST body JSON must supply either ezcod or latitude/longitude: %s" % data
             cod			= json_data.pop( 'ezcod', None )
             lat			= json_data.pop( 'latitude', None )
             lon			= json_data.pop( 'longitude', None )
-            precision		= json_data.pop( 'precision', None )
-            parity		= json_data.pop( 'parity', None )
+            precision		= json_data.pop( 'precision', None ) or precision
+            parity		= json_data.pop( 'parity', None ) or parity
             assert not json_data, \
                 "Unrecognized API POST payload JSON keys: %s" % ", ".join( json_data.keys() )
         if cod:
-            data		= ezcod_decode( cod=cod )
+            data		= ezcod_decode( cod=cod, precision=precision, parity=parity )
         else:
             data		= latlon_encode( latlon=latlon, lat=lat, lon=lon,
                                                  precision=precision, parity=parity )
