@@ -226,24 +226,35 @@ function updating( confidence, lat, lon, acc )
     $( document ).on( 'ready', function(){
         console.log( "Document ready" );
         // Emscripten is also ready (we block on( 'ready', ... ) 'til loaded).  Bind the en/decode functions.
-        $('input[id="EZCOD_3:10"]')
+        var codec_parity		= [
+            undefined,
+            $('input[id="EZCOD_3:10"]'),
+            $('input[id="EZCOD_3:11"]'),
+            $('input[id="EZCOD_3:12"]'),
+        ]
+        codec_parity[1]
             .data( 'encode', ezcod_3_10_encode )
             .data( 'decode', ezcod_3_10_decode );
-        $('input[id="EZCOD_3:11"]')
+        codec_parity[2]
             .data( 'encode', ezcod_3_11_encode )
             .data( 'decode', ezcod_3_11_decode );
-        $('input[id="EZCOD_3:12"]')
+        codec_parity[3]
             .data( 'encode', ezcod_3_12_encode )
             .data( 'decode', ezcod_3_12_decode );
 
         if ( window.location.search ) {
             var ezcod			= decodeURI( window.location.search ).match(
-                /[?&]ezcod=([- a-zA-Z0-9_?]+(?:[.!][- a-zA-Z0-9 _?]+)?)(?:$|&|\/)/ );
+                /[?&]ezcod=([- a-zA-Z0-9_?]+(?:[.!]([- a-zA-Z0-9 _?]+))?)(?:$|&|\/)/ );
             if ( ezcod ) {
                 console.log( [ "Query EZCOD geolocation: ", ezcod[1], "( from: ",
                                window.location.search, "): " ] );
                 try {
-                    var pos		= ezcod_3_10_decode( ezcod[1] );
+                    var parity		= 1;
+                    if ( ezcod[2] )
+                        parity		= ezcod[2].length;
+                    if ( codec_parity[parity] === undefined )
+                        parity		= codec_parity.length-1;
+                    var pos		= codec_parity[parity].data( 'decode' )( ezcod[1] );
                     updating( pos.confidence / 100.0, pos.latitude, pos.longitude, pos.accuracy );
                 } catch( err ) {
                     console.log( [ "Query EZCOD: ", ezcod[1], " invalid: ", err ] );
@@ -271,11 +282,6 @@ function updating( confidence, lat, lon, acc )
         }
 
         home();
-    });
-
-    $( document ).on( "deviceready", function(){
-        StatusBar.overlaysWebView( false );
-        StatusBar.backgroundColorByName( "gray" );
     });
 }
 )(jQuery);

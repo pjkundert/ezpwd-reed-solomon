@@ -33,6 +33,8 @@ import traceback
 
 import web
 from ezpwd_reed_solomon import ezcod
+from ezpwd_reed_solomon import __version_info__ as version_max
+version_min			= (0,0,0)
 
 address				= ( '0.0.0.0', 80 )	# --bind [i'face][:port] HTTP bind address
 analytics			= None			# --analytics '...'      Google Analytics {'id':...}
@@ -125,6 +127,12 @@ def http_exception( framework, status, message ):
                     self.message = '; '.join( [self.message, message] )
                     framework.NotAcceptable.__init__(self)
             return NotAcceptable( message )
+
+        if status == 500:
+            exc			= framework.InternalError()
+            if message:
+                exc.message	= '; '.join( [exc.message, message] )
+            return exc
 
     return Exception( "%d %s" % ( status, message ))
 
@@ -256,29 +264,54 @@ def api_request( version, path, queries, environ, accept, data=None, framework=w
         "Supply exactly one of ezcod=, latlon= query/form variable, or JSON payload"
     assert not queries, \
         "Unrecognized queries: %s" % ", ".join( queries.keys() )
+
     try:
-        if data:
-            # POST payload JSON: get either lat_var, lon or ezcod_var from data
-            json_data		= json.loads( data )
-            assert ( 'ezcod' in json_data ) ^ ( 'latitude' in json_data and 'longitude' in json_data ), \
-                "API POST body JSON must supply either ezcod or latitude/longitude: %s" % data
-            cod			= json_data.pop( 'ezcod', None )
-            lat			= json_data.pop( 'latitude', None )
-            lon			= json_data.pop( 'longitude', None )
-            precision		= json_data.pop( 'precision', None ) or precision
-            parity		= json_data.pop( 'parity', None ) or parity
-            assert not json_data, \
-                "Unrecognized API POST payload JSON keys: %s" % ", ".join( json_data.keys() )
+        # Ensure supplied path and version are recognized.  Pretty simple for now (no supported API
+        # path, all known versions supported identically)...
+        assert not path, \
+            "Unrecognized API path: %s" % path
+        version_info		= tuple( map( int, version.split( '.' )))
+        assert version_min <= version_info <= version_max, \
+            "Unrecognized API version: %s (%r)" % ( '.'.join( map( str, version_info )), version_info )
+
+        # GET query options, POST form variables support single requests only
         if cod:
-            data		= ezcod_decode( cod=cod, precision=precision, parity=parity )
-        else:
-            data		= latlon_encode( latlon=latlon, lat=lat, lon=lon,
+            results		= ezcod_decode( cod=cod, precision=precision, parity=parity )
+        elif latlon:
+            results		= latlon_encode( latlon=latlon, lat=lat, lon=lon,
                                                  precision=precision, parity=parity )
+        elif data:
+            # POST payload JSON supports <object> or [ <object>, ... ]: get either lat/lon or EZCOD
+            # cod from each one.
+            json_data		= json.loads( data )
+            results		= []
+            for j in json_data if type(json_data) is list else [ json_data ]:
+                assert ( 'ezcod' in j ) ^ ( 'latlon' in j) ^ ( 'latitude' in j and 'longitude' in j ), \
+                    "API POST body JSON must supply either ezcod, latlon or latitude/longitude: %s" % data
+                j_cod		= j.pop( 'ezcod', None )
+                j_latlon	= j.pop( 'latlon', None )
+                j_lat		= j.pop( 'latitude', None )
+                j_lon		= j.pop( 'longitude', None )
+                j_precision	= j.pop( 'precision', None ) or precision
+                j_parity	= j.pop( 'parity', None ) or parity
+                assert not j, \
+                    "Unrecognized API POST payload JSON keys: %s" % ", ".join( j.keys() )
+                if j_cod:
+                    results    += [ ezcod_decode( cod=j_cod,
+                                                  precision=j_precision, parity=j_parity ) ]
+                else:
+                    results    += [ latlon_encode( latlon=j_latlon, lat=j_lat, lon=j_lon,
+                                                   precision=j_precision, parity=j_parity ) ]
+            # And convert a single <object> back to single results
+            if type( json_data ) is not list:
+                results		= results[0]
+        else:
+            raise NotImplementedError( "Invalid API request" )
+
     except Exception as exc:
         log.warning( "Exception: %s", exc )
         log.info( "Exception Stack: %s", traceback.format_exc() )
-        raise
-        #raise http_exception( web, 500, str( exc ))
+        raise http_exception( framework, 500, str( exc ))
 
     accept			= deduce_encoding([ "application/json", "text/javascript", "text/plain",
                                                     "text/html" ],
@@ -289,16 +322,17 @@ def api_request( version, path, queries, environ, accept, data=None, framework=w
         callback		= queries and queries.get( 'callback', "" ) or ""
         if callback:
             response		= callback + "( "
-        response               += json.dumps( data, sort_keys=True, indent=4 )
+        response               += json.dumps( results, sort_keys=True, indent=4 )
         if callback:
             response           += " )"
     elif accept and accept in ( "text/html" ):
         render			= web.template.render( "static/templates/", base="layout",
                                                        globals={ 'analytics': analytics } )
+        resultslist		= results if type( results ) is list else [results]
         response		= render.keylist( {
             'title':		"EZCOD Position",
-            'keys':		list( sorted( data.keys() )),
-            'list':		[ data ],
+            'keys':		list( sorted( resultslist[0].keys() )),
+            'list':		resultslist,
         } )
     else:
         # Invalid encoding requested.  Return appropriate 406 Not Acceptable
@@ -367,7 +401,7 @@ class api:
         if path and path.endswith( ".json" ):
             path		= path[:-5]
             accept		= "application/json"
-
+        log.warning( "Queries: %r", queries )
         content,response	= api_request(
             version=version, path=path, queries=queries, environ=environ, accept=accept, data=data )
 
@@ -435,6 +469,11 @@ def main( argv=None ):
 
     logging.basicConfig( **log_cfg )
 
+    api_path			= [ '' ]	# Ensure a leading '/...' after join
+    if args.prefix:
+        api_path.append( args.prefix )
+    api_path.append( r"v([0-9]+(?:.[0-9]+)*)(.*)?" )
+
     # 
     # The web.py url endpoints, and their classes
     # 
@@ -443,8 +482,7 @@ def main( argv=None ):
         "/favicon.ico",				"favicon",
         "/?",					"home",
         "/index.html",				"home",
-        "%s/v([^/]*)(/.*)?" % (
-            args.prefix or '' ),		"api",
+        "/".join( api_path ),			"api",
     )
 
     try:
