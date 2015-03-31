@@ -904,7 +904,7 @@ var server = {
     For example, to get the details of an EZCOD using =wget=:
     : $ wget -S --header='Content-Type: application/json'         \
     :     -qO - --post-data '{"ezcod":"r3u08mpvt.d", "parity":3}' \
-    :     http://localhost:8000/v1.4.0}
+    :     http://localhost:8000/v1.5.0
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
