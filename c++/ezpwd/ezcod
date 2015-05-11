@@ -187,10 +187,10 @@ namespace ezpwd {
 	: public ezcod_base {
 
     private:
-	typedef ezpwd::array<symbols_t, 12>
+	typedef std::array<symbols_t, 12>
 				bits_t;
 	static const bits_t	bits;
-	typedef ezpwd::array<std::pair<uint32_t, uint32_t>, 12>
+	typedef std::array<std::pair<uint32_t, uint32_t>, 12>
 				parts_t;
 	static const parts_t	parts;
 

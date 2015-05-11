@@ -1,4 +1,5 @@
 
+#include <array>
 #include <map>
 #include <set>
 #include <random>
@@ -10,7 +11,6 @@
 
 #include <ezpwd/asserter>
 #include <ezpwd/rs>
-#include <ezpwd/array_safe>
 
 extern "C" {
 #include <rs.h> // Phil Karn's implementation
@@ -76,7 +76,7 @@ int main()
 	int			pad	= rs2->load() - payload;
 
 	// Get a fresh data payload of the maximum possible number of payload data
-	ezpwd::array<uint8_t,255>	buf;
+	std::array<uint8_t,255>	buf;
 	for ( auto &c : buf )
 	    c	 			= rnd_dst_uint8( rnd_gen );
 
@@ -87,12 +87,12 @@ int main()
 	    << std::endl;
 
 	// Phil Karn's standard encoder in enc1, ours in enc2
-	ezpwd::array<uint8_t,255>	enc1;
+	std::array<uint8_t,255>	enc1;
 	std::copy( buf.begin(), buf.end(), enc1.begin() );
 	void	   	       *rs1	= ::init_rs_char( 8, 0x011d, 1, 1, parity, pad );
 	::encode_rs_char( rs1, enc1.begin() + pad, enc1.begin() + pad + payload );
 
-	ezpwd::array<uint8_t,255>	enc2;
+	std::array<uint8_t,255>	enc2;
 	std::copy( buf.begin(), buf.end(), enc2.begin() );
 	rs2->encode( enc2, pad );
 
@@ -130,7 +130,7 @@ int main()
 	//     erasure + 2 * error <= parity
 	// 
 	// The target error load is 100% +/- 10% of the parity capacity.
-	ezpwd::array<uint8_t,255>	err1;
+	std::array<uint8_t,255>	err1;
 	std::copy( enc1.begin(), enc1.end(), err1.begin() );
 	std::vector<uint8_t>	err1flg( 255, ' ' );
 
@@ -215,7 +215,7 @@ int main()
 	    << std::vector<uint8_t>( err1flg.begin() + pad, err1flg.begin() + pad + payload + parity )
 	    << std::endl;
 
-	ezpwd::array<uint8_t,255> err2;
+	std::array<uint8_t,255> err2;
 	std::copy( err1.begin(), err1.end(), err2.begin() );
 	std::vector<int>	era2;
 	for ( auto e: era1 )

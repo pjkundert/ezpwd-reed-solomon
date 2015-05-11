@@ -20,15 +20,14 @@ CXXFLAGS       += -O3
 # Debugging
 #
 # -D_GLIBCXX_DEBUG	-- Enables the native GNU C++ standard library "debug" containers.
-#                          This include std::array bounds checking on all accesses.
+#     This include std::array bounds checking on all accesses (on GNU libstdc++ systems only)
 # -fsanitize=undefined	-- Additional compiler-based array bounds checking, etc.
 # -DDEBUG=0,1,2,3	-- Additional Reed-Solomon sanity checking and extensive logging
 # -DEZPWD_ARRAY_TEST	-- Intentional ERRONEOUS declarations of some R-S array extents.
 # -DEZPWD_NO_MOD_TAB	-- Do not use table-based accelerated R-S module implementation.
-# -DEZPWD_ARRAY_SAFE	-- A bounds-checked std::array (use -D_GLIBCXX_DEBUG instead)
 # 
 CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
-CXXFLAGS       +=#-DEZPWD_ARRAY_SAFE #-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler

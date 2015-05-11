@@ -16,7 +16,6 @@
 
 #include <ezpwd/rs>
 #include <ezpwd/timeofday>
-#include <ezpwd/array_safe>
 
 /* Exercise the RS codec passed as an argument */
 template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY >
@@ -27,8 +26,8 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
     int i;
     int errors;
 
-    ezpwd::array<int,NN>	errlocs;  // int errlocs[NN];
-    ezpwd::array<int,NROOTS>	derrlocs; // int derrlocs[NROOTS];
+    std::array<int,NN> 		errlocs;  // int errlocs[NN];
+    std::array<int,NROOTS>	derrlocs; // int derrlocs[NROOTS];
     data_t corrvals[NROOTS];
     int derrors;
     int errval,errloc;
