@@ -25,8 +25,9 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
     data_t block[NN],tblock[NN];
     int i;
     int errors;
-    int errlocs[NN];
-    int derrlocs[NROOTS];
+
+    std::array<int,NN> 		errlocs;  // int errlocs[NN];
+    std::array<int,NROOTS>	derrlocs; // int derrlocs[NROOTS];
     data_t corrvals[NROOTS];
     int derrors;
     int errval,errloc;
@@ -135,8 +136,8 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
 		/* Make temp copy, seed with errors */
 		memcpy(tblock,block,sizeof(tblock));
-		memset(errlocs,0,sizeof(errlocs));
-		memset(derrlocs,0,sizeof(derrlocs));
+		errlocs.fill( 0 );	// memset(errlocs,0,sizeof(errlocs));
+		derrlocs.fill( 0 );	// memset(derrlocs,0,sizeof(derrlocs));
 
 		/*
 		 * RS codes can correct t errors or 2t erasures.  In other words, "errors * 2 + erasures <
@@ -194,7 +195,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
 		/* Decode the errored block */
 		derrors = rs.decode( tblock+pad, NN-NROOTS-pad, tblock+NN-NROOTS,
-				     derrlocs, erasures, corrvals );
+				     &derrlocs[0], erasures, corrvals );
 #if defined( DEBUG ) && DEBUG >= 2
 		for ( int i = 0; i < derrors; ++i )
 		    if ( derrlocs[i] >= 0 && derrlocs[i] < NN-pad )

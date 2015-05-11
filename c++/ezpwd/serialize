@@ -17,8 +17,7 @@
 #define _EZPWD_SERIALIZE
 
 #include <iterator>
-
-#include "array_safe"
+#include <array>
 
 // 
 // EZPWD (no padding) and RFC4648 (enforce padding) base-N codecs
@@ -90,14 +89,14 @@ namespace ezpwd {
 	// base<32> tables
 	// 
 	template <> struct	standard<32> { 	// RFC4648 Standard
-	    static const constexpr array<char,32>
+	    static const constexpr std::array<char,32>
 				encoder { {
 	        'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 	        'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
 	        'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X',
 	        'Y', 'Z', '2', '3', '4', '5', '6', '7', 
 	    } };
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 				decoder { {
 	        nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
@@ -111,7 +110,7 @@ namespace ezpwd {
 	}; // struct serialize::standard<32>
 
 	template <> struct	ezpwd<32> {
-	    static const constexpr array<char,32>
+	    static const constexpr std::array<char,32>
 				    encoder { {
 		'0', '1', '2', '3', '4', '5', '6', '7',
 		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
@@ -119,7 +118,7 @@ namespace ezpwd {
 		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y',
 	    } };
 	
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 				    decoder { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
@@ -133,7 +132,7 @@ namespace ezpwd {
 	}; // struct serialize::ezpwd<32>
 	
 	template <> struct	crockford<32> {
-	    static const constexpr array<char,32>
+	    static const constexpr std::array<char,32>
 				    encoder { {
 		'0', '1', '2', '3', '4', '5', '6', '7',
 		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
@@ -141,7 +140,7 @@ namespace ezpwd {
 		'R', 'S', 'T', 'V', 'W', 'X', 'Y', 'Z',
 	    } };
 	
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 				    decoder { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
@@ -158,7 +157,7 @@ namespace ezpwd {
 	// base<64> tables
 	// 
 	template <> struct	standard<64> {
-	    static const constexpr array<char,64>	// RFC4648 Standard
+	    static const constexpr std::array<char,64>	// RFC4648 Standard
 				encoder { {
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -169,7 +168,7 @@ namespace ezpwd {
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '+', '/',
 	    } };
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 	    			decoder { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
@@ -183,7 +182,7 @@ namespace ezpwd {
 	}; // struct serialize::standard<64>
 
 	template <> struct	standard_url<64> {
-	    static const constexpr array<char,64>
+	    static const constexpr std::array<char,64>
 	    			encoder { {
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -194,7 +193,7 @@ namespace ezpwd {
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '-', '_', 
 	    } };
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 				decoder { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
@@ -208,7 +207,7 @@ namespace ezpwd {
 	}; // struct serialize::standar_url<64>
 
 	template <> struct	ezpwd<64> {
-	    static const constexpr array<char,64>	// '+' and '.' are URL safe, and we treat '-' as whitespace
+	    static const constexpr std::array<char,64>	// '+' and '.' are URL safe, and we treat '-' as whitespace
 				encoder { {
 		'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H',
 		'I', 'J', 'K', 'L', 'M', 'N', 'O', 'P',
@@ -219,7 +218,7 @@ namespace ezpwd {
 		'w', 'x', 'y', 'z', '0', '1', '2', '3',
 		'4', '5', '6', '7', '8', '9', '+', '.', 
 	    } };
-	    static const constexpr array<char,127>
+	    static const constexpr std::array<char,127>
 				decoder { {
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
 		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //

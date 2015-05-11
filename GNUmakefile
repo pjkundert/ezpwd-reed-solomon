@@ -1,14 +1,33 @@
 
 SHELL		= /bin/bash
 
-# Defaults to system c++; define CXX to use a specific C++ compiler
-#CXX		= g++ # clang++ # icc (not recommended; much slower than g++ for ezpwd::)
+# Compilers
+# 
+#    Defaults to system c++; define CXX to use a specific C++ compiler.  Supported across:
+# 
+# g++    4.8 - 5.1	-- Recommended; fastest
+# clang  3.6		-- Recommended
+# icc			-- Not recommended; much slower than g++ for ezpwd::rs
+CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
 		    -Wsign-promo -Wswitch -Wreturn-type	
-CXXFLAGS       += -O3 # -g
-CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_SAFE #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+CXXFLAGS       += -O3
+
+# Debugging
+#
+# -D_GLIBCXX_DEBUG	-- Enables the native GNU C++ standard library "debug" containers.
+#     This include std::array bounds checking on all accesses (on GNU libstdc++ systems only)
+# -fsanitize=undefined	-- Additional compiler-based array bounds checking, etc.
+# -DDEBUG=0,1,2,3	-- Additional Reed-Solomon sanity checking and extensive logging
+# -DEZPWD_ARRAY_TEST	-- Intentional ERRONEOUS declarations of some R-S array extents.
+# -DEZPWD_NO_MOD_TAB	-- Do not use table-based accelerated R-S module implementation.
+# 
+CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
+CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler

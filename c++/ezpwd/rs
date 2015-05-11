@@ -65,7 +65,6 @@
 // 
 
 #include "output"	// ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
-#include "array_safe"	// ezpwd::array std::array, optionally bounds-checked if EZPWD_ARRAY_SAFE set
 
 namespace ezpwd {
 
@@ -170,7 +169,7 @@ namespace ezpwd {
 
 	template < typename T, size_t N >
 	void			encode(
-				    ezpwd::array<T,N>  &data,
+				    std::array<T,N>    &data,
 				    int			pad	= 0 ) // ignore 'pad' symbols at start of array
 	    const
 	{
@@ -284,7 +283,7 @@ namespace ezpwd {
 
 	template < typename T, size_t N >
 	int			decode(
-				    ezpwd::array<T,N>  &data,
+				    std::array<T,N>    &data,
 				    int			pad	= 0, // ignore 'pad' symbols at start of array
 				    const std::vector<int>
 				    		       &erasure	= std::vector<int>(),
@@ -417,17 +416,17 @@ namespace ezpwd {
 	static int 		iprim;
 
     protected:
-	static ezpwd::array<TYP,
+	static std::array<TYP,
 #if not defined( EZPWD_ARRAY_TEST )
-                                 NN + 1>
+                              NN + 1>
 #else
 #  warning "EZPWD_ARRAY_TEST: Erroneously declaring alpha_to size!"
-                                 NN    >
+                              NN    >
 #endif
 				alpha_to;
-	static ezpwd::array<TYP,NN + 1>
+	static std::array<TYP,NN + 1>
 				index_of;
-	static ezpwd::array<TYP,MODS>
+	static std::array<TYP,MODS>
 				mod_of;
 	virtual		       ~reed_solomon_tabs()
 	{
@@ -556,7 +555,7 @@ namespace ezpwd {
 	static const int	LOAD	= SIZE - NROOTS;	// maximum non-parity symbol payload
 
     protected:
-	static ezpwd::array<TYP, NROOTS + 1>
+	static std::array<TYP, NROOTS + 1>
 				genpoly;
 
     public:
@@ -667,7 +666,7 @@ namespace ezpwd {
 		// copy.  The INP data must fit at least the SYMBOL size!
 		if ( SYMBOL > INPUT )
 		    throw std::runtime_error( "reed-solomon: output data type too small to contain symbols" );
-		ezpwd::array<TYP,SIZE>	tmp;
+		std::array<TYP,SIZE>	tmp;
 		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
 		for ( int i = 0; i < len; ++i )
 		    tmp[LOAD - len + i]		= data[i] & ~msk;
@@ -802,7 +801,7 @@ namespace ezpwd {
 	    TYP			       *pariptr;
 	    const size_t		INPUT	= 8 * sizeof ( INP );
 
-	    ezpwd::array<TYP,SIZE>	tmp;
+	    std::array<TYP,SIZE>	tmp;
 	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
 	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
 	    if ( cpy ) {
@@ -935,11 +934,11 @@ namespace ezpwd {
 				    TYP		       *corr	= 0 )	// Capacity: at least NROOTS
 	    const
 	{
-	    typedef ezpwd::array< TYP, NROOTS >
+	    typedef std::array< TYP, NROOTS >
 				typ_nroots;
-	    typedef ezpwd::array< TYP, NROOTS+1 >
+	    typedef std::array< TYP, NROOTS+1 >
 				typ_nroots_1;
-	    typedef ezpwd::array< int, NROOTS >
+	    typedef std::array< int, NROOTS >
 				int_nroots;
 
 	    typ_nroots_1	lambda  { { 0 } };
@@ -1272,24 +1271,24 @@ namespace ezpwd {
         int				reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::iprim = -1;
 
     template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        ezpwd::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >
 #if not defined( EZPWD_ARRAY_TEST )
-                                                                                      ::NN + 1 >
+                                                                          ::NN + 1 >
 #else
 #  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
-		                                                                      ::NN     >
+                                                                          ::NN     >
 #endif
 					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::alpha_to;
 
     template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        ezpwd::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::NN + 1 >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::NN + 1 >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::index_of;
     template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        ezpwd::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::MODS >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::MODS >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::mod_of;
 
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        ezpwd::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
+        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
 
     // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
