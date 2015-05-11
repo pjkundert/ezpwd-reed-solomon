@@ -3,6 +3,7 @@
 
 #include <iterator>
 #include <algorithm>
+#include <cstddef>
 
 #  if ! defined( EZPWD_ARRAY_SAFE )
 
@@ -248,27 +249,18 @@ inline void			swap(
     __x.swap(__y);
 }
 
-template <class T, size_t S>
-class std::tuple_size<ezpwd::array<T, S> >
-    : public integral_constant<size_t, S> {};
+namespace std {
+    template <typename T, size_t S>
+    struct tuple_size<ezpwd::array<T, S> >
+	: public integral_constant<size_t, S> {};
 
-template <class T, size_t S>
-class std::tuple_size<const ezpwd::array<T, S> >
-    : public integral_constant<size_t, S> {};
-
-template <size_t I, class T, size_t S>
-class std::tuple_element<I, ezpwd::array<T, S> >
-{
-public:
-    typedef T type;
-};
-
-template <size_t I, class T, size_t S>
-class std::tuple_element<I, const ezpwd::array<T, S>>
-{
- public:
-    typedef const T		type;
-};
+    template <size_t I, typename T, size_t S>
+    struct tuple_element<I, ezpwd::array<T, S> >
+    {
+	static_assert( I < S, "index is out of bounds" );
+	typedef T type;
+    };
+} // namespace std
 
 template <size_t I, class T, size_t S>
 inline constexpr T	       &get(
