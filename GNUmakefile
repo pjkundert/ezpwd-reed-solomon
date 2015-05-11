@@ -3,13 +3,14 @@ SHELL		= /bin/bash
 
 # Compilers
 # 
-#    Defaults to system c++; define CXX to use a specific C++ compiler.  Supported across:
+#    Defaults to system C/C++; define CXX to use a specific C++ compiler.  Supported across:
 # 
 # g++    4.8 - 5.1	-- Recommended; fastest
 # clang  3.6		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
-CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+# 
+#CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+#CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
