@@ -78,7 +78,11 @@
     least Swig Version 3.0.5 for C++11 support).  Since the Python module is
     generated from the C++ interface, it must be generated and compiled using
     the appropriate target OS, Python and C++ compiler implementation.
-    Therefore, there is no =pip install ezpwd_reed_solomon= available.
+
+    Therefore, there is no =pip install ezpwd_reed_solomon= available for the
+    Python bindings; they must be built and installed from the
+    ezpwd-reed-solomon source, on the target platform, using the platform's C++
+    compiler with C++11 support.
 
     To build the =ezpwd_reed_solomon= package, obtain the source from
     https://github.com/pjkundert/ezpwd-reed-solomon, and build with the version

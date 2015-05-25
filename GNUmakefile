@@ -112,12 +112,25 @@ EXCOMP =	rsexample					\
 
 EXTEST =	$(EXCOMP)
 
+help:
+	@echo  "EZPWD Reed-Solomon GNU 'make' targets"
+	@echo  "  all			-- Javascript production targets: js/ezpwd/*.js"
+	@echo  "  test			-- C++ (executable) and Javascript (Node.JS) tests"
+	@echo  "  testex		-- C++ (executable) tests (with timing, by default)"
+	@echo  "     ...-valgrind	-- C++ (executable) tests (with valgrind)"
+	@echo  "  testjs		-- Javascript (Node.JS) tests"
+	@echo  "  swig-python-install	-- Build and install Python bindings ezpwd_reed_solomon.* (via Swig)"
+
 all:		$(JSPROD)
 
 test:		testex testjs
 
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
+
+swig-python:	swig-python-install
+swig-python-%:
+	make -C swig/python $*
 
 valgrind:	testex-valgrind\ -v\ --leak-check=full
 
