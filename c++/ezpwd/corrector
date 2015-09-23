@@ -179,21 +179,31 @@ namespace ezpwd {
 	}
 
 	// 
-	// decode(<string>) -- Applies R-S error correction on the encoded string, removing parity
+	// decode(<string>[,...]) -- Applies R-S error correction on the encoded string, removing parity
 	// 
 	//     Up to 'PARITY' Reed-Solomon parity symbols are examined, to determine if the supplied
-	// string is a valid R-S codeword and hence very likely to be correct.
+	// string is a valid R-S codeword and hence very likely to be correct.  Optionally supply a
+	// vector of erasure positions.
+	// 
+	//     An optional 'minimum' final password length may be provided; no R-S parity is assumed
+	// to exist in the first 'minimum' password characters (default: PARITY).  This prevents
+	// accidentally finding valid R-S codewords in passwords of known minimum length; validation
+	// codes, for example.  Likewise, the optional 'maximum' allows us to limit the number of
+	// parity symbols that may be assumed to be missing from the end of the codeword.
 	// 
 	//     Returns a confidence strength rating, which is the ratio:
 	// 
 	//         100 - ( errors * 2 + erasures ) * 100 / parity
 	// 
-	// if an R-S codeword was solved, and 0.0 otherwise.  If a codeword is solved, but the
-	// number of errors and erasures corrected indicates that all parity was consumed, we do not
-	// use the corrected string, because there is a chance that our R-S polynomial was
-	// overwhelmed with errors and actually returned an incorrect codeword.  Therefore, a
-	// solving a codeword using all parity results in 100 - PARITY * 100 / PARITY == 0, which
-	// matches the strength of the final
+	// if an R-S codeword was solved, and 0 otherwise.  If a codeword is solved, but the number
+	// of errors and erasures corrected indicates that all parity was consumed, the caller may
+	// opt to not use the corrected string, because there is a chance that our R-S polynomial
+	// was overwhelmed with errors and actually returned an incorrect codeword.  Therefore,
+	// solving a codeword using all available parity results in 100 - PARITY * 100 / PARITY ==
+	// 0, which indicates that there is no certainty of correctness; all R-S parity resources
+	// were used in error/erasure recover, with none left to confirm that the result is actually
+	// correct.  If only zero-strength results are achieved, the longest will be returned (the
+	// full, original string).
 	// 
 	//     Supports the following forms of error/erasure:
 	// 
@@ -441,11 +451,6 @@ namespace ezpwd {
 	// 
 	//     Traditional C interface.  The provided NUL-terminated password+parity is decoded
 	// (parity removed), and the confidence % is returned.
-	// 
-	//     An optional 'minimum' final password length may be provided; no R-S parity is assumed
-	// to exist in the first 'minimum' password characters (default: PARITY).  This prevents
-	// accidentally finding valid R-S codewords in passwords of known minimum length; validation
-	// codes, for example.
 	// 
 	//     If any failure occurs, a -'ve value will be returned, and the supplied password
 	// buffer will be used to contain an error description.

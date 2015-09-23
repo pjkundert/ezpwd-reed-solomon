@@ -142,9 +142,8 @@
     | (monthly)  |  USD$ | USD$/yr |                                 |
     |------------+-------+---------+---------------------------------|
     | <1K        |     0 |      25 | Interesting project? ask... :)  |
-    | 1K-10K     |   100 |      25 | 1 hour                          |
-    | 10K-1M     |  1000 |     250 | 4 hours                         |
-    | >1M        | 10000 |    2500 | 16 hours                        |
+    | 1K-1M      |   100 |      25 | 1 hour                          |
+    | >1M        |  1000 |     250 | 4 hours                         |
     |------------+-------+---------+---------------------------------|
 
     Use of the EZCOD robust geolocation encoding module of EZPWD Reed-Solomon is

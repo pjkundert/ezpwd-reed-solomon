@@ -21,42 +21,43 @@ extern "C" {
 
 // Use 32 roots and the CCSDS initialization terms, for compatibility with Phil's fastest
 // en/decode_rs_8 fixed-size decoder.
-#define TOTAL	255
 #define POLY	0x187
 #define FCR	112
 #define PRIM	11
 
-template <size_t ROOTS>
+//        eg.     255,             2,            253
+template <size_t TOTAL, size_t ROOTS, size_t PAYLOAD=TOTAL-ROOTS>
 double 				compare()
 {
     std::array<uint8_t,TOTAL>	orig;
 
-    std::cout << std::endl << "RS(" << TOTAL << "," << (TOTAL-ROOTS) << ") w/ " << ROOTS << " parity:" << std::endl;
-    for ( size_t i = 0; i < (TOTAL-ROOTS); ++i ) {
+    std::cout << std::endl << "RS(" << TOTAL << "," << (TOTAL-ROOTS) << ") w/ "
+	      << PAYLOAD << " data, " << ROOTS << " parity:" << std::endl;
+    for ( size_t i = 0; i < PAYLOAD; ++i ) {
 	orig[i]				= i;
 #if defined( DEBUG )
-	if ( i and ( i % 32 == 31 or i == (TOTAL-ROOTS)-1 ))
+	if ( i and ( i % 32 == 31 or i == PAYLOAD-1 ))
 	    std::cout << std::vector<uint8_t>( orig.begin() + i - i % 32, orig.begin() + i + 1 ) << std::endl;
 #endif
     }
     // Ensure that each RS encoder produces the same parity symbols; both Phil Karn's generic codec,
     // his CCSDS-specific implementation, and the new ezpwd/reed_solomon codec.
     void		       *grs	= init_rs_char( 8, POLY, FCR, PRIM, ROOTS, 0 );
-    encode_rs_char( grs, orig.data(), orig.data() + (TOTAL-ROOTS) );
+    encode_rs_char( grs, orig.data(), orig.data() + PAYLOAD );
     std::array<uint8_t,TOTAL>	gdata( orig );
 #if defined( DEBUG )
     std::cout
         << "Phil Karn's Generic     parity: "
-	<< std::vector<uint8_t>( gdata.data() + (TOTAL-ROOTS), gdata.data() + TOTAL ) 
+	<< std::vector<uint8_t>( gdata.data() + PAYLOAD, gdata.data() + PAYLOAD + ROOTS ) 
         << std::endl;
 #endif
     std::array<uint8_t,TOTAL>	cdata( orig );
 if ( ROOTS == 32 ) {
-    encode_rs_8( cdata.data(), cdata.data() + (TOTAL-ROOTS), 0 );
+    encode_rs_8( cdata.data(), cdata.data() + PAYLOAD, 0 );
 #if defined( DEBUG )
     std::cout
 	<< "Phil Karn's CCSDS       parity: "
-	<< std::vector<uint8_t>( cdata.data() + (TOTAL-ROOTS), cdata.data() + TOTAL ) 
+	<< std::vector<uint8_t>( cdata.data() + PAYLOAD, cdata.data() + PAYLOAD + ROOTS ) 
 	<< std::endl;
 #endif
 }
@@ -64,11 +65,11 @@ if ( ROOTS == 32 ) {
     static const ezpwd::RS_CCSDS<TOTAL,TOTAL-ROOTS>
 				nrs;
     std::array<uint8_t,TOTAL>	ndata( orig );
-    nrs.encode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD );
+    nrs.encode( ndata.data(), PAYLOAD, ndata.data() + PAYLOAD );
 #if defined( DEBUG )
     std::cout
         << "EZPWD   " << nrs
-	<< "     parity: " << std::vector<uint8_t>( ndata.data() + (TOTAL-ROOTS), ndata.data() + TOTAL ) 
+	<< "     parity: " << std::vector<uint8_t>( ndata.data() + PAYLOAD, ndata.data() + PAYLOAD + ROOTS ) 
         << std::endl;
 #endif
     if ( gdata != ndata )
@@ -82,7 +83,7 @@ if ( ROOTS == 32 ) {
     const std::size_t generator_polynommial_root_count =  ROOTS;
 
     /* Reed Solomon Code Parameters */
-    const std::size_t code_length = TOTAL;
+    const std::size_t code_length = PAYLOAD + ROOTS;
     const std::size_t fec_length  = ROOTS;
     const std::size_t data_length = code_length - fec_length;
 
@@ -112,7 +113,7 @@ if ( ROOTS == 32 ) {
     std::array<uint8_t,TOTAL>	sdata( orig );
 
     std::string			sdata_str( data_length, 0 );
-    std::copy( sdata.begin(), sdata.end()-ROOTS, sdata_str.begin() );
+    std::copy( sdata.begin(), sdata.begin() + PAYLOAD, sdata_str.begin() );
     srs_encoder.encode( sdata_str, block );
     std::string			spari_str( fec_length, 0 );
     block.fec_to_string( spari_str );
@@ -292,15 +293,16 @@ int main()
 {
     double			avg	= 0;
     int				cnt	= 0;
-    avg				       += compare<128>();	++cnt;
-    avg				       += compare< 99>();	++cnt;
-    avg				       += compare< 64>();	++cnt;
-    avg				       += compare< 32>();	++cnt;
-    avg				       += compare< 16>();	++cnt;
-    avg				       += compare< 13>();	++cnt;
-    avg				       += compare<  8>();	++cnt;
-    avg				       += compare<  4>();	++cnt;
-    avg				       += compare<  2>();	++cnt;
+    avg				       += compare<255,128>();	++cnt;
+    avg				       += compare<255, 99>();	++cnt;
+    avg				       += compare<255, 64>();	++cnt;
+    avg				       += compare<255, 32>();	++cnt;
+    avg				       += compare<255, 16>();	++cnt;
+    avg				       += compare<255, 13>();	++cnt;
+    avg				       += compare<255,  8>();	++cnt;
+    avg				       += compare<255,  4>();	++cnt;
+    avg				       += compare<255,  3>();	++cnt;
+    avg				       += compare<255,  2>();	++cnt;
 
     std::cout << std::endl << "RS(255,...) EZPWD vs. Phil Karn's: " << avg/cnt << "% faster (avg.)" << std::endl;
 }
