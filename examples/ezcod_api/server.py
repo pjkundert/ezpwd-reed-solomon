@@ -421,7 +421,7 @@ def web_api( urls, http=None ):
     try:
         app			= web.application( urls, globals() )
         web.httpserver.runsimple( app.wsgifunc(), http )
-        log.normal( "Web API started on %s:%s",
+        log.info( "Web API started on %s:%s",
                     http[0] if http else None, http[1] if http else None )
     except socket.error:
         log.error( "Could not bind to %s:%s for web API",

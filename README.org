@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.5.1
+#+TITLE: EZPWD Reed-Solomon Version 1.5.2
 
 * Reed-Solomon Loss/Error Correction
 
@@ -27,9 +27,9 @@
    code for all internal table lookups, sometimes dramatically improving
    performance.
 
-*** 25-75% Faster Than Competing Codecs
+*** 25-75% Faster Than Competing R-S Codecs
 
-    EZPWD Reed Solomon performs R-S correction operations (using g++ on an Intel
+    EZPWD Reed-Solomon performs R-S correction operations (using g++ on an Intel
     i7) about 75% faster faster than Phil Karn's general case code, and about
     25% faster than Phil's optimized code for 8-bit/CCSDS symbols.  It also
     tests at about 25% faster than the Shifra C++ Reed-Solomon library.  It
@@ -55,13 +55,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -252,7 +252,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -342,7 +342,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -564,7 +564,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -633,7 +633,7 @@ var server = {
       };
    </script>
    <script async onload="jquery_release()"
-       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.1/js/ezpwd/ezcod.js">
+       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.5.2/js/ezpwd/ezcod.js">
    </script>
    <script defer onload="jquery_loaded()"
        src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
@@ -888,12 +888,12 @@ var server = {
     | --log <file>           | Put logs into the given file                        |
 
     The REST API URL always includes the version =v#.#.#=; for the above command
-    the API is hosted at: http://localhost:8000/api/v1.5.1.  To get the details
+    the API is hosted at: http://localhost:8000/api/v1.5.2.  To get the details
     for an EZCOD, encode a request with the EZCOD as a query option.  For
     example, visit this with a web browser:
-    http://localhost:8000/api/v1.5.1?ezcod=r3u08mpvt.d.  This will return the
+    http://localhost:8000/api/v1.5.2?ezcod=r3u08mpvt.d.  This will return the
     decoded data as HTML.  To get it in JSON form, append =.json= to the API
-    requests path: http://localhost:8000/api/v1.5.1.json?ezcod=r3u08mpvt.d.
+    requests path: http://localhost:8000/api/v1.5.2.json?ezcod=r3u08mpvt.d.
 
     This demo application supports GET query options and POST form variables (or
     body JSON of the form ={...}= or =[{...},...]= with object properties)
@@ -911,7 +911,7 @@ var server = {
     For example, to get the details of an EZCOD using =wget=:
     : $ wget -S --header='Content-Type: application/json'         \
     :     -qO - --post-data '{"ezcod":"r3u08mpvt.d", "parity":3}' \
-    :     http://localhost:8000/v1.5.1
+    :     http://localhost:8000/v1.5.2
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
