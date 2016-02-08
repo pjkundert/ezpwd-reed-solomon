@@ -132,46 +132,29 @@ void				test_rskey_simple( ezpwd::asserter &assert )
 // 
 // base<N> codec tests
 // 
-// Try a custom base-16 codec
-// 
-namespace ezpwd {
-    namespace serialize {
-	template <> struct		standard<16> {
-	    static const constexpr std::array<char,16>
-	    encoder = { {
-	        '0', '1', '2', '3', '4', '5', '6', '7',
-	        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-	    } };
-	    static const constexpr std::array<char,127>
-	    decoder = { {
-	        nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
-	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
-	        ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
-	        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?  '=' is pad
-	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // @ABCDEFGHIJKLMNO
-	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
-	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // `abcdefghijklmno
-	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
-	    } };
-	}; // struct serialize::standard<16>
-    } // namespace serialize
-} // namesapce ezpwd
-const constexpr std::array<char,16>	ezpwd::serialize::standard<16>::encoder;
-const constexpr std::array<char,127>	ezpwd::serialize::standard<16>::decoder;
-typedef ezpwd::serialize::base<16,ezpwd::serialize::standard<16>>
-				base16;
 
-void				test_base16( ezpwd::asserter &assert )
+void				test_hex( ezpwd::asserter &assert )
 {
-
+    std::string			original( "\xde\xad\xbe\xef" );
     std::string			deadbeef( "deadbeef" );
-    std::string		        nibbles( "\x0d\x0e\x0a\x0d\x0b\x0e\x0e\x0f" );
-    base16::decode( deadbeef );
+    std::string		        nibbles(  "\x0d\x0e\x0a\x0d\x0b\x0e\x0e\x0f" );
+
+    ezpwd::serialize::base16::decode( deadbeef );
     if ( assert.ISEQUAL( std::string() << u8vec_t( deadbeef.begin(), deadbeef.end() ),
 			 std::string() << u8vec_t( nibbles.begin(), nibbles.end() )))
 	std::cout << assert << std::endl;
-    base16::encode( deadbeef );
+    ezpwd::serialize::base16::encode( deadbeef );
     if ( assert.ISEQUAL( deadbeef, std::string( "DEADBEEF" )))
+	std::cout << assert << std::endl;
+
+    u8vec_t			u8;
+    ezpwd::serialize::base16::gather_standard( nibbles.begin(), nibbles.end(), std::back_insert_iterator<u8vec_t>( u8 ));
+    if ( assert.ISEQUAL( original, std::string( u8.begin(), u8.end() )))
+	std::cout << assert << std::endl;
+
+    u8vec_t			u8_nibbles;
+    ezpwd::serialize::base16::scatter_standard( u8.begin(), u8.end(), std::back_insert_iterator<u8vec_t>( u8_nibbles ));
+    if ( assert.ISEQUAL( nibbles, std::string( u8_nibbles.begin(), u8_nibbles.end() )))
 	std::cout << assert << std::endl;
 }
 
@@ -224,28 +207,28 @@ void				test_baseN(
 	if ( assert.ISEQUAL( std::string( std::get<1>( t )), std::string() << e1_vec_2 ))
 	    std::cout << assert << std::endl;
 
-	// Now, convert the raw scattered 5/6-bit data to base-N RFC4648 Standard symbols, in-place
+	// Now, convert the raw scattered 4/5/6-bit data to base-N RFC4648 Standard symbols, in-place
 	std::string		e1_s( e1_vec_1.begin(), e1_vec_1.end() );
 	SERSTD::encode( e1_s.begin(), e1_s.end() );
 #if defined( DEBUG )
-	std::cout << "base32::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
+	std::cout << "baseN::encode (standard): " << e1_vec_1  << " --> " << e1_s << std::endl;
 #endif
 	if ( assert.ISEQUAL( e1_s, std::get<2>( t )))
 	    std::cout << assert << std::endl;
 
-	// Now get rid of the pad symbols for the base32 ezpwd encoding test
+	// Now get rid of the pad symbols for the baseN ezpwd encoding test
 	std::string		e1_e( e1_vec_1.begin(), e1_vec_1.end() );
 	while ( e1_e.size() and e1_e.back() == EOF )
 	    e1_e.pop_back();
 	SEREZC::encode( e1_e.begin(), e1_e.end() );
 #if defined( DEBUG )
-	std::cout << "base32::encode (ezpwd):    " << e1_vec_1  << " --> " << e1_e << std::endl;
+	std::cout << "baseN::encode (ezpwd):    " << e1_vec_1  << " --> " << e1_e << std::endl;
 #endif
 	if ( assert.ISEQUAL( e1_e, std::get<3>( t )))
 	    std::cout << assert << std::endl;
 	
-	// Decode back to the original 5/6-bit binary data in-place, from both the standard (with
-	// pad) and ezcod (not padded) base32 encoded data.
+	// Decode back to the original 4/5/6-bit binary data in-place, from both the standard (with
+	// pad) and ezcod (not padded) base-N encoded data.
 
 	// _s -- Standard (with padding)
 	std::string		d1_s( e1_s );
@@ -260,9 +243,9 @@ void				test_baseN(
 	if ( assert.ISTRUE( std::get<1>( t ).find( std::string() << u8vec_t( d1_e.begin(), d1_e.end() )) == 0 ))
 	    std::cout << assert << std::endl;
 
-	// Finally, gather up the 5-bit chunks back into the original 8-bit data, using pd_ignored
+	// Finally, gather up the 4/5/6-bit chunks back into the original 8-bit data, using pd_ignored
 	// (no padding, the default) first, and then pd_enforce.  Make sure that the predicted
-	// base32::encode_size is correct.
+	// baseN::encode_size is correct.
 
 	u8vec_t			d1_vec_s; // pd_enforce
 	SEREZC::gather_standard( d1_s.begin(), d1_s.end(), std::back_insert_iterator<u8vec_t>( d1_vec_s ));
@@ -280,6 +263,73 @@ void				test_baseN(
 	    std::cout << assert << "; predicted " << std::get<0>( t ) << " --> " <<  u8vec_t( d1_e.begin(), d1_e.end() ) <<
 		" should be " << SEREZC::encode_size( std::get<0>( t ).size() ) << " bytes " << std::endl;
     }
+}
+
+void				test_base16( ezpwd::asserter &assert )
+{
+    test_baseN< ezpwd::serialize::base16_standard, ezpwd::serialize::base16 >( assert,
+        {
+	    // original scatter to 4-bit chunks				base16_standard		base16
+	    { "a",	R"""(0601)""",					"61",			"61" },
+	    { "ab",	R"""(06010602)""",				"6162",			"6162" },
+	    { "\xff\x01\x80",
+			R"""(0F0F00010800)""",				"FF0180",		"FF0180" },
+	    { std::string( 1, '\x00' ) + "\x01",
+			R"""(00000001)""",				"0001",			"0001" },
+	    { std::string( 1, '\x00' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
+	      "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
+	      " !\"#$%&`()*+,-./"
+	      "0123456789:;<=>?"
+	      "@ABCDEFGHIJKLMNO"
+	      "PQRSTUVWXYZ[\\]^_"
+	      "`abcdefghijklmno"
+	      "pqrstuvwxyz{|}~\x7f"
+	      "\x80\x81\x82\x83\x84\x85\x86\x87\x88\x89\x8a\x8b\x8c\x8d\x8e\x8f"
+	      "\x90\x91\x92\x93\x94\x95\x96\x97\x98\x99\x9a\x9b\x9c\x9d\x9e\x9f"
+	      "\xa0\xa1\xa2\xa3\xa4\xa5\xa6\xa7\xa8\xa9\xaa\xab\xac\xad\xae\xaf"
+	      "\xb0\xb1\xb2\xb3\xb4\xb5\xb6\xb7\xb8\xb9\xba\xbb\xbc\xbd\xbe\xbf"
+	      "\xc0\xc1\xc2\xc3\xc4\xc5\xc6\xc7\xc8\xc9\xca\xcb\xcc\xcd\xce\xcf"
+	      "\xd0\xd1\xd2\xd3\xd4\xd5\xd6\xd7\xd8\xd9\xda\xdb\xdc\xdd\xde\xdf"
+	      "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
+	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
+
+          R"""(00000001000200030004000500060007000800\t00\n00\v00\f00\r000E000F)"""
+          R"""(01000101010201030104010501060107010801\t01\n01\v01\f01\r010E010F)"""
+          R"""(02000201020202030204020502060600020802\t02\n02\v02\f02\r020E020F)"""
+          R"""(03000301030203030304030503060307030803\t03\n03\v03\f03\r030E030F)"""
+          R"""(04000401040204030404040504060407040804\t04\n04\v04\f04\r040E040F)"""
+          R"""(05000501050205030504050505060507050805\t05\n05\v05\f05\r050E050F)"""
+          R"""(06000601060206030604060506060607060806\t06\n06\v06\f06\r060E060F)"""
+          R"""(07000701070207030704070507060707070807\t07\n07\v07\f07\r070E070F)"""
+          R"""(08000801080208030804080508060807080808\t08\n08\v08\f08\r080E080F)"""
+          R"""(\t00\t01\t02\t03\t04\t05\t06\t07\t08\t\t\t\n\t\v\t\f\t\r\t0E\t0F)"""
+          R"""(\n00\n01\n02\n03\n04\n05\n06\n07\n08\n\t\n\n\n\v\n\f\n\r\n0E\n0F)"""
+          R"""(\v00\v01\v02\v03\v04\v05\v06\v07\v08\v\t\v\n\v\v\v\f\v\r\v0E\v0F)"""
+          R"""(\f00\f01\f02\f03\f04\f05\f06\f07\f08\f\t\f\n\f\v\f\f\f\r\f0E\f0F)"""
+          R"""(\r00\r01\r02\r03\r04\r05\r06\r07\r08\r\t\r\n\r\v\r\f\r\r\r0E\r0F)"""
+          R"""(0E000E010E020E030E040E050E060E070E080E\t0E\n0E\v0E\f0E\r0E0E0E0F)"""
+          R"""(0F000F010F020F030F040F050F060F070F080F\t0F\n0F\v0F\f0F\r0F0E0F0F)""",
+
+          R"""(000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F)"""
+          R"""(202122232425266028292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F)"""
+          R"""(404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F)"""
+          R"""(606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F)"""
+          R"""(808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9F)"""
+          R"""(A0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBF)"""
+          R"""(C0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF)"""
+          R"""(E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF)""",
+
+          R"""(000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F)"""
+          R"""(202122232425266028292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F)"""
+          R"""(404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F)"""
+          R"""(606162636465666768696A6B6C6D6E6F707172737475767778797A7B7C7D7E7F)"""
+          R"""(808182838485868788898A8B8C8D8E8F909192939495969798999A9B9C9D9E9F)"""
+          R"""(A0A1A2A3A4A5A6A7A8A9AAABACADAEAFB0B1B2B3B4B5B6B7B8B9BABBBCBDBEBF)"""
+          R"""(C0C1C2C3C4C5C6C7C8C9CACBCCCDCECFD0D1D2D3D4D5D6D7D8D9DADBDCDDDEDF)"""
+          R"""(E0E1E2E3E4E5E6E7E8E9EAEBECEDEEEFF0F1F2F3F4F5F6F7F8F9FAFBFCFDFEFF)""",
+
+          },
+	} );
 }
 
 void				test_base32( ezpwd::asserter &assert )
@@ -428,6 +478,7 @@ int				main( int, char ** )
     
     test_base32( assert );
     test_base64( assert );
+    test_hex( assert );
     test_base16( assert );
     test_rskey_simple( assert );
     // 8 bytes --> 13 base-32 symbols + 2 parity

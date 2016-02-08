@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.5.2
+#+TITLE: EZPWD Reed-Solomon Version 1.5.3
 
 * Reed-Solomon Loss/Error Correction
 

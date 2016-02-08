@@ -9,6 +9,7 @@
 
 #include <ezpwd/rs>
 #include <ezpwd/timeofday>
+#include <ezpwd/output>
 
 int main() 
 {

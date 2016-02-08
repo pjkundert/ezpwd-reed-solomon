@@ -19,6 +19,8 @@
 #include <iterator>
 #include <array>
 
+#include "output"
+
 // 
 // EZPWD (no padding) and RFC4648 (enforce padding) base-N codecs
 // 
@@ -71,23 +73,83 @@ namespace ezpwd {
 	// 
 
 	// 
-	// standard<32/64>	-- RFC4648 standard tables
+	// hex<16/32>		-- RFC4648 4-bit (standard 16 symbol) and 5-bit (32 symbol)
+	// standard<16/32/64>	-- RFC4648 standard tables
 	// standard_url<64>	-- RFC4648 standard tables (base-64 URL-safe)
-	// ezpwd<32/64>		-- EZPWD tables
+	// ezpwd<16/32/64>	-- EZPWD tables
 	// crockford<32> 	-- Crockford (base32 only)
 	// 
 	//     These types are passed as the TABLE template parameter to base<32/64,TABLE> class
 	// template instantiations.  They must specify an encoder table of size BASE, and a decoder
 	// table of size 127.
 	//
+	template < size_t N > struct hex { };
+	template < size_t N > struct uuencode { };
 	template < size_t N > struct standard { };
 	template < size_t N > struct standard_url { };
 	template < size_t N > struct ezpwd { };
 	template < size_t N > struct crockford { };
 
 	// 
-	// base<32> tables
+	// base<16> tables	-- basic hexadecimal supported (hex, standard, ezpwd identical)
 	// 
+	template <> struct		hex<16> {
+	    static const constexpr std::array<char,16>
+				encoder { {
+	        '0', '1', '2', '3', '4', '5', '6', '7',
+	        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+	    } };
+	    static const constexpr std::array<char,127>
+				decoder { {
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+	        ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
+	        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?  '=' is pad
+	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // @ABCDEFGHIJKLMNO
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+	        nv, 10, 11, 12, 13, 14, 15, nv, nv, nv, nv, nv, nv, nv, nv, nv, // `abcdefghijklmno
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	    } };
+	}; // struct serialize::hex<16>
+
+	template <> struct		standard<16> {
+	    static const constexpr std::array<char,16>
+				encoder = hex<16>::encoder;
+	    static const constexpr std::array<char,127>
+				decoder = hex<16>::decoder;
+	};
+
+	template <> struct		ezpwd<16> {
+	    static const constexpr std::array<char,16>
+				encoder = hex<16>::encoder;
+	    static const constexpr std::array<char,127>
+				decoder = hex<16>::decoder;
+	};
+
+	// 
+	// base<32> tables	-- ezpwd, and RFC4648 hex32, crockford and standard
+	// 
+	template <> struct		hex<32> {
+	    static const constexpr std::array<char,32>
+				encoder { {
+	        '0', '1', '2', '3', '4', '5', '6', '7',
+	        '8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+		'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N',
+		'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V',
+	    } };
+	    static const constexpr std::array<char,127>
+				decoder { {
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+	        nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+	        ws, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //  !"#$%&`()*+,-./
+	        0,  1,  2,  3,  4,  5,  6,  7,  8,  9,  nv, nv, nv, nv, nv, nv, // 0123456789:;<=>?  '=' is pad
+	        nv, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // @ABCDEFGHIJKLMNO
+	        25, 26, 27, 28, 29, 30, 31, nv, nv, nv, nv, nv, nv, nv, nv, nv, // PQRSTUVWXYZ[\]^_
+	        nv, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, // `abcdefghijklmno
+	        25, 26, 27, 28, 29, 30, 31, nv, nv, nv, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	    } };
+	}; // struct serialize::hex<32>
+
 	template <> struct	standard<32> { 	// RFC4648 Standard
 	    static const constexpr std::array<char,32>
 				encoder { {
@@ -156,6 +218,31 @@ namespace ezpwd {
 	// 
 	// base<64> tables
 	// 
+	template <> struct	uuencode<64> {
+	    static const constexpr std::array<char,64>
+				encoder { {
+		' ', '!', '"', '#', '$', '%', '&','\'',
+		'(', ')', '*', '+', ',', '-', '.', '/',
+		'0', '1', '2', '3', '4', '5', '6', '7',
+		'8', '9', ':', ';', '<', '=', '>', '?',
+		'@', 'A', 'B', 'C', 'D', 'E', 'F', 'G',
+		'H', 'I', 'J', 'K', 'L', 'M', 'N', 'O',
+		'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W',
+		'X', 'Y', 'Z', '[','\\', ']', '^', '_',
+	    } };
+	    static const constexpr std::array<char,127>
+	    			decoder { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 10, 11, 12, 13, 14, 15, //  !"#$%&`()*+,-./
+		16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, // 0123456789:;<=>?  '=' is pad
+		32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, // @ABCDEFGHIJKLMNO
+		48, 49, 50, 51, 52, 53, 54, 55, 56, 57, 58, 59, 60, 61, 62, 63, // PQRSTUVWXYZ[\]^_
+		nv, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, // `abcdefghijklmno
+		48, 49, 50, 51, 52, 53, 54, 55, 56, 57, nv, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
+	    } };
+	}; // struct serialize::standard<64>
+
 	template <> struct	standard<64> {
 	    static const constexpr std::array<char,64>	// RFC4648 Standard
 				encoder { {
@@ -475,6 +562,120 @@ namespace ezpwd {
 	    using base_generic< N, TABLES >::decode;
 	};
 
+
+	// 
+	// ezpwd::serialize::base<16> -- transform individual characters between 4-bit binary and a base-16
+	// 
+	template < typename TABLES >
+	class base< 16, TABLES >
+	    : public base_generic< 16, TABLES > {
+	public:
+	    using base_generic< 16, TABLES >::encode;
+	    using base_generic< 16, TABLES >::decode;
+	    using base_generic< 16, TABLES >::gather_next;
+
+	    static constexpr size_t encode_size(
+				    size_t		len,
+				    pd_use_t	     /* pd_use */ = pd_invalid )
+	    {
+		return len * 2; // encoding base-16 always exactly doubles size
+	    }
+
+	    // 
+	    // base<16>::scatter -- distribute a range of input bytes to an output iterator in 4-bit chunks
+	    // 
+	    //     The same implementation is used for both random-access iterators, and for all
+	    // other forward iterators.
+	    // 
+	    template < typename I, typename O, typename iterator_tag >
+	    static
+	    O			scatter(
+				    I			beg,
+				    I			end,
+				    O 			out,
+				    pd_use_t,			// ignored; never needs to pad
+				    iterator_tag )		// ignored
+	    {
+		while ( beg != end ) {
+		    int 	c0 	= *beg++;
+		    *out++ 		= char((c0 & 0xff) >> 4);
+		    *out++		= char((c0 & 0x0f));
+		}
+		return out;
+	    }
+
+	    template < typename I, typename O >
+	    static
+	    O			scatter(
+				    I			beg,
+				    I			end,
+				    O 			out,
+				    pd_use_t		pd_use	= pd_invalid )
+	    {
+		return scatter( beg, end, out, pd_use, typename std::iterator_traits<I>::iterator_category() );
+	    }
+
+	    template < typename I, typename O >
+	    static
+	    O			scatter_standard(
+				    I			beg,
+				    I			end,
+				    O 			out )
+	    {
+		return scatter( beg, end, out, pd_enforce, typename std::iterator_traits<I>::iterator_category() );
+	    }
+
+	    // 
+	    // base<16>::gather -- collect 4-bit chunks into 8-bit characters
+	    // 
+	    //     If underflow occurs (not enough data collected to output complete last char), then an
+	    // exception will be raised.  However, if 'pad' is set, then output will automatically be
+	    // padded, flushing out any un-emitted data remaining in previous 4-bit base-16 symbol.
+	    // 
+	    //     For correct base-16 data produced by 'scatter', this will allow 'gather' to always
+	    // produce the identical output as was originally provided to 'scatter'.  However, if simply
+	    // truncated base-16 input is provided (eg. only 1 symbols of an 2-symbol 8-bit
+	    // base-16 group), then the final 8-bit symbol from the original data will be missing.
+	    // 
+	    template < typename I, typename O >
+	    static
+	    O			gather(
+				    I			beg,
+				    I			end,
+				    O			out,
+				    pd_use_t		pd_use	= pd_invalid )
+	    {
+		while ( beg != end ) {
+		    int		c0	= gather_next( beg, end, pd_use, 0 );
+		    int		c1	= gather_next( beg, end, pd_use, c0 );
+		    if ( c0 >= 0 and c1 >= 0 )
+			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 4)
+					   | (c1 < 0 ? 0 : c1 ));
+		}
+		return out;
+	    }
+	    template < typename I, typename O >
+	    static
+	    O			gather_standard(
+				    I			beg,
+				    I			end,
+				    O			out )
+	    {
+		return gather( beg, end, out, pd_enforce );
+	    }
+	}; // ezpwd::base<16>
+
+	// 
+	// ezpwd::serialize::base16...
+	// 
+	//     Shortcut typedefs for the available base16 codec.
+	// 
+	typedef base< 16, hex< 16 >>
+				base16;
+	typedef base< 16, hex< 16 >>
+				base16_standard;
+
+
 	// 
 	// ezpwd::serialize::base<32> -- transform individual characters between 5-bit binary and a base-32
 	// 
@@ -778,6 +979,8 @@ namespace ezpwd {
 	// 
 	typedef base< 32, ezpwd< 32 >>
 	    			base32;
+	typedef base< 32, hex< 32 >>
+	    			base32_hex;
 	typedef base< 32, serialize::standard< 32 >>
 				base32_standard;
 	typedef base< 32, crockford< 32 >>
@@ -978,6 +1181,8 @@ namespace ezpwd {
 				base64_standard;
 	typedef base< 64, standard_url< 64 >>
 				base64_standard_url;
+	typedef base< 64, uuencode< 64 >>
+	    			base64_uuencode;
     } // namespace ezpwd::serialize
 
 } // namespace ezpwd
