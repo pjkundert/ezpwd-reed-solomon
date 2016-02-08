@@ -10,6 +10,7 @@ namespace ezpwd {
 
 #define ISEQUAL( ... ) isequal( __FILE__, __LINE__, __VA_ARGS__ )
 #define ISTRUE( ... )  istrue(  __FILE__, __LINE__, __VA_ARGS__ )
+#define ISFALSE( ... ) isfalse( __FILE__, __LINE__, __VA_ARGS__ )
 #define ISNEAR( ... )  isnear(  __FILE__, __LINE__, __VA_ARGS__ )
 
     struct asserter {
@@ -48,6 +49,12 @@ namespace ezpwd {
 	asserter	       &istrue(  const char *file, int line, const T &a, const std::string &comment = std::string() )
 	{
 	    return isequal( file, line, !!a, true, comment );
+	}
+
+	template < typename T >
+	asserter	       &isfalse(  const char *file, int line, const T &a, const std::string &comment = std::string() )
+	{
+	    return isequal( file, line, !!a, false, comment );
 	}
 
 	template < typename T >

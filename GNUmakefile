@@ -105,6 +105,7 @@ EXCOMP =	rsexample					\
 		rssimple					\
 		rsexercise					\
 		rscompare					\
+		rscompare_nexc					\
 		rsvalidate					\
 		rspwd_test					\
 		ezcod_test					\
@@ -210,6 +211,12 @@ rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
+rscompare_nexc.o:	CXXFLAGS += -DEZPWD_NO_EXCEPTS
+rscompare_nexc.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+rscompare_nexc: 	CXXFLAGS += -I./phil-karn
+rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
 rscompare: CXXFLAGS += -I./phil-karn
