@@ -211,8 +211,120 @@
 
    // ... later, after data is possibly corrupted ...
 
-   int fixed = rs.decode( data ); // Correct errors, discard 4 R-S parity symbols
+   int fixed = rs.decode( data );		// Correct errors, and
+   data.resize( data.size() - rs.nroots() );	// Ddiscard the 4 R-S parity symbols
    #+END_SRC
+
+   See =rssimple.C= for some basic examples.
+
+*** Constructing an RS(SIZE,PAYLOAD) Instance
+
+    When you decide on an N-bit symbol, how do you decide on and create an
+    instance of a Reed-Solomon codec (coder/decoder) appropriate for your data
+    payload?
+
+    Chose your R-S Codeword symbol bit size and hence your R-S
+    Codeword =SIZE=.  Then decide how many erroneous/missing symbols you need to be
+    able to correct for and hence your number of =PARITY= symbols required.
+
+    Now you have =SIZE=, and =PAYLOAD= is =SIZE-PARITY=.
+
+    Finally, break your data into chunks of at most =LOAD= (chunks of size =<
+    LOAD= will be internally considered to be padded with NUL/0 symbols; you
+    don't need to provide exactly =LOAD=-sized chunks).
+
+    For example, for 8-bit symbols, =SIZE= = 2^8-1 = 255, and for 4 symbols of
+    =PARITY=, =LOAD= = 255-4 = 251.  Therefore, the notation for the
+    Reed-Solomon codec is RS(255,251), and the C++ declaration for such a R-S
+    codec is:
+    #+BEGIN_SRC C++
+    ezpwd::RS<255,251> rs; // Up to 251 symbols data load; adds 4 symbols parity
+    #+END_SRC
+
+**** Codeword =SIZE= is always 2^N-1
+
+     For example, 8-bit symbols always use an RS(255,255-PARITY) codec.  For 5-bit
+     symbols (or, to correct only the bottom 5 bits of a larger symbol), you
+     would use an RS(31,31-PARITY) codec.
+
+**** Codeword =PARITY= may be from 1 to =SIZE=-1
+
+     You may specify an R-S codec specifying a codeword with as little as 1
+     symbol of data payload and the remainder R-S parity, to as little as 1
+     symbol of parity and the remainder data payload.
+
+*** Encoding Your Data w/ =PARITY= R-S Parity Symbols
+
+    The encode method can add symbols to a =std::string= or =std::vector<T>=
+    (where =T= is =uint8_t= or =uint16_t=) container:
+    #+BEGIN_SRC C++
+    std::string data( "Hello, world!" )
+    rs.encode( data ); // Add the 4 R-S parity symbols to data
+    #+END_SRC
+
+    Alternatively, you can keep the parity separate, and not interfere with the
+    original data (the container is not resized):
+    #+BEGIN_SRC C++
+    std::string data( "Hello, world!" );
+    std::string parity;
+    rs.encode( data, parity ); // resize and place rs.nroots() parity symbols
+    #+END_SRC
+    
+    Or, if you provide a fixed-size =std::array<size_t,T>=, it will presume that the
+    space for parity must already there at the end:
+    #+BEGIN_SRC C++
+    std::array<17,uint8_t> data(
+        'H', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd', '!', // 13
+        'x', 'x', 'x', 'x' );                                            // 4
+    rs.encode( data ); // Place the 4 R-S parity symbols at end of data
+    #+END_SRC
+
+    Or, pass pairs of =uint8_t= or =uint16_t= iterators into any container or
+    buffer you desire:
+    #+BEGIN_SRC C++
+    std::vector<uint8_t> data( 255 );
+    // Fill data with 251 bytes of payload, eg:
+    for ( uint8_t i = 0; i < 251; ++i )
+        data[i] = i;
+    // Append 4 symbols of R-S parity, using pairs of iterators
+    rs.encode( std::make_pair( data.cbegin(),       data.cbegin() + 251 ),
+               std::make_pair( data.begin()  + 251, data.begin()  + 255 ))
+    #+END_SRC
+
+*** Decoding Data w/ Corrupt/Missing Symbols
+
+    Once your data payload+parity is received, it may contain unknown erroneous
+    symbols (called "errors"), or known missing symbols (called "erasures").
+    Erasures are easier to correct (because we know their location), to they
+    only consume one R-S parity symbol to correct.  Unknown errors, however, are
+    lost in both position and value, so they each consume 2 R-S parity symbols
+    to correct.
+
+    If the R-S algorithm can correct any errors and erasures  present and
+    recover a valid R-S "codeword", it will report a positive value:
+    #+BEGIN_SRC C++
+    int correct = rs.decode( data );
+    if ( correct >= 0 )
+        std::cout << "Recovered data w/ " << correct << " errors" << std::endl
+    else
+        std::cout << "Failed to recover data; " << rs << " overwhelmed" << std::endl;
+    #+END_SRC
+
+    If desired, you can pass erasure positions, and get back recovered error
+    positions (remember that =erasures= symbols reported missing might not
+    actually be incorrect, so might not be reported back in =position=!):
+    #+BEGIN_SRC C++
+    std::vector<int> erasures = { 1 }; // Report second symbol missing
+    std::vector<int> position; // And get back corrected symbols here
+    int correct = rs.decode( data, erasures, &position );
+    #+END_SRC
+
+*** Discard The =PARITY= R-S Parity Symbols
+
+    In all cases where =rs.encode()= has added symbols to a resizable
+    =std::string= or =std::vector<T>= container, it is your responsibility to
+    remove them after =rs.decode()= finishes.  The =rs.nroots()= method reports
+    the number of parity symbols.
 
 * RSKEY: Data Key API
 
@@ -915,6 +1027,7 @@ var server = {
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
+
 * RSPWD: Password Correction API
 
   Javascript implementation of Reed-Solomon codec based password error
