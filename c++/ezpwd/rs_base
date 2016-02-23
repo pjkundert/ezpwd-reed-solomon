@@ -51,11 +51,12 @@
 #define _EZPWD_RS_BASE
 
 #include <algorithm>
-#include <vector>
-#include <type_traits>
+#include <array>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
+#include <type_traits>
+#include <vector>
 
 // 
 // Preprocessor defines available:
