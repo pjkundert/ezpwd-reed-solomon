@@ -14,7 +14,6 @@
 #include <cctype>
 #include <array>
 
-#define EZPWD_NO_EXCEPTS
 #include <ezpwd/rs>
 #include <ezpwd/output>
 

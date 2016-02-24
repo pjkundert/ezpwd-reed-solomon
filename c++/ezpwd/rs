@@ -132,7 +132,7 @@ namespace ezpwd {
 	    return -1;
 	}
 	if ( corrected != int( positions.size() ))
-	    throw std::runtime_error( "inconsistent R-S decode results" );
+	    EZPWD_RAISE_OR_RETURN( std::runtime_error, "inconsistent R-S decode results", -1 );
 
 	// Any erasures that don't turn out to contain errors are not returned as fixed positions.
 	// However, they have consumed parity resources.  Search for each erasure location in

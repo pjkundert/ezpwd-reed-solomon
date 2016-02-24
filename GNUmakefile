@@ -105,6 +105,7 @@ JSTEST =	$(JSCOMP) rskey_node.js
 EXCOMP =	rsexample					\
 		rssimple					\
 		rsembedded					\
+		rsembedded_nexc					\
 		rsexercise					\
 		rscompare					\
 		rscompare_nexc					\
@@ -158,37 +159,37 @@ COPYRIGHT:	VERSION
 # 
 # Production Javascript targets
 # 
-js/ezpwd/rspwd.js: rspwd.C rspwd.h COPYRIGHT rspwd_wrap.js				\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
+js/ezpwd/rspwd.js: rspwd.C rspwd.h COPYRIGHT rspwd_wrap.js			\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD)				\
-		--post-js rspwd_wrap.js $< -o $@					\
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD)			\
+		--post-js rspwd_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
-js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js				\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
+js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js			\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY)				\
-		--post-js rskey_wrap.js $< -o $@					\
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY)			\
+		--post-js rskey_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
-ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod						\
+ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod					\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
-js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod		\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
+js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
-	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD)				\
-		--post-js ezcod_wrap.js $< -o $@					\
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD)			\
+		--post-js ezcod_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 clean:
-	rm -f $(EXCOMP) $(EXCOMP:=.o)							\
-	      $(JSCOMP) $(JSCOMP:=.mem)							\
+	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
+	      $(JSCOMP) $(JSCOMP:=.mem)						\
 	      ezcod.o
 	make -C phil-karn clean
 
-rspwd_test.js:	rspwd_test.C rspwd.C							\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector			\
+rspwd_test.js:	rspwd_test.C rspwd.C						\
+		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
@@ -206,11 +207,16 @@ rssimple.js:	rssimple.C c++/ezpwd/rs						\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rsembedded.o:		CXXFLAGS += -fno-exceptions -Os
+rsembedded_nexc: 	CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions -Os
+rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+rsembedded_nexc:	rsembedded_nexc.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 rsembedded.o:	rsembedded.C c++/ezpwd/rs
 rsembedded:	rsembedded.o
-	$(CXX) $(CXXFLAGS) -fno-exceptions -Os -o $@ $^
-rsembedded.js:	rsembedded.C c++/ezpwd/rs						\
+	$(CXX) $(CXXFLAGS) -o $@ $^
+rsembedded.js:	rsembedded.C c++/ezpwd/rs					\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
@@ -221,7 +227,7 @@ rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rscompare_nexc.o:	CXXFLAGS += -DEZPWD_NO_EXCEPTS
+rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions -Os
 rscompare_nexc.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rscompare_nexc: 	CXXFLAGS += -I./phil-karn
