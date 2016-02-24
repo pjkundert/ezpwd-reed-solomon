@@ -67,14 +67,20 @@
 // EZPWD_ARRAY_TEST -- define to force erroneous sizing of some arrays for non-production testing
 // 
 
-#if defined( EZPWD_NO_EXCEPTS ) && EZPWD_NO_EXCEPTS
-#  define RAISE( exc ) std::cerr << ( exc ).what() << std::endl
-#else
-#  define RAISE( exc ) throw exc
-#endif
-
 #if defined( DEBUG ) && DEBUG >= 2
 #  include "output"	// ezpwd::hex... std::ostream shims for outputting containers of uint8_t data
+#endif
+
+#if defined( EZPWD_NO_EXCEPTS )
+#  include <cstdio>	// No exceptions; don't use C++ ostream
+#  define EZPWD_RAISE_OR_ABORT(  typ, str )		do {		\
+      std::fputs(( str ), stderr ); std::fputc( '\n', stderr );		\
+      abort();								\
+  } while ( false )
+#  define EZPWD_RAISE_OR_RETURN( typ, str, ret )	return ( ret )
+#else
+#  define EZPWD_RAISE_OR_ABORT(  typ, str )		throw ( typ )( str )
+#  define EZPWD_RAISE_OR_RETURN( typ, str, ret )	throw ( typ )( str )
 #endif
 
 namespace ezpwd {
@@ -470,10 +476,9 @@ namespace ezpwd {
 		alpha_to[i]		= sr;
 		sr			= poly( sr );
 	    }
-	    // If it's not primitive, exit
+	    // If it's not primitive, raise exception or abort
 	    if ( sr != alpha_to[0] ) {
-		RAISE( std::runtime_error( "reed-solomon: Galois field polynomial not primitive" ));
-	        abort();
+	        EZPWD_RAISE_OR_ABORT( std::runtime_error, "reed-solomon: Galois field polynomial not primitive" );
 	    }
 
 	    // Generate modulo table for some commonly used (non-trivial) values
@@ -620,8 +625,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode_mask( data.first, data.second - data.first, parity.first );
 	}
@@ -642,8 +646,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode_mask( data.first, data.second - data.first, parity.first );
 	}
@@ -664,8 +667,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode_mask( data.first, data.second - data.first, parity.first );
 	}
@@ -679,8 +681,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( len < 1 ) {
-		RAISE( std::runtime_error( "reed-solomon: must provide space for all parity and at least one non-parity symbol" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide space for all parity and at least one non-parity symbol", -1 );
 	    }
 
 	    const TYP       	       *dataptr;
@@ -692,8 +693,7 @@ namespace ezpwd {
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must mask and
 		// copy.  The INP data must fit at least the SYMBOL size!
 		if ( SYMBOL > INPUT ) {
-		    RAISE( std::runtime_error( "reed-solomon: output data type too small to contain symbols" ));
-		    return -1;
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: output data type too small to contain symbols", -1 );
 		}
 		std::array<TYP,SIZE>	tmp;
 		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
@@ -741,8 +741,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return decode_mask( data.first, data.second - data.first, parity.first,
 				erasure, position );
@@ -771,8 +770,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+		EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return decode_mask( data.first, data.second - data.first, parity.first,
 				erasure, position );
@@ -801,8 +799,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( parity.second - parity.first != NROOTS ) {
-		RAISE( std::runtime_error( "reed-solomon: parity length incompatible with number of roots" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return decode_mask( data.first, data.second - data.first, parity.first,
 				erasure, position );
@@ -827,8 +824,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( len < ( parity ? 0 : NROOTS ) + 1 ) {
-		RAISE( std::runtime_error( "reed-solomon: must provide all parity and at least one non-parity symbol" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide all parity and at least one non-parity symbol", -1 );
 	    }
 	    if ( ! parity ) {
 		len			       -= NROOTS;
@@ -847,8 +843,7 @@ namespace ezpwd {
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
 		// The INP data must fit at least the SYMBOL size!
 		if ( SYMBOL > INPUT ) {
-		    RAISE( std::runtime_error( "reed-solomon: input data type too small to contain symbols" ));
-		    return -1;
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data type too small to contain symbols", -1 );
 		}
 		for ( int i = 0; i < len; ++i ) {
 		    tmp[LOAD - len + i]		= data[i] & ~msk;
@@ -856,8 +851,7 @@ namespace ezpwd {
 		dataptr				= &tmp[LOAD - len];
 		for ( int i = 0; i < NROOTS; ++i ) {
 		    if ( TYP( parity[i] ) & msk ) {
-			RAISE( std::runtime_error( "reed-solomon: parity data contains information beyond R-S symbol size" ));
-			return -1;
+		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity data contains information beyond R-S symbol size", -1 );
 		    }
 		    tmp[LOAD + i]		= parity[i];
 		}
@@ -885,8 +879,7 @@ namespace ezpwd {
 		corrects			= decode( dataptr, len, pariptr,
 							  &pos.front(), erasure.size() );
 		if ( corrects > int( pos.size() )) {
-		    RAISE( std::runtime_error( "reed-solomon: FATAL: produced too many corrections; possible corruption!" ));
-		    return -1;
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: FATAL: produced too many corrections; possible corruption!", -1 );
 		}
 		pos.resize( std::max( 0, corrects ));
 	    }
@@ -948,8 +941,7 @@ namespace ezpwd {
 	    // Check length parameter for validity
 	    int			pad	= NN - NROOTS - len;
 	    if ( pad < 0 || pad >= NN ) {
-		RAISE( std::runtime_error( "reed-solomon: data length incompatible with block size and error correction symbols" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1 );
 	    }
 	    for ( int i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
@@ -1001,18 +993,15 @@ namespace ezpwd {
 	    // Check length parameter and erasures for validity
 	    int			pad	= NN - NROOTS - len;
 	    if ( pad < 0 || pad >= NN ) {
-		RAISE( std::runtime_error( "reed-solomon: data length incompatible with block size and error correction symbols" ));
-		return -1;
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1 );
 	    }
 	    if ( no_eras ) {
 		if ( no_eras > NROOTS ) {
-		    RAISE( std::runtime_error( "reed-solomon: number of erasures exceeds capacity (number of roots)" ));
-		    return -1;
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: number of erasures exceeds capacity (number of roots)", -1 );
 		}
 		for ( int i = 0; i < no_eras; ++i ) {
 		    if ( eras_pos[i] < 0 || eras_pos[i] >= len + NROOTS ) {
-			RAISE( std::runtime_error( "reed-solomon: erasure positions outside data+parity" ));
-			return -1;
+		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: erasure positions outside data+parity", -1 );
 		    }
 		}
 	    }

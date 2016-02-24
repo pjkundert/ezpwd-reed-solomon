@@ -9,8 +9,8 @@ SHELL		= /bin/bash
 # clang  3.6		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
-#CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-#CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
@@ -94,6 +94,7 @@ JSPROD =	js/ezpwd/ezcod.js				\
 
 JSCOMP =	rsexample.js					\
 		rssimple.js					\
+		rsembedded.js					\
 		rsexercise.js					\
 		rspwd_test.js					\
 		ezcod_test.js					\
@@ -103,6 +104,7 @@ JSTEST =	$(JSCOMP) rskey_node.js
 
 EXCOMP =	rsexample					\
 		rssimple					\
+		rsembedded					\
 		rsexercise					\
 		rscompare					\
 		rscompare_nexc					\
@@ -201,6 +203,14 @@ rssimple.o:	rssimple.C c++/ezpwd/rs
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 rssimple.js:	rssimple.C c++/ezpwd/rs						\
+		emscripten
+	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
+
+rsembedded.o:		CXXFLAGS += -fno-exceptions -Os
+rsembedded.o:	rsembedded.C c++/ezpwd/rs
+rsembedded:	rsembedded.o
+	$(CXX) $(CXXFLAGS) -fno-exceptions -Os -o $@ $^
+rsembedded.js:	rsembedded.C c++/ezpwd/rs						\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 

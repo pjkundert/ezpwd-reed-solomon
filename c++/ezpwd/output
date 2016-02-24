@@ -1,28 +1,30 @@
 #ifndef _EZPWD_OUTPUT
 #define _EZPWD_OUTPUT
 
+#include <cstdio>
 #include <streambuf>
 #include <iostream>
+#include <cctype>
 #include <iomanip>
 #include <sstream>
 #include <set>
 #include <map>
 
 // 
+// ezpwd::hexchr	-- escape/hexify char c, output using func/meth f, in width w >= 2
 // ezpwd::hexify	-- hexify something that can be converted to an unsigned char
-// ezpwd::hexout	-- hexify each element in the range (beg,end] 
+// ezpwd::hexout	-- hexify each element in the range (beg,end], limited by stream's width
 // 
-//     Optionally, limit each line length by setting the output ostream's width.
-// 
-// std::ostream << ezpwd::hexify( c )
-// std::ostream << ezpwd::hexout( beg, end )
+// std::ostream << ezpwd::hexify( c )		// output any char escaped/hex
+// std::ostream << ezpwd::hexout( beg, end )	// output any char iterator to ostream
 // std::ostream << std::vector<unsigend char>
 // std::ostream << std::array<unsigend char, N>
+// ezpwd::hexchr( c, [](unsigned char c){...;} )// output escaped/hex char via functor
+// ezpwd::hexout( beg, end, FILE* )		// output any char iterator to FILE*
 // 
-//     Output unprintable unsigned char data in hex, escape printable/space data.
+//     Output unprintable unsigned char data in hex, escape printable/whitespace data.
 //
 namespace ezpwd {
-
 
     struct hexify {
 	unsigned char		c;
@@ -33,7 +35,7 @@ namespace ezpwd {
 				    : c( _c )
 				    , w( _w )
 	{ ; }
-	explicit			hexify(
+	explicit		hexify(
 				    char		_c,
 				    std::streamsize	_w	= 2 )
 				    : c( (unsigned char)_c )
@@ -48,41 +50,43 @@ namespace ezpwd {
 	{ ; }
     };
 
-} // namespace ezpwd
+    template <typename F> // a functor taking a char
+    void
+    hexchr( unsigned char c, F f = []( unsigned char c ) { std::cout.put( c );}, size_t w = 2 )
+    {
+	for ( ; w > 2; --w )
+	    f( ' ' );
+	if ( std::isprint( c ) || std::isspace( c )
+	    || c == '\0' || c == '\a' || c == '\b' || c == 0x1B ) { // '\e' is not standard
+	    switch ( c ) {
+	    case 0x00: f( '\\' ); f( '0' ); break;  // NUL
+	    case 0x07: f( '\\' ); f( 'a' ); break;  // BEL
+	    case 0x08: f( '\\' ); f( 'b' ); break;  // BS
+	    case 0x09: f( '\\' ); f( 't' ); break;  // HT
+	    case 0x0A: f( '\\' ); f( 'n' ); break;  // LF
+	    case 0x0B: f( '\\' ); f( 'v' ); break;  // VT
+	    case 0x0C: f( '\\' ); f( 'f' ); break;  // FF
+	    case 0x0D: f( '\\' ); f( 'r' ); break;  // CR
+	    case 0x1B: f( '\\' ); f( 'e' ); break;  // ESC
+	    case '\"': f( '\\' ); f( '"' ); break;  // "
+	    case '\'': f( '\\' ); f( '\''); break;  // '
+	    case '\\': f( '\\' ); f( '\\'); break;  // '\'
+	    default:   f( ' '  ); f( c );	    // space, any other printable character
+	  }
+	} else {
+	    f( "0123456789ABCDEF"[( c >> 4 ) & 0x0f ] );
+	    f( "0123456789ABCDEF"[( c >> 0 ) & 0x0f ] );
+	}
+    }
 
+} // namespace ezpwd
 
 inline
 std::ostream		       &operator<<(
 				    std::ostream       &lhs,
 				    const ezpwd::hexify&rhs )
 {
-    std::ios_base::fmtflags	flg	= lhs.flags();			// left, right, hex?
-    
-    lhs << std::setw( rhs.w );
-    if ( isprint( rhs.c ) || isspace( rhs.c )) {
-	switch ( char( rhs.c )) {
-	case 0x00: lhs << "\\0";  break;		// NUL
-	case 0x07: lhs << "\\a";  break;		// BEL
-	case 0x08: lhs << "\\b";  break;		// BS
-	case 0x1B: lhs << "\\e";  break;		// ESC
-	case 0x09: lhs << "\\t";  break;		// HT
-	case 0x0A: lhs << "\\n";  break;		// LF
-	case 0x0B: lhs << "\\v";  break;		// VT
-	case 0x0C: lhs << "\\f";  break;		// FF
-	case 0x0D: lhs << "\\r";  break;		// CR
-	case '\"': lhs << "\\\""; break;		// "
-	case '\'': lhs << "\\\'"; break;		// '
-	case ' ':  lhs << "  ";   break;		// space
-	case '\\': lhs << "\\\\"; break;		// '\'
-	default:   lhs << char( rhs.c );		// any other printable character
-	}
-    } else {
-	char			fill	= lhs.fill();
-	lhs << std::setfill( '0' ) << std::hex << std::uppercase 
-	    << (unsigned int)rhs.c
-	    << std::setfill( fill ) << std::dec << std::nouppercase;
-    }
-    lhs.flags( flg );
+    ezpwd::hexchr( rhs.c, [ &lhs ]( unsigned char c ) { lhs.put( c ); }, rhs.w );
     return lhs;
 }
 
@@ -103,6 +107,19 @@ namespace ezpwd {
 	    }
 	    lhs << hexify( *i );
 	    ++col;
+	}
+	return lhs;
+    }
+
+    template < typename iter_t >
+    inline
+    std::FILE		       *hexout(
+				    const iter_t       &beg,
+				    const iter_t       &end,
+				    std::FILE          *lhs )
+    {
+	for ( auto i = beg; i != end; ++i ) {
+	    ezpwd::hexchr( *i, [ lhs ]( unsigned char c ) { std::fputc( c, lhs ); } );
 	}
 	return lhs;
     }

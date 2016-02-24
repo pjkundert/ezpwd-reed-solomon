@@ -92,7 +92,7 @@ void				test_rskey_simple( ezpwd::asserter &assert )
     decres				= rskey_2_decode( 8, dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
-    if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
+    if ( assert.ISEQUAL( std::string( R"""(\0010203FFFEFDFC)""" ), std::string() << u8vec_t( dec, dec+8 )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( decres, 100 ))
 	std::cout << assert << std::endl;
@@ -103,7 +103,7 @@ void				test_rskey_simple( ezpwd::asserter &assert )
     decres				= rskey_2_decode( 8, dec, encres, sizeof dec );
     if ( decres < 0 )
 	std::cout << dec << std::endl;
-    if ( assert.ISEQUAL( std::string( "00010203FFFEFDFC" ), std::string() << u8vec_t( dec, dec+8 )))
+    if ( assert.ISEQUAL( std::string( R"""(\0010203FFFEFDFC)""" ), std::string() << u8vec_t( dec, dec+8 )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( decres, 50 ))
 	std::cout << assert << std::endl;
@@ -273,9 +273,9 @@ void				test_base16( ezpwd::asserter &assert )
 	    { "a",	R"""(0601)""",					"61",			"61" },
 	    { "ab",	R"""(06010602)""",				"6162",			"6162" },
 	    { "\xff\x01\x80",
-			R"""(0F0F00010800)""",				"FF0180",		"FF0180" },
+			R"""(0F0F\001\b\0)""",				"FF0180",		"FF0180" },
 	    { std::string( 1, '\x00' ) + "\x01",
-			R"""(00000001)""",				"0001",			"0001" },
+			R"""(\0\0\001)""",				"0001",			"0001" },
 	    { std::string( 1, '\x00' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
 	      "\x10\x11\x12\x13\x14\x15\x16\x17\x18\x19\x1a\x1b\x1c\x1d\x1e\x1f"
 	      " !\"#$%&`()*+,-./"
@@ -293,23 +293,23 @@ void				test_base16( ezpwd::asserter &assert )
 	      "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
 	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
 
-          R"""(00000001000200030004000500060007000800\t00\n00\v00\f00\r000E000F)"""
-          R"""(01000101010201030104010501060107010801\t01\n01\v01\f01\r010E010F)"""
-          R"""(02000201020202030204020502060600020802\t02\n02\v02\f02\r020E020F)"""
-          R"""(03000301030203030304030503060307030803\t03\n03\v03\f03\r030E030F)"""
-          R"""(04000401040204030404040504060407040804\t04\n04\v04\f04\r040E040F)"""
-          R"""(05000501050205030504050505060507050805\t05\n05\v05\f05\r050E050F)"""
-          R"""(06000601060206030604060506060607060806\t06\n06\v06\f06\r060E060F)"""
-          R"""(07000701070207030704070507060707070807\t07\n07\v07\f07\r070E070F)"""
-          R"""(08000801080208030804080508060807080808\t08\n08\v08\f08\r080E080F)"""
-          R"""(\t00\t01\t02\t03\t04\t05\t06\t07\t08\t\t\t\n\t\v\t\f\t\r\t0E\t0F)"""
-          R"""(\n00\n01\n02\n03\n04\n05\n06\n07\n08\n\t\n\n\n\v\n\f\n\r\n0E\n0F)"""
-          R"""(\v00\v01\v02\v03\v04\v05\v06\v07\v08\v\t\v\n\v\v\v\f\v\r\v0E\v0F)"""
-          R"""(\f00\f01\f02\f03\f04\f05\f06\f07\f08\f\t\f\n\f\v\f\f\f\r\f0E\f0F)"""
-          R"""(\r00\r01\r02\r03\r04\r05\r06\r07\r08\r\t\r\n\r\v\r\f\r\r\r0E\r0F)"""
-          R"""(0E000E010E020E030E040E050E060E070E080E\t0E\n0E\v0E\f0E\r0E0E0E0F)"""
-          R"""(0F000F010F020F030F040F050F060F070F080F\t0F\n0F\v0F\f0F\r0F0E0F0F)""",
-
+          R"""(\0\0\001\002\003\004\005\006\0\a\0\b\0\t\0\n\0\v\0\f\0\r\00E\00F)"""
+          R"""(01\001010102010301040105010601\a01\b01\t01\n01\v01\f01\r010E010F)"""
+          R"""(02\002010202020302040205020606\002\b02\t02\n02\v02\f02\r020E020F)"""
+          R"""(03\003010302030303040305030603\a03\b03\t03\n03\v03\f03\r030E030F)"""
+          R"""(04\004010402040304040405040604\a04\b04\t04\n04\v04\f04\r040E040F)"""
+          R"""(05\005010502050305040505050605\a05\b05\t05\n05\v05\f05\r050E050F)"""
+          R"""(06\006010602060306040605060606\a06\b06\t06\n06\v06\f06\r060E060F)"""
+          R"""(\a\0\a01\a02\a03\a04\a05\a06\a\a\a\b\a\t\a\n\a\v\a\f\a\r\a0E\a0F)"""
+          R"""(\b\0\b01\b02\b03\b04\b05\b06\b\a\b\b\b\t\b\n\b\v\b\f\b\r\b0E\b0F)"""
+          R"""(\t\0\t01\t02\t03\t04\t05\t06\t\a\t\b\t\t\t\n\t\v\t\f\t\r\t0E\t0F)"""
+          R"""(\n\0\n01\n02\n03\n04\n05\n06\n\a\n\b\n\t\n\n\n\v\n\f\n\r\n0E\n0F)"""
+          R"""(\v\0\v01\v02\v03\v04\v05\v06\v\a\v\b\v\t\v\n\v\v\v\f\v\r\v0E\v0F)"""
+          R"""(\f\0\f01\f02\f03\f04\f05\f06\f\a\f\b\f\t\f\n\f\v\f\f\f\r\f0E\f0F)"""
+          R"""(\r\0\r01\r02\r03\r04\r05\r06\r\a\r\b\r\t\r\n\r\v\r\f\r\r\r0E\r0F)"""
+          R"""(0E\00E010E020E030E040E050E060E\a0E\b0E\t0E\n0E\v0E\f0E\r0E0E0E0F)"""
+          R"""(0F\00F010F020F030F040F050F060F\a0F\b0F\t0F\n0F\v0F\f0F\r0F0E0F0F)""",
+		
           R"""(000102030405060708090A0B0C0D0E0F101112131415161718191A1B1C1D1E1F)"""
           R"""(202122232425266028292A2B2C2D2E2F303132333435363738393A3B3C3D3E3F)"""
           R"""(404142434445464748494A4B4C4D4E4F505152535455565758595A5B5C5D5E5F)"""
@@ -338,14 +338,14 @@ void				test_base32( ezpwd::asserter &assert )
         {
 	    // original scatter to 5-bit chunks				standard		ezcod
 	    { "a",	R"""(\f04FFFFFFFFFFFF)""",			"ME======",		"C4" },
-	    { "ab",	R"""(\f051100FFFFFFFF)""",			"MFRA====",		"C5H0" },
+	    { "ab",	R"""(\f0511\0FFFFFFFF)""",			"MFRA====",		"C5H0" },
 	    { "abc",	R"""(\f05110606FFFFFF)""",			"MFRGG===",		"C5H66" },
-	    { "abcd",	R"""(\f051106061900FF)""",			"MFRGGZA=",		"C5H66R0" },
+	    { "abcd",	R"""(\f0511060619\0FF)""",			"MFRGGZA=",		"C5H66R0" },
 	    { "abcde",	R"""(\f05110606190305)""",			"MFRGGZDF",		"C5H66R35" },
-	    { "abcde0",	R"""(\f051106061903050600FFFFFFFFFFFF)""",	"MFRGGZDFGA======",	"C5H66R3560" },
+	    { "abcde0",	R"""(\f0511060619030506\0FFFFFFFFFFFF)""",	"MFRGGZDFGA======",	"C5H66R3560" },
 	    // RFC4648 test vectors
 	    { "foo",	R"""(\f1917161EFFFFFF)""",			"MZXW6===",		"CRPNX" },
-	    { "foobar",	R"""(\f1917161E1813010E08FFFFFFFFFFFF)""",	"MZXW6YTBOI======",	"CRPNXQK1E8" },
+	    { "foobar",	R"""(\f1917161E1813010E\bFFFFFFFFFFFF)""",	"MZXW6YTBOI======",	"CRPNXQK1E8" },
 	    { "\xff",	R"""(1F1CFFFFFFFFFFFF)""",			"74======",		"YV" },
 	    { "\xff\xff",
 			R"""(1F1F1F10FFFFFFFF)""",			"777Q====",		"YYYG" },
@@ -374,19 +374,19 @@ void				test_base32( ezpwd::asserter &assert )
 	      "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
 	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
 
-	  R"""(0000001004001804001403000E0200\t010805101803080E011C080102041013)"""
-	  R"""(0210\n11\f0518180304\r011607001D03180F120008\t0204\f1202\n\t1300)"""
-	  R"""(0500141214\n19\f051417021E\f01110608191308\r\t16061C1C03120E111B)"""
-	  R"""(07101E131C0F1A000805010406110205081903141012\n\n\t\r06041A13120F)"""
-	  R"""(\n01081504141A14\n15\v050E160219\v\t\r151817\n1E\v1D100602181303)"""
-	  R"""(\f111216\f191B08\r051506161B03\r\r191717001C\v120E\r1A07\n1D1317)"""
-	  R"""(0F011C17141E1B1C0F151F071F00040110\n0118\t01\f06101E0408130214\v)"""
-	  R"""(111206181D031C101206\t\t07050415121A\v191106\f1A130E0E\t1B07141F)"""
-          R"""(1402101A05081D04141613\n0F\n05\t15\n151A19\v\r0E151E18\v03\f1513)"""
-          R"""(16121A1B\r\r1D1817061D\v170F051D171A1F1C01100E02180F02\f\v111607)"""
-          R"""(1903041C15121E\f191707\f1F1406111A\v\t1D\t150E161A1F\f\r1316161B)"""
-          R"""(1B130E1D1D171F001C07110E071907051C1B131E111A0F\n1D0F160E1B1B170F)"""
-          R"""(1E03181F051C1F141E171B0F0F1E07191F\v1D1F191F0F1E1F1CFFFFFFFFFFFF)""",
+          R"""(\0\0\01004\01804\01403\00E02\0\t01\b05101803\b0E011C\b0102041013)"""
+          R"""(0210\n11\f0518180304\r0116\a\01D03180F12\0\b\t0204\f1202\n\t13\0)"""
+          R"""(05\0141214\n19\f051417021E\f011106\b1913\b\r\t16061C1C03120E11\e)"""
+          R"""(\a101E131C0F1A\0\b05010406110205\b1903141012\n\n\t\r06041A13120F)"""
+          R"""(\n01\b1504141A14\n15\v050E160219\v\t\r151817\n1E\v1D100602181303)"""
+          R"""(\f111216\f19\e\b\r05150616\e03\r\r191717\01C\v120E\r1A\a\n1D1317)"""
+          R"""(0F011C17141E\e1C0F151F\a1F\0040110\n0118\t01\f06101E04\b130214\v)"""
+          R"""(111206181D031C101206\t\t\a050415121A\v191106\f1A130E0E\t\e\a141F)"""
+          R"""(1402101A05\b1D04141613\n0F\n05\t15\n151A19\v\r0E151E18\v03\f1513)"""
+          R"""(16121A\e\r\r1D1817061D\v170F051D171A1F1C01100E02180F02\f\v1116\a)"""
+          R"""(1903041C15121E\f1917\a\f1F1406111A\v\t1D\t150E161A1F\f\r131616\e)"""
+          R"""(\e130E1D1D171F\01C\a110E\a19\a051C\e131E111A0F\n1D0F160E\e\e170F)"""
+          R"""(1E03181F051C1F141E17\e0F0F1E\a191F\v1D1F191F0F1E1F1CFFFFFFFFFFFF)""",
 
 	      "AAAQEAYEAUDAOCAJBIFQYDIOB4IBCEQTCQKRMFYYDENBWHA5DYPSAIJCEMSCKJTA"
 	      "FAUSUKZMFUXC6MBRGIZTINJWG44DSOR3HQ6T4P2AIFBEGRCFIZDUQSKKJNGE2TSP"
@@ -412,7 +412,7 @@ void				test_base64( ezpwd::asserter &assert )
 	    // original scatter to 6-bit chunks				standard		ezcod
 	    { "",       R"""()""",					"",			"" },
 	    { "a",	R"""(1810FFFF)""",				"YQ==",			"YQ" },
-	    { "ab",	R"""(181608FF)""",				"YWI=",			"YWI" },
+	    { "ab",	R"""(1816\bFF)""",				"YWI=",			"YWI" },
 	    { "f",	R"""(19  FFFF)""",				"Zg==", 		"Zg" },
 	    { "fo", 	R"""(19 & <FF)""", 				"Zm8=",			"Zm8" },
 	    { "foo",	R"""(19 & = /)""",				"Zm9v",			"Zm9v" },
@@ -420,7 +420,7 @@ void				test_base64( ezpwd::asserter &assert )
 	    { "fooba",	R"""(19 & = /18 &04FF)""",			"Zm9vYmE=",		"Zm9vYmE" },
 	    { "foobar",	R"""(19 & = /18 &05 2)""",			"Zm9vYmFy",		"Zm9vYmFy" },
 	    { "\x14\xfb\x9c\x03\xd9\x7e",
-		        R"""(050F .1C00 = % >)""",			"FPucA9l+",		"FPucA9l+" },
+		        R"""(050F .1C\0 = % >)""",			"FPucA9l+",		"FPucA9l+" },
 	    { "\xff\xff\xff\xff\xff\xff",
 			R"""( ? ? ? ? ? ? ? ?)""",			"////////",		"........" },
 	    { std::string( 1, '\x00' ) + "\x01\x02\x03\x04\x05\x06\x07\x08\x09\x0a\x0b\x0c\x0d\x0e\x0f"
@@ -440,18 +440,18 @@ void				test_base64( ezpwd::asserter &assert )
 	      "\xe0\xe1\xe2\xe3\xe4\xe5\xe6\xe7\xe8\xe9\xea\xeb\xec\xed\xee\xef"
 	      "\xf0\xf1\xf2\xf3\xf4\xf5\xf6\xf7\xf8\xf9\xfa\xfb\xfc\xfd\xfe\xff",
 
-	  R"""(0000040200 0100501  1C080210 (\v0300 40E03 1001104 !\f1405111817)"""
-	  R"""(0601 $1A06 1 01D07 ! <  081208 #\t0214 &1802   )\n\" , ,\v12 8 /)"""
-	  R"""(\f0304 2\f 310 5\r #1C 80E13 ( ;0F03 4 >0F 4010110 $\r0411141907)"""
-	  R"""(1204 %\n12 4 1\r13 $ =101415\t131505151615 5 !1916 % -1C1715 91F)"""
-	  R"""(180605\"18 611 %19 &1D (1A16 ) +1B06 5 .1B 701 11C\'\r 41D1719 7)"""
-	  R"""(1E07 % :1E 7 1 =1F\' >00  18\n03 !081606 ! 8\"\t\" ( .\f #18 :0F)"""
-	  R"""( $\t0612 $ 91215 % )1E18 &19 *1B\'\t 61E\' :02 ! ( *0E $ )1A1A\')"""
-	  R"""( *\n & * * : 2 - + * > 0 ,1B\n 3 -\v16 6 - ;\" 9 . + . < /1B : ?)"""
-	  R"""( 0\f0702 0 <1305 1 ,1F08 21C +\v 3\f 70E 3 =0311 4 -0F14 51D1B17)"""
-	  R"""( 6\r\'1A 6 = 31D 7 - ?   81E\v # 90E17 & 9 > # ) : . / , ;1E ; /)"""
-	  R"""( <0F07 2 < ?13 5 = /1F 8 >1F + ; ?0F 7 > ? 0FFFF)""",
-
+          R"""(\0\00402\0 0100501  1C\b0210 (\v03\0 40E03 1\01104 !\f1405111817)"""
+          R"""(0601 $1A06 1 01D\a ! <  \b12\b #\t0214 &1802   )\n\" , ,\v12 8 /)"""
+          R"""(\f0304 2\f 310 5\r #1C 80E13 ( ;0F03 4 >0F 4010110 $\r04111419\a)"""
+          R"""(1204 %\n12 4 1\r13 $ =101415\t131505151615 5 !1916 % -1C1715 91F)"""
+          R"""(180605\"18 611 %19 &1D (1A16 ) +\e06 5 .\e 701 11C\'\r 41D1719 7)"""
+          R"""(1E\a % :1E 7 1 =1F\' >\0  18\n03 !\b1606 ! 8\"\t\" ( .\f #18 :0F)"""
+          R"""( $\t0612 $ 91215 % )1E18 &19 *\e\'\t 61E\' :02 ! ( *0E $ )1A1A\')"""
+          R"""( *\n & * * : 2 - + * > 0 ,\e\n 3 -\v16 6 - ;\" 9 . + . < /\e : ?)"""
+          R"""( 0\f\a02 0 <1305 1 ,1F\b 21C +\v 3\f 70E 3 =0311 4 -0F14 51D\e17)"""
+          R"""( 6\r\'1A 6 = 31D 7 - ?   81E\v # 90E17 & 9 > # ) : . / , ;1E ; /)"""
+          R"""( <0F\a 2 < ?13 5 = /1F 8 >1F + ; ?0F 7 > ? 0FFFF)""",
+		
 	      "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8gISIjJCUmYCgpKissLS4v"
 	      "MDEyMzQ1Njc4OTo7PD0+P0BBQkNERUZHSElKS0xNTk9QUVJTVFVWV1hZWltcXV5f"
 	      "YGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6e3x9fn+AgYKDhIWGh4iJiouMjY6P"
