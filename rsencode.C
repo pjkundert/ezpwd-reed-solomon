@@ -71,6 +71,7 @@ int main( int argc, const char **argv )
 	    chunk.resize( chunksize );
 	    inp.read( &chunk.front(), chunksize );
 	    chunk.resize( inp.gcount() );
+	    inptotal		       += inp.gcount();
 	    // std::cerr << "Read:  " << chunk.size() << std::endl;
 	    if ( chunk.size() == 0 )
 		continue;
