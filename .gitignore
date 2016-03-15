@@ -31,3 +31,6 @@
 rscompare_nexc
 rsembedded
 rsembedded.js
+rsencode
+rsdecode
+rsembedded_nexc

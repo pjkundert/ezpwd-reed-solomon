@@ -102,7 +102,8 @@ JSCOMP =	rsexample.js					\
 
 JSTEST =	$(JSCOMP) rskey_node.js
 
-EXCOMP =	rsexample					\
+EXCOMP =	rsencode rsdecode				\
+		rsexample					\
 		rssimple					\
 		rsembedded					\
 		rsembedded_nexc					\
@@ -142,14 +143,14 @@ testex:		testex-time
 testex-%:	$(EXTEST)
 	@for t in $^; do 					\
 	    echo "$* ./$$t...";					\
-	    $* ./$$t;						\
+	    $* ./$$t </dev/null;				\
 	done
 
 testjs:		testjs-node
 testjs-%:	$(JSTEST)
 	@for t in $^; do 					\
 	    echo "$* ./$$t...";					\
-	    $* ./$$t;						\
+	    $* ./$$t </dev/null;				\
 	done
 
 COPYRIGHT:	VERSION
@@ -192,6 +193,17 @@ rspwd_test.js:	rspwd_test.C rspwd.C						\
 		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
+
+rsencode.o:	rsencode.C c++/ezpwd/rs
+rsencode:	rsencode.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsdecode: 	CXXFLAGS += -DRSDECODE
+rsdecode.o:	rsencode.C c++/ezpwd/rs
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+rsdecode:	rsdecode.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
