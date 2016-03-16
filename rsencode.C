@@ -27,7 +27,7 @@
 
 constexpr size_t		paritysize = 32; // bytes of parity
 constexpr size_t		chunksize = 128; // bytes of data chunk (up to 255-parity)
-ezpwd::RS<255,255-paritysize>	rs; // eg; paritysize of 32 ==> RS<255,221>
+ezpwd::RS<255,255-paritysize>	rs; // eg; paritysize of 32 ==> RS<255,223>
 
 int main( int argc, const char **argv )
 {
