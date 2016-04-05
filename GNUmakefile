@@ -231,7 +231,7 @@ rssimple.js:	rssimple.C c++/ezpwd/rs						\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rsembedded_nexc: 	CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions -Os
+rsembedded_nexc: 	CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
 rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsembedded_nexc:	rsembedded_nexc.o
@@ -251,7 +251,7 @@ rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions -Os
+rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
 rscompare_nexc.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rscompare_nexc: 	CXXFLAGS += -I./phil-karn
