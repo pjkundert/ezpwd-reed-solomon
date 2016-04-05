@@ -204,6 +204,18 @@ rsdecode.o:	rsencode.C c++/ezpwd/rs
 rsdecode:	rsdecode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
+rsencode_9:	CXXFLAGS += -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128
+rsencode_9.o:	rsencode.C c++/ezpwd/rs
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+rsencode_9:	rsencode_9.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsdecode_9: 	CXXFLAGS +=  -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128 -DRSDECODE
+rsdecode_9.o:	rsencode.C c++/ezpwd/rs
+	$(CXX) $(CXXFLAGS) -c -o $@ $<
+rsdecode_9:	rsdecode_9.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o

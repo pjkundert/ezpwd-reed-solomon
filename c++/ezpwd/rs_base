@@ -374,7 +374,7 @@ namespace ezpwd {
 				    std::vector<int>   *position= 0 )
 	    const
 	= 0;
-    };
+    }; // class reed_solomon_base
 } // namespace ezpwd
 
 // 
@@ -421,6 +421,7 @@ namespace ezpwd {
 	: public reed_solomon_base {
 
     public:
+	typedef TYP		symbol_t;
 	static const size_t	DATUM	= 8 * sizeof TYP();	// bits / TYP
 	static const size_t	SYMBOL	= SYM;			// bits / symbol
 	static const int	MM	= SYM;
