@@ -102,7 +102,7 @@ JSCOMP =	rsexample.js					\
 
 JSTEST =	$(JSCOMP) rskey_node.js
 
-EXCOMP =	rsencode rsdecode				\
+EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsexample					\
 		rssimple					\
 		rsembedded					\
@@ -194,28 +194,30 @@ rspwd_test.js:	rspwd_test.C rspwd.C						\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
+# rsencode -- correct 8-bit symbols (default to 128 symbol chunks, each w/ 32 parity symbols)
 rsencode.o:	rsencode.C c++/ezpwd/rs
 rsencode:	rsencode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "abcd"
 
-rsdecode: 	CXXFLAGS += -DRSDECODE
-rsdecode.o:	rsencode.C c++/ezpwd/rs
-	$(CXX) $(CXXFLAGS) -c -o $@ $<
-rsdecode:	rsdecode.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
-
+# rsencode_9 -- correct lower 9 bits of 16-bit symbols (serialized big-endian)
+# Thus, only the lowest bit of the 1st, 3rd, etc. character is corrected
+# (remainder passed through unchanged).  So, 'a' (0b01100001) changed to 'b'
+# (0b01100010), and is thus corrected to 'c' (0b01100011).
 rsencode_9:	CXXFLAGS += -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128
 rsencode_9.o:	rsencode.C c++/ezpwd/rs
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_9:	rsencode_9.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "cbcde"
 
-rsdecode_9: 	CXXFLAGS +=  -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128 -DRSDECODE
-rsdecode_9.o:	rsencode.C c++/ezpwd/rs
+# rsencode_16 -- correct all bits of 16-bit symbols (serialized big-endian)
+rsencode_16:	CXXFLAGS += -DRSCODEWORD=65535 -DRSPARITY=32 -DRSCHUNK=128
+rsencode_16.o:	rsencode.C c++/ezpwd/rs
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-rsdecode_9:	rsdecode_9.o
+rsencode_16:	rsencode_16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-
+	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "abcde"
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
