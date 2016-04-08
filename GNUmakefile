@@ -198,7 +198,7 @@ rspwd_test.js:	rspwd_test.C rspwd.C						\
 rsencode.o:	rsencode.C c++/ezpwd/rs
 rsencode:	rsencode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "abcd"
+	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcd" >/dev/null
 
 # rsencode_9 -- correct lower 9 bits of 16-bit symbols (serialized big-endian)
 # Thus, only the lowest bit of the 1st, 3rd, etc. character is corrected
@@ -209,7 +209,7 @@ rsencode_9.o:	rsencode.C c++/ezpwd/rs
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_9:	rsencode_9.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "cbcde"
+	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "cbcde" >/dev/null
 
 # rsencode_16 -- correct all bits of 16-bit symbols (serialized big-endian)
 rsencode_16:	CXXFLAGS += -DRSCODEWORD=65535 -DRSPARITY=32 -DRSCHUNK=128
@@ -217,7 +217,7 @@ rsencode_16.o:	rsencode.C c++/ezpwd/rs
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_16:	rsencode_16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -v "abcde"
+	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcde" >/dev/null
 
 rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
