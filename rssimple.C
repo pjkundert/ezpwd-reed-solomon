@@ -44,7 +44,7 @@ int main()
 	rs.encode( data );
 
 	std::vector<int>	erasure;
-	if ( i & 1 ) {
+	if ( i & 1 ) {					// every other loop...
 	    erasure.push_back( i );
 	    data[i]			= ' ';		// erasure
 	    std::cout << "Erasure:   " << data << std::endl;

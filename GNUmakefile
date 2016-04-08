@@ -32,20 +32,31 @@ CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
-#CC		= gcc # clang
 CFLAGS		= # -O3 already defined
 
+# Emscripten
+#   - At -O2 and above, code is minified
+# 
+#     Instead of 'latest', choose a specific version known to work.  To see
+# what's available, use:
+# 
+#         $ cd emscripten/emsdk_portable   
+#         $ ./emsdk list
+# 
+#     At time of writing, 1.35.0 is "latest", but doesn't work (1.34.1 did, I believe).  The current
+# master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
+# 
 EMSDK		= ./emscripten/emsdk_portable
-EMSDK_ACTIVATE	= ./emscripten/emsdk_portable/emsdk activate latest
+EMSDK_VERSION	= sdk-master-64bit # latest
+EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
 
 EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=`pwd`/emscripten:$${PATH} && em++
 DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
 CHEERP_EMXX	= /opt/cheerp/bin/clang++
 
-# Emscripten
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s NO_EXIT_RUNTIME=1 #-s ASSERTIONS=2
+EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s NO_EXIT_RUNTIME=1 -s ASSERTIONS=2
 
 EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
 			'_ezcod_3_10_encode',			\
