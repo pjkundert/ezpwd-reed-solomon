@@ -1,4 +1,16 @@
-
+// 
+// rsexample.C -- Illustrate the use of the R-S codec and ezpwd::corrector APIs
+// 
+//     There are cases where we may have to guess how many symbols have R-S symbols been provided.
+// Such is the case when we know how many R-S parity symbols are to be provided, but it is unknown
+// how long the protected non-parity data is, nor how many of the parity symbols have been supplied.
+// 
+//     We can guess, and return an estimated likelihood that the supplied data is correct.  This is
+// what ezpwd::corrector does.  Instantiate it with the known number of R-S parity symbols, and it
+// will evaluate the supplied codeword, performing R-S decodes with varying guesses of data and
+// parity symbols, returning the most likely candidate data, with an estimate of its probability of
+// correctness.
+// 
 #include <time.h>
 
 #include <iostream>

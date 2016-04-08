@@ -1,3 +1,4 @@
+*~
 *.o
 /*.js.map
 /*.js.mem
@@ -27,3 +28,10 @@
 /rssimple.js
 /rsvalidate
 /schifra/
+rscompare_nexc
+rsembedded
+rsembedded.js
+rsembedded_nexc
+rsencode
+rsencode_9
+rsencode_16

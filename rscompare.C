@@ -6,6 +6,7 @@
 
 #include <ezpwd/rs>
 #include <ezpwd/timeofday>
+#include <ezpwd/asserter>
 
 
 // Phil Karn's implementation
@@ -27,7 +28,8 @@ extern "C" {
 
 //        eg.     255,             2,            253
 template <size_t TOTAL, size_t ROOTS, size_t PAYLOAD=TOTAL-ROOTS>
-double 				compare()
+double 				compare(
+				    ezpwd::asserter    &assert )
 {
     std::array<uint8_t,TOTAL>	orig;
 
@@ -52,29 +54,33 @@ double 				compare()
         << std::endl;
 #endif
     std::array<uint8_t,TOTAL>	cdata( orig );
-if ( ROOTS == 32 ) {
-    encode_rs_8( cdata.data(), cdata.data() + PAYLOAD, 0 );
+    if ( ROOTS == 32 ) {
+	encode_rs_8( cdata.data(), cdata.data() + PAYLOAD, 0 );
 #if defined( DEBUG )
-    std::cout
-	<< "Phil Karn's CCSDS       parity: "
-	<< std::vector<uint8_t>( cdata.data() + PAYLOAD, cdata.data() + PAYLOAD + ROOTS ) 
-	<< std::endl;
+	std::cout
+	    << "Phil Karn's CCSDS       parity: "
+	    << std::vector<uint8_t>( cdata.data() + PAYLOAD, cdata.data() + PAYLOAD + ROOTS ) 
+	    << std::endl;
 #endif
-}
+    }
     
     static const ezpwd::RS_CCSDS<TOTAL,TOTAL-ROOTS>
 				nrs;
     std::array<uint8_t,TOTAL>	ndata( orig );
-    nrs.encode( ndata.data(), PAYLOAD, ndata.data() + PAYLOAD );
+    if ( assert.ISEQUAL( nrs.encode( ndata.data(), PAYLOAD, ndata.data() + PAYLOAD ), int( ROOTS )))
+	std::cout
+	    << assert << " " << nrs << ".encode didn't return NROOTS"
+	    << std::endl;
 #if defined( DEBUG )
     std::cout
         << "EZPWD   " << nrs
 	<< "     parity: " << std::vector<uint8_t>( ndata.data() + PAYLOAD, ndata.data() + PAYLOAD + ROOTS ) 
         << std::endl;
 #endif
-    if ( gdata != ndata )
-	throw std::logic_error( "EZPWD and Karn R-S decoders produced different parity" );
-
+    if ( assert.ISTRUE( gdata == ndata ))
+	std::cout
+	    << assert << " EZPWD and Karn R-S decoders produced different parity"
+	    << std::endl;
 
     // The Schifra R-S codec
     /* Finite Field Parameters */
@@ -148,9 +154,12 @@ if ( ROOTS == 32 ) {
 		uint8_t		err	= (final - count ) % 255; // may xor with a zero value
 		geras[0]		= count % gdata.size();
 		gdata[geras[0]]	       ^= err;
-		gcorrs			= decode_rs_char( grs, gdata.data(), geras, err&1 );
-		if ( ! gcorrs != ! err )
-		    throw std::logic_error( "corrections doesn't match error load!" );
+		int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
+		gcorrs			= decode_rs_char( grs, gdata.data(), geras, numeras );
+		if ( assert.ISEQUAL( ! gcorrs, ! err ))
+		    std::cout
+			<< assert << " corrections doesn't match error load!"
+			<< std::endl;
 	    }
 	}
 	double			elapsed	= ezpwd::seconds( now - beg );
@@ -161,42 +170,49 @@ if ( ROOTS == 32 ) {
 	<< " at "			<< gtps/1000
 	<< " kTPS"
         << std::endl;
-    if ( gdata != orig )
-	throw std::logic_error( "Phil's Generic R-S decoder produced different results" );
+    if ( assert.ISTRUE( gdata == orig ))
+	std::cout
+	    << assert << " Phil's Generic R-S decoder produced different results"
+	    << std::endl;
 
-if ( ROOTS == 32 ) {
-    int				ceras[ROOTS];
-    int				ccorrs	= 0;
-    double			ctps	= 0;
-    {
-	timeval			beg	= ezpwd::timeofday();
-	timeval			end	= beg;
-	end.tv_sec		       += 1;
-	int			count	= 0;
-	timeval			now;
-	while (( now = ezpwd::timeofday() ) < end ) {
-	    for ( int final = count + 997; count < final; ++count ) {
-		uint8_t		err	= (final - count ) % 255; // may xor with a zero value
-		ceras[0]		= count % cdata.size();
-		cdata[ceras[0]]	       ^= err;
-		ccorrs			= decode_rs_8( cdata.data(), ceras, err&1, 0 );
-		if ( ! ccorrs != ! err )
-		    throw std::logic_error( "corrections doesn't match error load!" );
+    if ( ROOTS == 32 ) {
+	int			ceras[ROOTS];
+	int			ccorrs	= 0;
+	double			ctps	= 0;
+	{
+	    timeval		beg	= ezpwd::timeofday();
+	    timeval		end	= beg;
+	    end.tv_sec		       += 1;
+	    int			count	= 0;
+	    timeval		now;
+	    while (( now = ezpwd::timeofday() ) < end ) {
+		for ( int final = count + 997; count < final; ++count ) {
+		    uint8_t	err	= (final - count ) % 255; // may xor with a zero value
+		    ceras[0]		= count % cdata.size();
+		    cdata[ceras[0]]    ^= err;
+		    int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
+		    ccorrs		= decode_rs_8( cdata.data(), ceras, numeras, 0 );
+		    if ( assert.ISEQUAL( ! ccorrs, ! err ))
+			std::cout 
+			    << assert <<  " corrections doesn't match error load!"
+			    << std::endl;
+		}
 	    }
+	    double		elapsed	= ezpwd::seconds( now - beg );
+	    ctps			= count / elapsed;
 	}
-	double			elapsed	= ezpwd::seconds( now - beg );
-	ctps				= count / elapsed;
+	std::cout 
+	    << "Phil's CCSDS corrections: "<< ccorrs
+	    << " at "			<< ctps/1000
+	    << " kTPS ("		<< std::abs( ctps - gtps ) / gtps * 100
+	    << "% "			<< ( ctps > gtps ? "faster" : "slower" )
+	    << ")"
+	    << std::endl;
+	if ( assert.ISTRUE( cdata == orig ))
+	    std::cout
+		<< assert << " Phil's CCSDS R-S decoder produced different results"
+		<< std::endl;
     }
-    std::cout 
-	<< "Phil's CCSDS corrections: "	<< ccorrs
-	<< " at "			<< ctps/1000
-	<< " kTPS ("			<< std::abs( ctps - gtps ) / gtps * 100
-	<< "% "				<< ( ctps > gtps ? "faster" : "slower" )
-	<< ")"
-        << std::endl;
-    if ( cdata != orig )
-	throw std::logic_error( "Phil's CCSDS R-S decoder produced different results" );
-}
 
     // We'll cheat a bit with the Schifra R-S decoder to give it a fighting chance.  Instead of
     // decoding the R-S codeword in-place (in the client's data buffer) like the Phil Karn and EZCOD
@@ -223,13 +239,18 @@ if ( ROOTS == 32 ) {
 		seras.resize( 1 );
 		seras[0]		= count % gdata.size();
 		block[seras[0]]	       ^= err;
-		if ( ! ( err & 1 ))
+		int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
+		if ( ! numeras )
 		    seras.resize( 0 ); // no erasures; just an error
-		if ( ! srs_decoder.decode( block, seras ))
-		    throw std::logic_error( "Schifra decoder failed" );
+		if ( assert.ISTRUE( srs_decoder.decode( block, seras )))
+		    std::cout
+			<< assert << " Schifra decoder failed"
+			<< std::endl;
 		scorrs			= block.errors_corrected;
-		if ( ! scorrs != ! err )
-		    throw std::logic_error( "corrections doesn't match error load!" );
+		if ( assert.ISEQUAL( ! scorrs, ! err ))
+		    std::cout
+			<< assert <<  " corrections doesn't match error load!"
+			<< std::endl;
 	    }
 	}
 	// Copy the data back out of Schifra's block...
@@ -247,9 +268,11 @@ if ( ROOTS == 32 ) {
 	<< "% "				<< ( stps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
-    if ( std::vector<uint8_t>( sdata.begin(), sdata.begin() + TOTAL-ROOTS)
-	 != std::vector<uint8_t>( orig.begin(), orig.begin() + TOTAL-ROOTS ))
-	throw std::logic_error( "Schifra R-S decoder produced different results" );
+    if ( assert.ISTRUE( std::vector<uint8_t>( sdata.begin(), sdata.begin() + TOTAL-ROOTS)
+		     == std::vector<uint8_t>( orig.begin(), orig.begin() + TOTAL-ROOTS )))
+	std::cout
+	    << assert << " Schifra R-S decoder produced different results"
+	    << std::endl;
 
     int				neras[nrs.NROOTS];
     int				ncorrs	= 0;
@@ -265,11 +288,14 @@ if ( ROOTS == 32 ) {
 		uint8_t		err	= (final - count) % 255; // may xor with a zero value
 		neras[0]		= count % gdata.size();
 		ndata[neras[0]]	       ^= err;
+		int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
 		ncorrs			= nrs.decode( ndata.data(), nrs.LOAD,
 						      ndata.data() + nrs.LOAD,
-						      neras, err&1 );
-		if ( ! ncorrs != ! err )
-		    throw std::logic_error( "corrections doesn't match error load!" );
+						      neras, numeras );
+		if ( assert.ISEQUAL( ! ncorrs, ! err ))
+		    std::cout
+			<< assert << " corrections doesn't match error load!"
+			<< std::endl;
 	    }
 	}
 	double			elapsed	= ezpwd::seconds( now - beg );
@@ -282,8 +308,10 @@ if ( ROOTS == 32 ) {
 	<< "% "				<< ( ntps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
-    if ( ndata != orig )
-	throw std::logic_error( "EZPWD R-S decoder produced different results" );
+    if ( assert.ISTRUE( ndata == orig ))
+	std::cout
+	    << assert << " EZPWD R-S decoder produced different results"
+	    << std::endl;
 
     free_rs_char( grs );
     return ( ntps - gtps ) / gtps * 100;
@@ -291,18 +319,22 @@ if ( ROOTS == 32 ) {
 
 int main()
 {
+    ezpwd::asserter		assert;
     double			avg	= 0;
     int				cnt	= 0;
-    avg				       += compare<255,128>();	++cnt;
-    avg				       += compare<255, 99>();	++cnt;
-    avg				       += compare<255, 64>();	++cnt;
-    avg				       += compare<255, 32>();	++cnt;
-    avg				       += compare<255, 16>();	++cnt;
-    avg				       += compare<255, 13>();	++cnt;
-    avg				       += compare<255,  8>();	++cnt;
-    avg				       += compare<255,  4>();	++cnt;
-    avg				       += compare<255,  3>();	++cnt;
-    avg				       += compare<255,  2>();	++cnt;
+    avg				       += compare<255,128>( assert );	++cnt;
+    avg				       += compare<255, 99>( assert );	++cnt;
+    avg				       += compare<255, 64>( assert );	++cnt;
+    avg				       += compare<255, 32>( assert );	++cnt;
+    avg				       += compare<255, 16>( assert );	++cnt;
+    avg				       += compare<255, 13>( assert );	++cnt;
+    avg				       += compare<255,  8>( assert );	++cnt;
+    avg				       += compare<255,  4>( assert );	++cnt;
+    avg				       += compare<255,  3>( assert );	++cnt;
+    avg				       += compare<255,  2>( assert );	++cnt;
+    avg				       += compare<255,  1>( assert );	++cnt;
 
     std::cout << std::endl << "RS(255,...) EZPWD vs. Phil Karn's: " << avg/cnt << "% faster (avg.)" << std::endl;
+
+    return assert.failures ? 1 : 0;
 }

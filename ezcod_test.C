@@ -44,7 +44,10 @@ ezcod_exercise( const ezpwd::ezcod<P,L> &ezc )
 #endif
 	<< std::endl
 	<< ezc
+	<< std::endl
+	<< std::endl
 	<< std::endl;
+
 
     for ( int test = 0; test < 5; ++test ) {
 	std::string	manip	= ezc.encode();

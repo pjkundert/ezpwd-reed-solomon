@@ -11,6 +11,7 @@
 
 #include <ezpwd/asserter>
 #include <ezpwd/rs>
+#include <ezpwd/output>
 
 extern "C" {
 #include <rs.h> // Phil Karn's implementation
