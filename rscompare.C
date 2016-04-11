@@ -279,7 +279,7 @@ double 				compare(
 	    << assert << " Schifra R-S decoder produced different results"
 	    << std::endl;
 
-    int				neras[nrs.NROOTS];
+    size_t			neras[nrs.NROOTS];
     int				ncorrs	= 0;
     double			ntps	= 0;
     {

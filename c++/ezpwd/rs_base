@@ -97,9 +97,9 @@ namespace ezpwd {
     public:
 	virtual size_t		datum()		const = 0;	// a data element's bits
 	virtual size_t		symbol()	const = 0;	// a symbol's bits
-	virtual int		size()		const = 0;	// R-S block size (maximum total symbols)
-	virtual int		nroots()	const = 0;	// R-S roots (parity symbols)
-	virtual	int		load()		const = 0;	// R-S net payload (data symbols)
+	virtual size_t		size()		const = 0;	// R-S block size (maximum total symbols)
+	virtual size_t		nroots()	const = 0;	// R-S roots (parity symbols)
+	virtual	size_t		load()		const = 0;	// R-S net payload (data symbols)
 
 	virtual		       ~reed_solomon_base()
 	{
@@ -253,9 +253,9 @@ namespace ezpwd {
 
 	int			decode(
 				    std::string	       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
@@ -268,9 +268,9 @@ namespace ezpwd {
 	int			decode(
 				    std::string	       &data,
 				    std::string	       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
@@ -284,9 +284,9 @@ namespace ezpwd {
 	template < typename T >
 	int			decode(
 				    std::vector<T>     &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -301,9 +301,9 @@ namespace ezpwd {
 	int			decode(
 				    std::vector<T>     &data,
 				    std::vector<T>     &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -318,10 +318,10 @@ namespace ezpwd {
 	template < typename T, size_t N >
 	int			decode(
 				    std::array<T,N>    &data,
-				    int			pad	= 0, // ignore 'pad' symbols at start of array
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    size_t		pad	= 0, // ignore 'pad' symbols at start of array
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -335,9 +335,9 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -345,17 +345,17 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -363,17 +363,17 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
 	virtual int		decode(
@@ -381,9 +381,9 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
     }; // class reed_solomon_base
@@ -405,9 +405,9 @@ namespace ezpwd {
     //
     // gfpoly - default field polynomial generator functor.
     //
-    template < int SYM, int PLY >
+    template < size_t SYM, size_t PLY >
     struct gfpoly {
-	int 			operator() ( int sr )
+	size_t			operator() ( size_t sr )
 	    const
 	{
 	    if ( sr == 0 )
@@ -425,26 +425,26 @@ namespace ezpwd {
     // 
     // class reed_solomon_tabs -- R-S tables common to all RS(NN,*) with same SYM, PRM and PLY
     // 
-    template < typename TYP, int SYM, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t PRM, class PLY >
     class reed_solomon_tabs
 	: public reed_solomon_base {
 
     public:
 	typedef TYP		symbol_t;
-	static const size_t	DATUM	= 8 * sizeof TYP();	// bits / TYP
-	static const size_t	SYMBOL	= SYM;			// bits / symbol
-	static const int	MM	= SYM;
-	static const int	SIZE	= ( 1 << SYM ) - 1;	// maximum symbols in field
-	static const int	NN	= SIZE;
-	static const int	A0	= SIZE;
-	static const int	MODS				// modulo table: 1/2 the symbol size squared, up to 4k
+	static constexpr size_t	DATUM	= 8 * sizeof TYP();	// bits / TYP
+	static constexpr size_t	SYMBOL	= SYM;			// bits / symbol
+	static constexpr size_t	MM	= SYM;
+	static constexpr size_t	SIZE	= ( 1 << SYM ) - 1;	// maximum symbols in field
+	static constexpr size_t	NN	= SIZE;
+	static constexpr size_t	A0	= SIZE;
+	static constexpr size_t	MODS				// modulo table: 1/2 the symbol size squared, up to 4k
 #if defined( EZPWD_NO_MOD_TAB )
 					= 0;
 #else
 					= SYM > 8 ? ( 1 << 12 ) : ( 1 << SYM << SYM/2 );
 #endif
 
-	static int 		iprim;				// initialized to -1, below
+	static size_t 		iprim;				// 0 if uninitialized
 
     protected:
 	static std::array<TYP,
@@ -466,11 +466,19 @@ namespace ezpwd {
 				reed_solomon_tabs()
 				    : reed_solomon_base()
 	{
+<<<<<<< HEAD
 	    // Do init if not already done.  We check one value which is initialized to -1; this is
 	    // safe, 'cause the value will not be set 'til the initializing thread has completely
 	    // initialized the structure.  Worst case scenario: multiple threads will initialize
 	    // identically.  No mutex necessary.
 	    if ( iprim >= 0 )
+=======
+	    // lock, if guard/mutex provided, and do init if not already done.  We check one value
+	    // which changes several times; this is safe, 'cause the mutex will not be released (for
+	    // us to check) 'til the initializing thread has completely initialized it.
+	    GRD			guard( mutex ); (void)guard;
+	    if ( iprim > 0 )
+>>>>>>> Trial to see if switching to unsigned yields any optimization
 		return;
 
 #if defined( DEBUG ) && DEBUG >= 1
@@ -480,8 +488,8 @@ namespace ezpwd {
 	    index_of[0]			= A0;	// log(zero) = -inf
 	    alpha_to[A0]		= 0;	// alpha**-inf = 0
 	    PLY			poly;
-	    int			sr	= poly( 0 );
-	    for ( int i = 0; i < NN; i++ ) {
+	    size_t		sr	= poly( 0 );
+	    for ( size_t i = 0; i < NN; i++ ) {
 		index_of[sr]		= i;
 		alpha_to[i]		= sr;
 		sr			= poly( sr );
@@ -492,7 +500,7 @@ namespace ezpwd {
 	    }
 
 	    // Generate modulo table for some commonly used (non-trivial) values
-	    for ( int x = NN; x < NN + MODS; ++x )
+	    for ( size_t x = NN; x < NN + MODS; ++x )
 		mod_of[x-NN]		= _modnn( x );
 	    // Find prim-th root of 1, index form, used in decoding.
 	    int			iptmp	= 1;
@@ -513,7 +521,7 @@ namespace ezpwd {
 	//  Simple arithmetic modulo would return a wrong result for values >= 3 * NN
 	//
 	TYP	 		_modnn(
-				    int			x )
+				    size_t		x )
 	    const
 	{
 	    while ( x >= NN ) {
@@ -523,7 +531,7 @@ namespace ezpwd {
 	    return x;
 	}
 	TYP	 		modnn(
-				    int			x )
+				    size_t		x )
 	    const
 	{
 	    while ( x >= NN + MODS ) {
@@ -560,7 +568,7 @@ namespace ezpwd {
     // appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
     // access via "safe" (size specifying) containers or iterators is available.
     //
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t RTS, size_t FCR, size_t PRM, class PLY >
     class reed_solomon
 	: public reed_solomon_tabs<TYP, SYM, PRM, PLY> {
 
@@ -581,8 +589,8 @@ namespace ezpwd {
 
 	using tabs_t::modnn;
 
-	static const int	NROOTS	= RTS;
-	static const int	LOAD	= SIZE - NROOTS;	// maximum non-parity symbol payload
+	static constexpr size_t	NROOTS	= RTS;
+	static constexpr size_t	LOAD	= SIZE - NROOTS;	// maximum non-parity symbol payload
 
     protected:
 	static std::array<TYP, NROOTS + 1>
@@ -599,17 +607,17 @@ namespace ezpwd {
 	    return SYMBOL;
 	}
 
-	virtual int		size() const
+	virtual size_t		size() const
 	{
 	    return SIZE;
 	}
 
-	virtual int		nroots() const
+	virtual size_t		nroots() const
 	{
 	    return NROOTS;
 	}
 
-	virtual int		load() const
+	virtual size_t		load() const
 	{
 	    return LOAD;
 	}
@@ -620,6 +628,9 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -630,6 +641,9 @@ namespace ezpwd {
 						       &parity )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -641,6 +655,9 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -651,6 +668,9 @@ namespace ezpwd {
 						       &parity )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -662,6 +682,9 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return encode_mask( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -672,6 +695,9 @@ namespace ezpwd {
 						       &parity )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -680,13 +706,13 @@ namespace ezpwd {
 
 	template < typename INP >
 	int			encode_mask(
-				    const INP	       *data,
-				    int			len,
+				    const INP	       *data,		// pointer to codeword data;
+				    size_t		len,		//    from 1 to LOAD symbols in length
 				    INP		       *parity )	// pointer to all NROOTS parity symbols
 
 	    const
 	{
-	    if ( len < 1 ) {
+	    if ( len < 1 || len > LOAD ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide space for all parity and at least one non-parity symbol", -1 );
 	    }
 
@@ -703,7 +729,7 @@ namespace ezpwd {
 		}
 		std::array<TYP,SIZE>	tmp;
 		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
-		for ( int i = 0; i < len; ++i )
+		for ( size_t i = 0; i < len; ++i )
 		    tmp[LOAD - len + i]		= data[i] & ~msk;
 		dataptr				= &tmp[LOAD - len];
 		pariptr				= &tmp[LOAD];
@@ -711,7 +737,7 @@ namespace ezpwd {
 		encode( dataptr, len, pariptr );
 
 		// we copied/masked data; copy the parity symbols back (may be different sizes)
-		for ( int i = 0; i < NROOTS; ++i )
+		for ( size_t i = 0; i < NROOTS; ++i )
 		    parity[i]			= pariptr[i];
 	    } else {
 		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches; use in-place.
@@ -727,11 +753,14 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return decode_mask( data.first, data.second - data.first, (uint8_t *)0,
 				erasure, position );
 	}
@@ -741,11 +770,14 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -756,11 +788,14 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return decode_mask( data.first, data.second - data.first, (uint16_t *)0,
 				erasure, position );
 	}
@@ -770,11 +805,14 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 		EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -785,11 +823,14 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    return decode_mask( data.first, data.second - data.first, (uint32_t *)0,
 				erasure, position );
 	}
@@ -799,11 +840,14 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
 	    if ( parity.second - parity.first != NROOTS ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
@@ -822,11 +866,11 @@ namespace ezpwd {
 	template < typename INP >
 	int			decode_mask(
 				    INP		       *data,
-				    int			len,
-				    INP		       *parity	= 0,	// either 0, or pointer to all parity symbols
-				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
-				    std::vector<int>   *position= 0 )
+				    size_t		len,
+				    INP		       *parity	= 0,	// either 0, or pointer to all NROOTS parity symbols
+				    const std::vector<size_t>
+				    		       &erasure	= std::vector<size_t>(),
+				    std::vector<size_t>*position= 0 )
 	    const
 	{
 	    if ( len < ( parity ? 0 : NROOTS ) + 1 ) {
@@ -839,11 +883,11 @@ namespace ezpwd {
 
 	    TYP		       	       *dataptr;
 	    TYP			       *pariptr;
-	    const size_t		INPUT	= 8 * sizeof ( INP );
+	    constexpr size_t		INPUT	= 8 * sizeof ( INP );
 
 	    std::array<TYP,SIZE>	tmp;
-	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
-	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT;
+	    constexpr TYP		msk	= static_cast<TYP>( ~0UL << SYMBOL );
+	    constexpr bool		cpy	= DATUM != SYMBOL || DATUM != INPUT;
 	    if ( cpy ) {
 		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size; Must copy.
@@ -851,11 +895,11 @@ namespace ezpwd {
 		if ( SYMBOL > INPUT ) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data type too small to contain symbols", -1 );
 		}
-		for ( int i = 0; i < len; ++i ) {
+		for ( size_t i = 0; i < len; ++i ) {
 		    tmp[LOAD - len + i]		= data[i] & ~msk;
 		}
 		dataptr				= &tmp[LOAD - len];
-		for ( int i = 0; i < NROOTS; ++i ) {
+		for ( size_t i = 0; i < NROOTS; ++i ) {
 		    if ( TYP( parity[i] ) & msk ) {
 		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity data contains information beyond R-S symbol size", -1 );
 		    }
@@ -878,9 +922,9 @@ namespace ezpwd {
 		// erasure positions.  After number of corrections is known, resize the position
 		// vector.  Thus, we use any supplied erasure info, and optionally return any
 		// correction position info separately.
-		std::vector<int>       _pos;
-		std::vector<int>       &pos	= position ? *position : _pos;
-		pos.resize( std::max( size_t( NROOTS ), erasure.size() ));
+		std::vector<size_t>    _pos;
+		std::vector<size_t>    &pos	= position ? *position : _pos;
+		pos.resize( std::max( NROOTS, erasure.size() ));
 		std::copy( erasure.begin(), erasure.end(), pos.begin() );
 		corrects			= decode( dataptr, len, pariptr,
 							  &pos.front(), erasure.size() );
@@ -891,11 +935,11 @@ namespace ezpwd {
 	    }
 
 	    if ( cpy && corrects > 0 ) {
-		for ( int i = 0; i < len; ++i ) {
+		for ( size_t i = 0; i < len; ++i ) {
 		    data[i]		       &= msk;
 		    data[i]		       |= tmp[LOAD - len + i];
 		}
-		for ( int i = 0; i < NROOTS; ++i ) {
+		for ( size_t i = 0; i < NROOTS; ++i ) {
 		    parity[i]			= tmp[LOAD + i];
 		}
 	    }
@@ -909,15 +953,26 @@ namespace ezpwd {
 				reed_solomon()
 				    : reed_solomon_tabs<TYP, SYM, PRM, PLY>()
 	{
+<<<<<<< HEAD
 	    // We check one element of the array; this is safe, 'cause the value will not be
 	    // initialized 'til the initializing thread has completely initialized the array.  Worst
 	    // case scenario: multiple threads will initialize identically.  No mutex necessary.
+=======
+	    if ( NROOTS == 0 || NROOTS >= SIZE ) {
+	        EZPWD_RAISE_OR_ABORT( std::runtime_error, "reed-solomon: Invalid number of parity symbols for codeword symbol capacity" );
+	    }
+	    // lock, if guard/mutex provided, and do init if not already done.  We check one element
+	    // of the array; this is safe, 'cause the mutex will not be released (for us to check)
+	    // 'til the initializing thread has completely initialized the array.
+	    GRD			guard( mutex ); (void)guard;
+>>>>>>> Trial to see if switching to unsigned yields any optimization
 	    if ( genpoly[0] )
 		return;
 
 #if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << "RS(" << SIZE << "," << LOAD << "): Initialize for " << NROOTS << " roots." << std::endl;
 #endif
+<<<<<<< HEAD
 	    std::array<TYP, NROOTS + 1>
 				tmppoly; // uninitialized
 	    // Form RS code generator polynomial from its roots.  Only lower-index entries are
@@ -930,35 +985,54 @@ namespace ezpwd {
 		    if ( tmppoly[j] != 0 )
 			tmppoly[j]	= tmppoly[j - 1]
 			    ^ alpha_to[modnn(index_of[tmppoly[j]] + root)];
+=======
+	    // Form RS code generator polynomial from its roots
+	    genpoly[0]			= 1;
+	    for ( size_t i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
+		genpoly[i + 1]		= 1;
+		// Multiply genpoly[] by  @**(root + x)
+		for ( size_t j = i; j > 0; j-- ) {
+		    if ( genpoly[j] != 0 )
+			genpoly[j]	= genpoly[j - 1]
+			    ^ alpha_to[modnn(index_of[genpoly[j]] + root)];
+>>>>>>> Trial to see if switching to unsigned yields any optimization
 		    else
 			tmppoly[j]	= tmppoly[j - 1];
 		}
 		// tmppoly[0] can never be zero
 		tmppoly[0]		= alpha_to[modnn(index_of[tmppoly[0]] + root)];
 	    }
+<<<<<<< HEAD
 	    // convert NROOTS entries of tmppoly[] to genpoly[] in index form for quicker encoding,
 	    // in reverse order so genpoly[0] is last element initialized.
 	    for ( int i = NROOTS; i >= 0; --i )
 		genpoly[i]		= index_of[tmppoly[i]];
+=======
+	    // convert genpoly[] to index form for quicker encoding
+	    for ( size_t i = 0; i <= NROOTS; i++ )
+		genpoly[i]		= index_of[genpoly[i]];
+>>>>>>> Trial to see if switching to unsigned yields any optimization
 	}
 
 	int			encode(
 				    const TYP	       *data,
-				    int			len,
+				    size_t		len,
 				    TYP		       *parity ) // at least nroots
 	    const
 	{
-	    // Check length parameter for validity
-	    int			pad	= NN - NROOTS - len;
-	    if ( pad < 0 || pad >= NN ) {
+	    // Check length parameter for validity.  We know NROOTS < NN.  It is possible to have as
+	    // little as 1 non-parity (payload) symbol that isn't a pad, and as many as LOAD (SIZE -
+	    // NROOTS.
+	    if ( len == 0 || len > LOAD ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1 );
 	    }
-	    for ( int i = 0; i < NROOTS; i++ )
+
+	    for ( size_t i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
-	    for ( int i = 0; i < len; i++ ) {
+	    for ( size_t i = 0; i < len; i++ ) {
 		TYP		feedback= index_of[data[i] ^ parity[0]];
 		if ( feedback != A0 )
-		    for ( int j = 1; j < NROOTS; j++ )
+		    for ( size_t j = 1; j < NROOTS; j++ )
 			parity[j]      ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
 
 		std::rotate( parity, parity + 1, parity + NROOTS );
@@ -976,10 +1050,10 @@ namespace ezpwd {
 
 	int			decode(
 				    TYP		       *data,
-				    int			len,
+				    size_t		len,
 				    TYP		       *parity,		// Requires: at least NROOTS
-				    int		       *eras_pos= 0,	// Capacity: at least NROOTS
-				    int			no_eras	= 0,	// Maximum:  at most  NROOTS
+				    size_t	       *eras_pos= 0,	// Capacity: at least NROOTS
+				    size_t		no_eras	= 0,	// Maximum:  at most  NROOTS
 				    TYP		       *corr	= 0 )	// Capacity: at least NROOTS
 	    const
 	{
@@ -987,41 +1061,43 @@ namespace ezpwd {
 				typ_nroots;
 	    typedef std::array< TYP, NROOTS+1 >
 				typ_nroots_1;
-	    typedef std::array< int, NROOTS >
-				int_nroots;
+	    typedef std::array< size_t, NROOTS >
+				siz_nroots;
 
 	    typ_nroots_1	lambda  { { 0 } };
 	    typ_nroots		syn;
 	    typ_nroots_1	b;
 	    typ_nroots_1	t;
 	    typ_nroots_1	omega;
-	    int_nroots		root;
+	    siz_nroots		root;
 	    typ_nroots_1	reg;
-	    int_nroots		loc;
+	    siz_nroots		loc;
 	    int			count	= 0;
 
-	    // Check length parameter and erasures for validity
-	    int			pad	= NN - NROOTS - len;
-	    if ( pad < 0 || pad >= NN ) {
+	    // Check length parameter for validity.  We know NROOTS < NN.  It is possible to have as
+	    // little as 1 non-parity (payload) symbol that isn't a pad, and as many as LOAD (SIZE -
+	    // NROOTS.
+	    if ( len == 0 || len > LOAD ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1 );
 	    }
+	    size_t		pad	= LOAD - len;
 	    if ( no_eras ) {
 		if ( no_eras > NROOTS ) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: number of erasures exceeds capacity (number of roots)", -1 );
 		}
-		for ( int i = 0; i < no_eras; ++i ) {
-		    if ( eras_pos[i] < 0 || eras_pos[i] >= len + NROOTS ) {
+		for ( size_t i = 0; i < no_eras; ++i ) {
+		    if ( eras_pos[i] >= len + NROOTS ) {
 		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: erasure positions outside data+parity", -1 );
 		    }
 		}
 	    }
 
 	    // form the syndromes; i.e., evaluate data(x) at roots of g(x)
-	    for ( int i = 0; i < NROOTS; i++ )
+	    for ( size_t i = 0; i < NROOTS; i++ )
 		syn[i]			= data[0];
 
-	    for ( int j = 1; j < len; j++ ) {
-		for ( int i = 0; i < NROOTS; i++ ) {
+	    for ( size_t j = 1; j < len; j++ ) {
+		for ( size_t i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
 			syn[i]		= data[j];
 		    } else {
@@ -1031,8 +1107,8 @@ namespace ezpwd {
 		}
 	    }
 
-	    for ( int j = 0; j < NROOTS; j++ ) {
-		for ( int i = 0; i < NROOTS; i++ ) {
+	    for ( size_t j = 0; j < NROOTS; j++ ) {
+		for ( size_t i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
 			syn[i]		= parity[j];
 		    } else {
@@ -1044,15 +1120,15 @@ namespace ezpwd {
 
 	    // Convert syndromes to index form, checking for nonzero condition
 	    TYP 		syn_error = 0;
-	    for ( int i = 0; i < NROOTS; i++ ) {
+	    for ( size_t i = 0; i < NROOTS; i++ ) {
 		syn_error	       |= syn[i];
 		syn[i]			= index_of[syn[i]];
 	    }
 
-	    int			deg_lambda = 0;
-	    int			deg_omega = 0;
-	    int			r	= no_eras;
-	    int			el	= no_eras;
+	    size_t		deg_lambda = 0;
+	    size_t		deg_omega = 0;
+	    size_t		r	= no_eras;
+	    size_t		el	= no_eras;
 	    if ( ! syn_error ) {
 		// if syndrome is zero, data[] is a codeword and there are no errors to correct.
 		count			= 0;
@@ -1064,9 +1140,9 @@ namespace ezpwd {
 		// Init lambda to be the erasure locator polynomial.  Convert erasure positions
 		// from index into data, to index into Reed-Solomon block.
 		lambda[1]		= alpha_to[modnn(PRM * (NN - 1 - ( eras_pos[0] + pad )))];
-		for ( int i = 1; i < no_eras; i++ ) {
+		for ( size_t i = 1; i < no_eras; i++ ) {
 		    TYP		u	= modnn(PRM * (NN - 1 - ( eras_pos[i] + pad )));
-		    for ( int j = i + 1; j > 0; j-- ) {
+		    for ( size_t j = i + 1; j > 0; j-- ) {
 			TYP	tmp	= index_of[lambda[j - 1]];
 			if ( tmp != A0 ) {
 			    lambda[j]  ^= alpha_to[modnn(u + tmp)];
@@ -1080,13 +1156,13 @@ namespace ezpwd {
 	    // Needed only for decoder debugging.
     
 	    // find roots of the erasure location polynomial
-	    for( int i = 1; i<= no_eras; i++ )
+	    for( size_t i = 1; i<= no_eras; i++ )
 		reg[i]			= index_of[lambda[i]];
 
 	    count			= 0;
-	    for ( int i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
+	    for ( size_t i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
 		TYP		q	= 1;
-		for ( int j = 1; j <= no_eras; j++ ) {
+		for ( size_t j = 1; j <= no_eras; j++ ) {
 		    if ( reg[j] != A0 ) {
 			reg[j]		= modnn( reg[j] + j );
 			q	       ^= alpha_to[reg[j]];
@@ -1110,19 +1186,19 @@ namespace ezpwd {
 	    if ( count ) {
 	        std::cout
 		    << "Erasure positions as determined by roots of Eras Loc Poly: ";
-		for ( int i = 0; i < count; i++ )
+		for ( size_t i = 0; i < count; i++ )
 		    std::cout << loc[i] << ' ';
 		std::cout << std::endl;
 	        std::cout
 		    << "Erasure positions as determined by roots of eras_pos array: ";
-		for ( int i = 0; i < no_eras; i++ )
+		for ( size_t i = 0; i < no_eras; i++ )
 		    std::cout << eras_pos[i] << ' ';
 		std::cout << std::endl;
 	    }
 #endif
 #endif
 
-	    for ( int i = 0; i < NROOTS + 1; i++ )
+	    for ( size_t i = 0; i < NROOTS + 1; i++ )
 		b[i]			= index_of[lambda[i]];
 
 	    //
@@ -1131,7 +1207,7 @@ namespace ezpwd {
 	    while ( ++r <= NROOTS ) { // r is the step number
 		// Compute discrepancy at the r-th step in poly-form
 		TYP		discr_r	= 0;
-		for ( int i = 0; i < r; i++ ) {
+		for ( size_t i = 0; i < r; i++ ) {
 		    if (( lambda[i] != 0 ) && ( syn[r - i - 1] != A0 )) {
 			discr_r	       ^= alpha_to[modnn(index_of[lambda[i]] + syn[r - i - 1])];
 		    }
@@ -1145,7 +1221,7 @@ namespace ezpwd {
 		} else {
 		    // 7 lines below: T(x) <-- lambda(x)-discr_r*x*b(x)
 		    t[0]		= lambda[0];
-		    for ( int i = 0; i < NROOTS; i++ ) {
+		    for ( size_t i = 0; i < NROOTS; i++ ) {
 			if ( b[i] != A0 ) {
 			    t[i + 1]	= lambda[i + 1]
 				^ alpha_to[modnn(discr_r + b[i])];
@@ -1155,7 +1231,7 @@ namespace ezpwd {
 		    if ( 2 * el <= r + no_eras - 1 ) {
 			el		= r + no_eras - el;
 			// 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
-			for ( int i = 0; i <= NROOTS; i++ ) {
+			for ( size_t i = 0; i <= NROOTS; i++ ) {
 			    b[i]	= ((lambda[i] == 0)
 					   ? A0
 					   : modnn(index_of[lambda[i]] - discr_r + NN));
@@ -1170,7 +1246,7 @@ namespace ezpwd {
 	    }
 
 	    // Convert lambda to index form and compute deg(lambda(x))
-	    for ( int i = 0; i < NROOTS + 1; i++ ) {
+	    for ( size_t i = 0; i < NROOTS + 1; i++ ) {
 		lambda[i]		= index_of[lambda[i]];
 		if ( lambda[i] != NN )
 		    deg_lambda		= i;
@@ -1178,9 +1254,9 @@ namespace ezpwd {
 	    // Find roots of error+erasure locator polynomial by Chien search
 	    reg				= lambda;
 	    count			= 0; // Number of roots of lambda(x)
-	    for ( int i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
+	    for ( size_t i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
 		TYP		q	= 1; // lambda[0] is always 0
-		for ( int j = deg_lambda; j > 0; j-- ) {
+		for ( size_t j = deg_lambda; j > 0; j-- ) {
 		    if ( reg[j] != A0 ) {
 			reg[j]		= modnn( reg[j] + j );
 			q	       ^= alpha_to[reg[j]];
@@ -1195,10 +1271,10 @@ namespace ezpwd {
 		root[count]		= i;
 		loc[count]		= k;
 		// If we've already found max possible roots, abort the search to save time
-		if ( ++count == deg_lambda )
+		if ( ++count == int( deg_lambda ))
 		    break;
 	    }
-	    if ( deg_lambda != count ) {
+	    if ( int( deg_lambda ) != count ) {
 		// deg(lambda) unequal to number of roots => uncorrectable error detected
 		count			= -1;
 		goto finish;
@@ -1208,9 +1284,9 @@ namespace ezpwd {
 	    // index form. Also find deg(omega).
 	    //
 	    deg_omega 			= deg_lambda - 1;
-	    for ( int i = 0; i <= deg_omega; i++ ) {
+	    for ( size_t i = 0; i <= deg_omega; i++ ) {
 		TYP		tmp	= 0;
-		for ( int j = i; j >= 0; j-- ) {
+		for ( size_t j = i + 1; j-- > 0; ) { // unsigned j descentding from i to 0, inclusive
 		    if (( syn[i - j] != A0 ) && ( lambda[j] != A0 ))
 			tmp	       ^= alpha_to[modnn(syn[i - j] + lambda[j])];
 		}
@@ -1221,9 +1297,9 @@ namespace ezpwd {
 	    // Compute error values in poly-form. num1 = omega(inv(X(l))), num2 = inv(X(l))**(fcr-1)
 	    // and den = lambda_pr(inv(X(l))) all in poly-form
 	    //
-	    for ( int j = count - 1; j >= 0; j-- ) {
+	    for ( size_t j = count; j-- > 0; ) {
 		TYP		num1	= 0;
-		for ( int i = deg_omega; i >= 0; i-- ) {
+		for ( size_t i = deg_omega + 1; i-- > 0; ) {
 		    if ( omega[i] != A0 )
 			num1	       ^= alpha_to[modnn(omega[i] + i * root[j])];
 		}
@@ -1231,7 +1307,7 @@ namespace ezpwd {
 		TYP		den	= 0;
 
 		// lambda[i+1] for i even is the formal derivative lambda_pr of lambda[i]
-		for ( int i = std::min(deg_lambda, NROOTS - 1) & ~1; i >= 0; i -= 2 ) {
+		for ( int i = int( std::min(deg_lambda, NROOTS - 1) & ~1 ); i >= 0; i -= 2 ) {
 		    if ( lambda[i + 1] != A0 ) {
 			den	       ^= alpha_to[modnn(lambda[i + 1] + i * root[j])];
 		    }
@@ -1315,10 +1391,10 @@ namespace ezpwd {
     //     The reed_solomon_tags<...>::iprim < 0 is used to indicate to the first instance that the
     // static tables require initialization.
     // 
-    template < typename TYP, int SYM, int PRM, class PLY >
-        int				reed_solomon_tabs< TYP, SYM, PRM, PLY >::iprim = -1;
+    template < typename TYP, size_t SYM, size_t PRM, class PLY >
+        size_t				reed_solomon_tabs< TYP, SYM, PRM, PLY >::iprim = 0;
 
-    template < typename TYP, int SYM, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t PRM, class PLY >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >
 #if not defined( EZPWD_ARRAY_TEST )
                                                                           ::NN + 1 >
@@ -1326,16 +1402,16 @@ namespace ezpwd {
 #  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
                                                                           ::NN     >
 #endif
-					reed_solomon_tabs< TYP, SYM, PRM, PLY >::alpha_to;
+					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::alpha_to;
 
-    template < typename TYP, int SYM, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t PRM, class PLY >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >::NN + 1 >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY >::index_of;
-    template < typename TYP, int SYM, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t PRM, class PLY >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >::MODS >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY >::mod_of;
 
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY >
+    template < typename TYP, size_t SYM, size_t RTS, size_t FCR, size_t PRM, class PLY >
         std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY >::NROOTS + 1 >
 					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY >::genpoly;
 
