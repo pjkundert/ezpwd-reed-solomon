@@ -26,7 +26,11 @@
 #include <vector>
 
 #include <ezpwd/rs>
-#include <ezpwd/output>
+
+#if defined( EZPWD_BOOST )
+# include <boost/lexical_cast.hpp>
+# include <boost/shared_ptr.hpp>
+#endif
 
 // Choose Reed-Solomon codeword capacity (and symbol bits), parity and default chunk size The
 // CODEWORD and PARITY are fixed compile-time constants, but the chunk size (the number of symbols
@@ -102,21 +106,24 @@ std::string		       &encode(
 
     // R-S Encode.  Read up to chunksize (or to EOF) symbols worth of data
     chunk.resize( chunksize * sizeof symbol_t() );
-    inp.read( &chunk.front(), chunksize * sizeof symbol_t() );
+    inp.read( &chunk[0], chunksize * sizeof symbol_t() );
     chunk.resize( inp.gcount() );
     inptotal			       += inp.gcount();
 
     // Make sure either 0 (EOF at start of input) or an even symbol's worth of data was read.
     if ( chunk.size() == 0 )
 	return chunk;
-    if ( chunk.size() % sizeof symbol_t() )
-	throw std::logic_error( std::string() << "Insufficient data for an " << rs << " encoded chunk" );
+    if ( chunk.size() % sizeof symbol_t() ) {
+	std::ostringstream oss;
+	oss << "Insufficient data for an " << rs << " encoded chunk";
+	throw std::logic_error( oss.str() );
+    }
 
     // R-S encode (adds rs.NROOTS R-S parity symbols to chunk)
     if ( sizeof symbol_t() == 1 )// <= 8-bit symbols.  Encodes in-place
 	rs.encode( chunk );
     else {			// >= 16-bit symbols.  Deserialize to symbols, encode, re-serialize
-	auto		data	= deserialize<symbol_t>( chunk );
+	std::vector<symbol_t> data( deserialize<symbol_t>( chunk ));
 	rs.encode( data );
 	chunk			= serialize<symbol_t>( data );
     }
@@ -135,15 +142,18 @@ std::string		       &decode(
 
     // R-S Decode.  Read up to chunk + parity (or to EOF) symbols of data
     chunk.resize( ( chunksize+rs.NROOTS ) * sizeof symbol_t() );
-    inp.read( &chunk.front(), ( chunksize+rs.NROOTS ) * sizeof symbol_t() );
+    inp.read( &chunk[0], ( chunksize+rs.NROOTS ) * sizeof symbol_t() );
     chunk.resize( inp.gcount() );
     inptotal			       += inp.gcount();
 
     // Make sure either 0 (EOF at start of input) or an even symbol's worth of data was read.
     if ( chunk.size() == 0 )
 	return chunk;
-    if ( chunk.size() < ( rs.NROOTS + 1 ) * sizeof symbol_t() || chunk.size() % sizeof symbol_t() )
-	throw std::logic_error( std::string() << "Insufficient data for an " << rs << " encoded chunk" );
+    if ( chunk.size() < ( rs.NROOTS + 1 ) * sizeof symbol_t() || chunk.size() % sizeof symbol_t() ) {
+	std::ostringstream oss;
+	oss << "Insufficient data for an " << rs << " encoded chunk";
+	throw std::logic_error( oss.str() );
+    }
 
     // R-S decode (raises std::exception on R-S decode failure), then remove parity
     if ( rs.SYMBOL <= 8 )
@@ -151,7 +161,7 @@ std::string		       &decode(
 	rs.decode( chunk );
     else {
 	// >= 9-bit symbols.  Deserialize to symbols, correct, and re-serialize for output.
-	auto			data	= deserialize<symbol_t>( chunk );
+	std::vector<symbol_t> data( deserialize<symbol_t>( chunk ));
 	// if errors corrected, serialize corrected symbols back into chunk
 	if ( rs.decode( data ))
 	    chunk			= serialize<symbol_t>( data );
@@ -164,8 +174,8 @@ std::string		       &decode(
 
 int main( int argc, const char **argv )
 {
-    constexpr size_t		codeword= RSCODEWORD;	// R-S codeword size (always 2^N-1)
-    constexpr size_t		parity	= RSPARITY;	// symbols of parity
+    const size_t		codeword= RSCODEWORD;	// R-S codeword size (always 2^N-1)
+    const size_t		parity	= RSPARITY;	// symbols of parity
     size_t			chunksize= RSCHUNK;	// symbols of data chunk (up to codeword-parity)
     typedef ezpwd::RS<codeword,codeword-parity> \
 				RS_t;
@@ -184,24 +194,36 @@ int main( int argc, const char **argv )
 	    } else if ( !strcmp( *argv, "-e" ) || !strcmp( *argv, "--encode" )) {
 		encoding		= true;
 	    } else if ( !strcmp( *argv, "-c" ) || !strcmp( *argv, "--chunk" )) {
-		if ( --argc <= 0 )
-		    throw std::logic_error( std::string() << *argv << " missing value" );
+		if ( --argc <= 0 ) {
+		    std::ostringstream oss;
+		    oss << *argv << " missing value";
+		    throw std::logic_error( oss.str() );
+		}
+#if defined ( EZPWD_BOOST )
+		int		val	= boost::lexical_cast<int>( *++argv );
+#else
 		size_t		end;
 		int		val	= std::stoi( *++argv, &end );
 		if ( (*argv)[end] || val <= 0 )
 		    throw std::logic_error( std::string() << "garbage after chunk size: " << val <<", or bad value: " << *argv );
+#endif
 		chunksize		= val;
 	    } else {
-		throw std::logic_error(
-		    std::string() << "Invalid option: " << *argv << "\n"
+		std::ostringstream oss;
+		oss << "Invalid option: " << *argv << "\n"
 		    << "    -e|--encode   -- R-S encode, adding parity (default)" << "\n"
 		    << "    -d|--decide   -- R-S decode, correcting errors and removing parity" << "\n"
-		    << "    -c|--chunk    -- set data symbol chunks; default: " << chunksize << "\n" );
+		    << "    -c|--chunk    -- set data symbol chunks; default: " << chunksize << "\n";
+		throw std::logic_error( oss.str() );
 	    }
 	}
 
 	// Set 'inp' to std::cin, or a newly opened file (which will be released at end of scope)
+#if defined( EZPWD_BOOST )
+	boost::shared_ptr<std::ifstream>
+#else
 	std::unique_ptr<std::ifstream>
+#endif
 				inpfile;
 	if ( argc > 0 and strcmp( argv[0], "-" )) {
 	    inpfile.reset( new std::ifstream( argv[1], std::ifstream::binary ));
@@ -209,7 +231,11 @@ int main( int argc, const char **argv )
 	std::istream	       &inp( inpfile ? *inpfile : std::cin );
 
 	// Set 'out' to std::cout, or a newly removed and opened file (also release at end of scope)
+#if defined( EZPWD_BOOST )
+	boost::shared_ptr<std::ofstream>
+#else
 	std::unique_ptr<std::ofstream>
+#endif
 				outfile;
 	if ( argc > 1 and strcmp( argv[1], "-" )) {
 	    std::remove( argv[2] );
@@ -220,7 +246,10 @@ int main( int argc, const char **argv )
 	// Read, R-S encode/decode and write chunks
 	std::string		chunk;
 	while ( inp ) {					// 'til error/eof
-	    out << ( encoding ? encode<RS_t> : decode<RS_t> )( rs, inp, inptotal, chunk, chunksize );
+	    if ( encoding )
+		out << encode<RS_t>( rs, inp, inptotal, chunk, chunksize );
+	    else
+		out << decode<RS_t>( rs, inp, inptotal, chunk, chunksize );
 	    // std::cerr << "Read: " << inptotal << ", wrote: " << chunk.size() << " bytes." << std::endl;
 	}
     } catch ( std::exception &exc ) {

@@ -55,7 +55,7 @@ namespace ezpwd {
 	    (SYMBOLS) - (PAYLOAD), FCR, PRIM,				\
 	    ezpwd::gfpoly<						\
 		ezpwd::log_< (SYMBOLS) + 1 >::value,			\
-		POLY >>
+		POLY > >
 
 #   define __RS( NAME, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )	\
 	__RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM ) {		\
@@ -138,13 +138,13 @@ namespace ezpwd {
 	// However, they have consumed parity resources.  Search for each erasure location in
 	// positions, and if not reflected, add to the corrected/missed counters.
 	int			missed	= 0;
-	for ( auto e : erasures ) {
-	    if ( std::find( positions.begin(), positions.end(), e ) == positions.end() ) {
+	for ( std::vector<int>::const_iterator ei = erasures.begin(); ei != erasures.end(); ++ei ) {
+	    if ( std::find( positions.begin(), positions.end(), *ei ) == positions.end() ) {
 		++corrected;
 		++missed;
 #if defined( DEBUG ) && DEBUG >= 2
 		std::cout
-		    << corrected << " corrections (R-S erasure missed): " << e
+		    << corrected << " corrections (R-S erasure missed): " << *ei
 		    << std::endl;
 #endif
 	    }

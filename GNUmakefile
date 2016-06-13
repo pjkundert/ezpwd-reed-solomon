@@ -9,14 +9,18 @@ SHELL		= /bin/bash
 # clang  3.6		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
-CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+CC		= gcc-4.3 #cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= g++-4.3 #c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
-CXXFLAGS       += -I./c++ -std=c++11								\
+CXXFLAGS       += -I./c++									\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
 		    -Wsign-promo -Wswitch -Wreturn-type	
 CXXFLAGS       += -O3
+
+#CXXFLAGS       += -std=c++11
+CXXFLAGS	+= -std=c++98 -DEZPWD_BOOST -DEZPWD_CXX98
+
 
 # Debugging
 #
@@ -206,7 +210,7 @@ rspwd_test.js:	rspwd_test.C rspwd.C						\
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 # rsencode -- correct 8-bit symbols (default to 128 symbol chunks, each w/ 32 parity symbols)
-rsencode.o:	rsencode.C c++/ezpwd/rs
+rsencode.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 rsencode:	rsencode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcd" >/dev/null

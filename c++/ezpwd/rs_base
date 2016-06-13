@@ -51,11 +51,31 @@
 #define _EZPWD_RS_BASE
 
 #include <algorithm>
-#include <array>
-#include <cstdint>
+#if defined( EZPWD_BOOST )
+   // Use boost instead of c++11...
+#  include <boost/tr1/tr1/array>
+namespace std {
+    using tr1::array;
+}
+#  include <boost/tr1/tr1/type_traits>
+namespace std {
+    using boost::make_unsigned;
+}
+#else
+   // Use c++11 std::...
+#  include <array>
+#  include <type_traits>
+#endif
+
+// uint8_t, etc.
+#if defined( EZPWD_CXX98 )
+#  include <stdint.h>
+#else
+#  include <cstdint>
+#endif
+
 #include <cstring>
 #include <iostream>
-#include <type_traits>
 #include <vector>
 
 // 
@@ -142,7 +162,7 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    data.resize( data.size() + nroots() );
-	    return encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ));
+	    return encode( uTpair( (uT *)&data[0], (uT *)&data[0] + data.size() ));
 	}
 
 	int			encode(
@@ -156,8 +176,8 @@ namespace ezpwd {
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    parity.resize( nroots() );
-	    return encode( cuTpair( (const uT *)&data.front(), (const uT *)&data.front() + data.size() ),
-			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ));
+	    return encode( cuTpair( (const uT *)&data[0], (const uT *)&data[0] + data.size() ),
+			   uTpair( (uT *)&parity[0], (uT *)&parity[0] + parity.size() ));
 	}
 
 	template < typename T >
@@ -249,7 +269,7 @@ namespace ezpwd {
 	    typedef uint8_t	uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
-	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+	    return decode( uTpair( (uT *)&data[0], (uT *)&data[0] + data.size() ),
 			   erasure, position );
 	}
 
@@ -264,8 +284,8 @@ namespace ezpwd {
 	    typedef uint8_t	uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
-	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
-			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ),
+	    return decode( uTpair( (uT *)&data[0], (uT *)&data[0] + data.size() ),
+			   uTpair( (uT *)&parity[0], (uT *)&parity[0] + parity.size() ),
 			   erasure, position );
 	}
 
@@ -981,7 +1001,7 @@ namespace ezpwd {
 	    typedef std::array< int, NROOTS >
 				int_nroots;
 
-	    typ_nroots_1	lambda  { { 0 } };
+	    typ_nroots_1	lambda  = { { 0 } };
 	    typ_nroots		syn;
 	    typ_nroots_1	b;
 	    typ_nroots_1	t;
@@ -1327,6 +1347,7 @@ namespace ezpwd {
     template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::NN + 1 >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::index_of;
+
     template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::MODS >
 					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::mod_of;
