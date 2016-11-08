@@ -101,10 +101,15 @@ double 				compare(
 
     schifra::galois::field_polynomial generator_polynomial(field);
 
-    schifra::sequential_root_generator_polynomial_creator(field,
-							  generator_polynommial_index,
-							  generator_polynommial_root_count,
-							  generator_polynomial);
+    bool			sroot = schifra::make_sequential_root_generator_polynomial(
+					    field,
+					    generator_polynommial_index,
+					    generator_polynommial_root_count,
+					    generator_polynomial);
+    if ( assert.ISTRUE( sroot ))
+	std::cout
+	    << assert << " Failed to create sequential root generator!"
+	    << std::endl;
 
     /* Instantiate Encoder and Decoder (Codec) */
     schifra::reed_solomon::encoder<code_length,fec_length> srs_encoder(field,generator_polynomial);
