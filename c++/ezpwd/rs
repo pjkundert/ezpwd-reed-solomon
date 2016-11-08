@@ -42,27 +42,28 @@ namespace ezpwd {
     // 
     // __RS( ... ) -- Define a reed-solomon codec 
     // 
+    // @CODEC:		An ezpwd::reed_solomon derived type
     // @SYMBOLS:	Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255
     // @PAYLOAD:	The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols
     // @POLY:		A primitive polynomial appropriate to the SYMBOLS size
     // @FCR:		The first consecutive root of the Reed-Solomon generator polynomial
     // @PRIM:		The primitive root of the generator polynomial
     // 
-#   define __RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
-	ezpwd::reed_solomon<						\
-	    TYPE,							\
-	    ezpwd::log_< (SYMBOLS) + 1 >::value,			\
-	    (SYMBOLS) - (PAYLOAD), FCR, PRIM,				\
-	    ezpwd::gfpoly<						\
-		ezpwd::log_< (SYMBOLS) + 1 >::value,			\
-		POLY >>
+#   define __RS_TYP( CODEC, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
+    CODEC<									\
+	TYPE,									\
+	ezpwd::log_< (SYMBOLS) + 1 >::value,					\
+	(SYMBOLS) - (PAYLOAD), FCR, PRIM,					\
+	ezpwd::gfpoly<								\
+	    ezpwd::log_< (SYMBOLS) + 1 >::value,				\
+	    POLY >>
 
-#   define __RS( NAME, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )	\
-	__RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM ) {		\
-	    NAME()							\
-		: __RS_TYP( TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )()	\
-	    {;}								\
-	}
+#   define __RS( NAME, CODEC, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )		\
+    __RS_TYP( CODEC, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM ) {		\
+	NAME()									\
+	    : __RS_TYP( CODEC, TYPE, SYMBOLS, PAYLOAD, POLY, FCR, PRIM )()	\
+	{;}									\
+    }
 
     //
     // RS<SYMBOLS, PAYLOAD> -- Standard partial specializations for Reed-Solomon codec type access
@@ -76,26 +77,61 @@ namespace ezpwd {
     // default constructor must be provided.
     // 
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS;
-    template < size_t PAYLOAD > struct RS<    3, PAYLOAD> : public __RS( RS, uint8_t,      3, PAYLOAD,     0x7,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<    7, PAYLOAD> : public __RS( RS, uint8_t,      7, PAYLOAD,     0xb,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   15, PAYLOAD> : public __RS( RS, uint8_t,     15, PAYLOAD,    0x13,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   31, PAYLOAD> : public __RS( RS, uint8_t,     31, PAYLOAD,    0x25,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<   63, PAYLOAD> : public __RS( RS, uint8_t,     63, PAYLOAD,    0x43,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  127, PAYLOAD> : public __RS( RS, uint8_t,    127, PAYLOAD,    0x89,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  255, PAYLOAD> : public __RS( RS, uint8_t,    255, PAYLOAD,   0x11d,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<  511, PAYLOAD> : public __RS( RS, uint16_t,   511, PAYLOAD,   0x211,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 1023, PAYLOAD> : public __RS( RS, uint16_t,  1023, PAYLOAD,   0x409,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 2047, PAYLOAD> : public __RS( RS, uint16_t,  2047, PAYLOAD,   0x805,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 4095, PAYLOAD> : public __RS( RS, uint16_t,  4095, PAYLOAD,  0x1053,	 1,  1 );
-    template < size_t PAYLOAD > struct RS< 8191, PAYLOAD> : public __RS( RS, uint16_t,  8191, PAYLOAD,  0x201b,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<16383, PAYLOAD> : public __RS( RS, uint16_t, 16383, PAYLOAD,  0x4443,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<32767, PAYLOAD> : public __RS( RS, uint16_t, 32767, PAYLOAD,  0x8003,	 1,  1 );
-    template < size_t PAYLOAD > struct RS<65535, PAYLOAD> : public __RS( RS, uint16_t, 65535, PAYLOAD, 0x1100b,	 1,  1 );
-    
+    template < size_t PAYLOAD > struct RS<    3, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,      3, PAYLOAD,     0x7,  1,  1 );
+    template < size_t PAYLOAD > struct RS<    7, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,      7, PAYLOAD,     0xb,  1,  1 );
+    template < size_t PAYLOAD > struct RS<   15, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,     15, PAYLOAD,    0x13,  1,  1 );
+    template < size_t PAYLOAD > struct RS<   31, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,     31, PAYLOAD,    0x25,  1,  1 );
+    template < size_t PAYLOAD > struct RS<   63, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,     63, PAYLOAD,    0x43,  1,  1 );
+    template < size_t PAYLOAD > struct RS<  127, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,    127, PAYLOAD,    0x89,  1,  1 );
+    template < size_t PAYLOAD > struct RS<  255, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint8_t,    255, PAYLOAD,   0x11d,  1,  1 );
+    template < size_t PAYLOAD > struct RS<  511, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t,   511, PAYLOAD,   0x211,  1,  1 );
+    template < size_t PAYLOAD > struct RS< 1023, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t,  1023, PAYLOAD,   0x409,  1,  1 );
+    template < size_t PAYLOAD > struct RS< 2047, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t,  2047, PAYLOAD,   0x805,  1,  1 );
+    template < size_t PAYLOAD > struct RS< 4095, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t,  4095, PAYLOAD,  0x1053,  1,  1 );
+    template < size_t PAYLOAD > struct RS< 8191, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t,  8191, PAYLOAD,  0x201b,  1,  1 );
+    template < size_t PAYLOAD > struct RS<16383, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t, 16383, PAYLOAD,  0x4443,  1,  1 );
+    template < size_t PAYLOAD > struct RS<32767, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t, 32767, PAYLOAD,  0x8003,  1,  1 );
+    template < size_t PAYLOAD > struct RS<65535, PAYLOAD>
+	: public __RS( RS, ezpwd::reed_solomon, uint16_t, 65535, PAYLOAD, 0x1100b,  1,  1 );
+
+    // 
+    // The CCSDS (Consultive Committee for Space Data Systems) standard R-S codec is defined for
+    // GF(2^8) (8-bit symbols), using the field generator polynomial x^8+x^7+x^2+x+1
+    // (0b0001_1000_0111, or 0x187), and only for R-S codewords RS<255,239> (16 parity symbols) and
+    // RS<255,223> (32 parity symbols), each with the specified FCR and PRM values.  No other R-S
+    // codec sizes are supported.
+    // 
+    // Also, a codec using the 'dual basis' representation is supported (used by systems which need
+    // to minimize encoder circuit size).
+    // 
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS_CCSDS;
-    template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD> : public __RS( RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 112, 11 );
+    //template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD>
+    //	: public __RS( ezpwd::reed_solomon, RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 112, 11 );
+    template <> struct RS_CCSDS<255, 223>
+	: public __RS( RS_CCSDS, ezpwd::reed_solomon, uint8_t, 255, 223, 0x187, 112, 11 );
+    template <> struct RS_CCSDS<255, 239>
+	: public __RS( RS_CCSDS, ezpwd::reed_solomon, uint8_t, 255, 239, 0x187, 120, 11 );
 
-
+    template < size_t SYMBOLS, size_t PAYLOAD > struct RS_CCSDS_DUAL;
+    template <> struct RS_CCSDS_DUAL<255, 223>
+	: public __RS( RS_CCSDS_DUAL, ezpwd::reed_solomon_dual, uint8_t, 255, 223, 0x187, 112, 11 );
+    template <> struct RS_CCSDS_DUAL<255, 239>
+	: public __RS( RS_CCSDS_DUAL, ezpwd::reed_solomon_dual, uint8_t, 255, 239, 0x187, 120, 11 );
+    
     // 
     // strength<PARITY>	-- compute strength (given N parity symbols) of R-S correction
     // 
