@@ -1,0 +1,19 @@
+
+// 
+// The encoder/decoder tables for all ezpwd::serialize::... base<N> codecs
+// 
+//     Must be included in exactly one C++ compilation unit.
+// 
+
+#ifndef _EZPWD_RS_DEFINITIONS
+#define _EZPWD_RS_DEFINITIONS
+
+#include "rs"
+
+// 
+// RS_CCSDS_DUAL Berleskamp "dual basis" transcoding tables.
+// 
+const constexpr std::array<uint8_t,256> ezpwd::dual_tabs<uint8_t>::into_dual;
+const constexpr std::array<uint8_t,256> ezpwd::dual_tabs<uint8_t>::from_dual;
+
+#endif // _EZPWD_RS_DEFINITIONS

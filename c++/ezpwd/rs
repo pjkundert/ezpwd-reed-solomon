@@ -43,6 +43,7 @@ namespace ezpwd {
     // __RS( ... ) -- Define a reed-solomon codec 
     // 
     // @CODEC:		An ezpwd::reed_solomon derived type
+    // @TYPE:		The unsigned C type holding symbol data
     // @SYMBOLS:	Total number of symbols; must be a power of 2 minus 1, eg 2^8-1 == 255
     // @PAYLOAD:	The maximum number of non-parity symbols, eg 253 ==> 2 parity symbols
     // @POLY:		A primitive polynomial appropriate to the SYMBOLS size
@@ -119,8 +120,6 @@ namespace ezpwd {
     // to minimize encoder circuit size).
     // 
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS_CCSDS;
-    //template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD>
-    //	: public __RS( ezpwd::reed_solomon, RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 112, 11 );
     template <> struct RS_CCSDS<255, 223>
 	: public __RS( RS_CCSDS, ezpwd::reed_solomon, uint8_t, 255, 223, 0x187, 112, 11 );
     template <> struct RS_CCSDS<255, 239>
