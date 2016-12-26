@@ -394,12 +394,25 @@ std::ostream		       &operator<<(
 namespace ezpwd {
     //
     // gfpoly - default field polynomial generator functor.
-    //
+    // 
     template < int SYM, int PLY >
     struct gfpoly {
+	// constexpr	
 	int 			operator() ( int sr )
 	    const
 	{
+	    // 
+	    // For C++11 constexpr, must be a return-statement.  However, since this is only used
+	    // during R-S table initialization, it isn't really critical to optimize.
+	    // 
+	    /*
+	    return ( ( sr == 0 )
+		     ? 1
+		     : (( (( sr << 1 ) & ( 1 << SYM ))
+			  ? (( sr << 1 ) ^ PLY )
+			  : ( sr << 1 ))
+			& (( 1 << SYM ) - 1 )));
+	    */
 	    if ( sr == 0 )
 		sr			= 1;
 	    else {
