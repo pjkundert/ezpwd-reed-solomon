@@ -953,7 +953,7 @@ namespace ezpwd {
 	/// In order to support non-conventional symbol encodings (eg. Berleskamp "dual basis"), the
 	/// core {en,de}code methods are virtual, and may be overridden in derived classes to
 	/// implement such transcodings.
-	virtual
+	// virtual
 	int			encode(
 				    const TYP	       *data,
 				    int			len,
@@ -986,7 +986,7 @@ namespace ezpwd {
 	    return NROOTS;
 	}
 
-	virtual
+	// virtual
 	int			decode(
 				    TYP		       *data,
 				    int			len,
@@ -1366,7 +1366,10 @@ namespace ezpwd {
         0x54,0x98,0xf8,0x34,0x2d,0xe1,0x81,0x4d,0xa4,0x68,0x08,0xc4,0xdd,0x11,0x71,0xbd,
     } };
     };
-    
+
+    // 
+    // reed_solomon_dual -- a specialization that perform from/into dual basis
+    // 
     template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
 	       typename MTX=int, typename GRD=int >
     class reed_solomon_dual
@@ -1382,7 +1385,7 @@ namespace ezpwd {
 	    ;
 	}
 
-	virtual
+	// virtual
 	int			encode(
 				    const TYP	       *data,
 				    int			len,
@@ -1400,7 +1403,7 @@ namespace ezpwd {
 	}
 
 	using reed_solomon<TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD>::decode;
-	virtual
+	// virtual
 	int			decode(
 				    TYP		       *data,
 				    int			len,
