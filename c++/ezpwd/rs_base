@@ -105,6 +105,13 @@ namespace ezpwd {
 	    ;
 	}
 
+	virtual std::ostream   &output(
+					std::ostream       &lhs )
+	    const
+	{
+	    return lhs << "RS(" << this->size() << "," << this->load() << ")";
+	}
+
 	// 
 	// {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded container
 	// 
@@ -388,7 +395,7 @@ std::ostream		       &operator<<(
 				    const ezpwd::reed_solomon_base
 						       &rhs )
 {
-    return lhs << "RS(" << rhs.size() << "," << rhs.load() << ")";
+    return rhs.output( lhs );
 }
 
 namespace ezpwd {
