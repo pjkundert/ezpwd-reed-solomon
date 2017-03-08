@@ -105,6 +105,13 @@ namespace ezpwd {
 	    ;
 	}
 
+	virtual std::ostream   &output(
+					std::ostream       &lhs )
+	    const
+	{
+	    return lhs << "RS(" << this->size() << "," << this->load() << ")";
+	}
+
 	// 
 	// {en,de}code -- Compute/Correct errors/erasures in a Reed-Solomon encoded container
 	// 
@@ -388,7 +395,7 @@ std::ostream		       &operator<<(
 				    const ezpwd::reed_solomon_base
 						       &rhs )
 {
-    return lhs << "RS(" << rhs.size() << "," << rhs.load() << ")";
+    return rhs.output( lhs );
 }
 
 namespace ezpwd {
@@ -413,10 +420,9 @@ namespace ezpwd {
     };
     
     // 
-    // class reed_solomon_tabs -- R-S tables common to all RS(NN,*) with same SYM, PRM, PLY, MTX and GRD
+    // class reed_solomon_tabs -- R-S tables common to all RS(NN,*) with same SYM, PRM and PLY
     // 
-    template < typename TYP, int SYM, int PRM, class PLY,
-	       typename MTX=int, typename GRD=int >
+    template < typename TYP, int SYM, int PRM, class PLY >
     class reed_solomon_tabs
 	: public reed_solomon_base {
 
@@ -435,8 +441,7 @@ namespace ezpwd {
 					= SYM > 8 ? ( 1 << 12 ) : ( 1 << SYM << SYM/2 );
 #endif
 
-	static MTX		mutex;
-	static int 		iprim;
+	static int 		iprim;				// initialized to -1, below
 
     protected:
 	static std::array<TYP,
@@ -458,12 +463,13 @@ namespace ezpwd {
 				reed_solomon_tabs()
 				    : reed_solomon_base()
 	{
-	    // lock, if guard/mutex provided, and do init if not already done.  We check one value
-	    // which changes several times; this is safe, 'cause the mutex will not be released (for
-	    // us to check) 'til the initializing thread has completely initialized it.
-	    GRD			guard( mutex ); (void)guard;
+	    // Do init if not already done.  We check one value which is initialized to -1; this is
+	    // safe, 'cause the value will not be set 'til the initializing thread has completely
+	    // initialized the structure.  Worst case scenario: multiple threads will initialize
+	    // identically.  No mutex necessary.
 	    if ( iprim >= 0 )
 		return;
+
 #if defined( DEBUG ) && DEBUG >= 1
 	    std::cout << "RS(" << SIZE << ",*): Initialize for " << NN << " symbols size, " << MODS << " modulo table." << std::endl;
 #endif
@@ -486,10 +492,10 @@ namespace ezpwd {
 	    for ( int x = NN; x < NN + MODS; ++x )
 		mod_of[x-NN]		= _modnn( x );
 	    // Find prim-th root of 1, index form, used in decoding.
-	    iprim			= 1;
-	    while ( iprim % PRM != 0 )
-		iprim		       += NN;
-	    iprim 		       /= PRM;
+	    int			iptmp	= 1;
+	    while ( iptmp % PRM != 0 )
+		iptmp		       += NN;
+	    iprim			= iptmp / PRM;
 	}
 
 	// 
@@ -542,24 +548,21 @@ namespace ezpwd {
     // @PRM:		Primitive element, index form
     // @iprim:		prim-th root of 1, index form
     // @PLY:		The primitive generator polynominal functor
-    // @MTX:		A std::mutex like object, or a dummy
-    // @GRD:		A std::lock_guard, or anything that can take an MTX
     //
     //     All reed_solomon<T, ...> instances with the same template type parameters share a common
     // (static) set of alpha_to, index_of and genpoly tables.  The first instance to be constructed
-    // initializes the tables (optionally protected by a std::mutex/std::lock_guard).
+    // initializes the tables.
     // 
     //     Each specialized type of reed_solomon implements a specific encode/decode method
     // appropriate to its datum 'TYP'.  When accessed via a generic reed_solomon_base pointer, only
     // access via "safe" (size specifying) containers or iterators is available.
     //
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY,
-	       typename MTX=int, typename GRD=int >
+    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY >
     class reed_solomon
-	: public reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD> {
+	: public reed_solomon_tabs<TYP, SYM, PRM, PLY> {
 
     public:
-	typedef reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD>
+	typedef reed_solomon_tabs<TYP, SYM, PRM, PLY>
 				tabs_t;
 	using tabs_t::DATUM;
 	using tabs_t::SYMBOL;
@@ -568,7 +571,6 @@ namespace ezpwd {
 	using tabs_t::NN;
 	using tabs_t::A0;
 
-	using tabs_t::mutex;
 	using tabs_t::iprim;
 
 	using tabs_t::alpha_to;
@@ -902,35 +904,39 @@ namespace ezpwd {
 	    ;
 	}
 				reed_solomon()
-				    : reed_solomon_tabs<TYP, SYM, PRM, PLY, MTX, GRD>()
+				    : reed_solomon_tabs<TYP, SYM, PRM, PLY>()
 	{
-	    // lock, if guard/mutex provided, and do init if not already done.  We check one element
-	    // of the array; this is safe, 'cause the mutex will not be released (for us to check)
-	    // 'til the initializing thread has completely initialized the array.
-	    GRD			guard( mutex ); (void)guard;
+	    // We check one element of the array; this is safe, 'cause the value will not be
+	    // initialized 'til the initializing thread has completely initialized the array.  Worst
+	    // case scenario: multiple threads will initialize identically.  No mutex necessary.
 	    if ( genpoly[0] )
 		return;
+
 #if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << "RS(" << SIZE << "," << LOAD << "): Initialize for " << NROOTS << " roots." << std::endl;
 #endif
-	    // Form RS code generator polynomial from its roots
-	    genpoly[0]			= 1;
+	    std::array<TYP, NROOTS + 1>
+				tmppoly; // uninitialized
+	    // Form RS code generator polynomial from its roots.  Only lower-index entries are
+	    // consulted, when computing subsequent entries; only index 0 needs initialization.
+	    tmppoly[0]			= 1;
 	    for ( int i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
-		genpoly[i + 1]		= 1;
-		// Multiply genpoly[] by  @**(root + x)
+		tmppoly[i + 1]		= 1;
+		// Multiply tmppoly[] by  @**(root + x)
 		for ( int j = i; j > 0; j-- ) {
-		    if ( genpoly[j] != 0 )
-			genpoly[j]	= genpoly[j - 1]
-			    ^ alpha_to[modnn(index_of[genpoly[j]] + root)];
+		    if ( tmppoly[j] != 0 )
+			tmppoly[j]	= tmppoly[j - 1]
+			    ^ alpha_to[modnn(index_of[tmppoly[j]] + root)];
 		    else
-			genpoly[j]	= genpoly[j - 1];
+			tmppoly[j]	= tmppoly[j - 1];
 		}
-		// genpoly[0] can never be zero
-		genpoly[0]		= alpha_to[modnn(index_of[genpoly[0]] + root)];
+		// tmppoly[0] can never be zero
+		tmppoly[0]		= alpha_to[modnn(index_of[tmppoly[0]] + root)];
 	    }
-	    // convert genpoly[] to index form for quicker encoding
-	    for ( int i = 0; i <= NROOTS; i++ )
-		genpoly[i]		= index_of[genpoly[i]];
+	    // convert NROOTS entries of tmppoly[] to genpoly[] in index form for quicker encoding,
+	    // in reverse order so genpoly[0] is last element initialized.
+	    for ( int i = NROOTS; i >= 0; --i )
+		genpoly[i]		= index_of[tmppoly[i]];
 	}
 
 	int			encode(
@@ -1304,36 +1310,31 @@ namespace ezpwd {
     // Define the static reed_solomon...<...> members; allowed in header for template types.
     // 
     //     The reed_solomon_tags<...>::iprim < 0 is used to indicate to the first instance that the
-    // static tables require initialization.  If reed_solomon_tabs<...>::mutex is something like a
-    // std::mutex, and GRD is a std::lock_guard, then the mutex is acquired for the test and
-    // initialization.
+    // static tables require initialization.
     // 
-    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        MTX				reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::mutex;
+    template < typename TYP, int SYM, int PRM, class PLY >
+        int				reed_solomon_tabs< TYP, SYM, PRM, PLY >::iprim = -1;
 
-    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        int				reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::iprim = -1;
-
-    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >
+    template < typename TYP, int SYM, int PRM, class PLY >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >
 #if not defined( EZPWD_ARRAY_TEST )
                                                                           ::NN + 1 >
 #else
 #  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
                                                                           ::NN     >
 #endif
-					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::alpha_to;
+					reed_solomon_tabs< TYP, SYM, PRM, PLY >::alpha_to;
 
-    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::NN + 1 >
-					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::index_of;
-    template < typename TYP, int SYM, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::MODS >
-					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::mod_of;
+    template < typename TYP, int SYM, int PRM, class PLY >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >::NN + 1 >
+					reed_solomon_tabs< TYP, SYM, PRM, PLY >::index_of;
+    template < typename TYP, int SYM, int PRM, class PLY >
+        std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >::MODS >
+					reed_solomon_tabs< TYP, SYM, PRM, PLY >::mod_of;
 
-    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY, typename MTX, typename GRD >
-        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::NROOTS + 1 >
-					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY, MTX, GRD >::genpoly;
+    template < typename TYP, int SYM, int RTS, int FCR, int PRM, class PLY >
+        std::array< TYP, reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY >::NROOTS + 1 >
+					reed_solomon< TYP, SYM, RTS, FCR, PRM, PLY >::genpoly;
 
 } // namespace ezpwd
     
