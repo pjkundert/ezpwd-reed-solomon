@@ -179,7 +179,7 @@
     error positioned in the first 20 symbols of the codeword (an impossible
     situation), we reject the codeword and return an error.
 
-*** Shared data tables w/ optional locking
+*** Shared data tables w/ no locking required
 
     Instead of re-computing all of the required data tables used by the
     Reed-Solomon computations, every instance of RS<CAPACITY,*> with compatible
@@ -188,9 +188,7 @@
     parameters shares the tables specific to the computed number of parity
     symbols.
 
-    The initialization of these tables is protected by a Mutex primitive and
-    Guard object.  These default to 'int' (NO-OP), but if a threading mutex and
-    guard are provided, the shared initialization is thread-safe.
+    The initialization of these tables is intrinsically thread-safe.
 
 ** ezpwd::RS<...>: C++ Reed-Solomon API
 
