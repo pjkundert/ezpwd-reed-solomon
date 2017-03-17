@@ -1,6 +1,8 @@
 #ifndef _EZPWD_ASSERTER
 #define _EZPWD_ASSERTER
 
+#include <algorithm>
+#include <cstring>
 #include <iostream>
 #include <iomanip>
 #include <sstream>
