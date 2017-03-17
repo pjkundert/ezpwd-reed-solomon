@@ -303,6 +303,16 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
+
+# 
+# BCH tests.  Requires "standalone" shims for building Kernel code in user space
+# 
+
+bch_test.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
+bch_test.o:	bch_test.C
+bch_test:	bch_test.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 
@@ -313,18 +323,29 @@ phil-karn/librs.a:
 	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
 
 # 
-# Build Schifra R-S implementation.  Used by some tests.
+# Schifra R-S implementation.  Used by some tests.
 # 
-# schifra:	schifra.tgz
-#	tar xzf $<
-#	make -C schifra all
-#
-# schifra.tgz:
-#	wget -O $@ http://www.schifra.com/downloads/schifra.tgz
-#
-
 schifra:
 	git clone https://github.com/ArashPartow/schifra.git
+
+# 
+# Djelic BCH implementation.  Used by some tests (also, foundation for EZPWD BCH implementation)
+# 
+# djelic-test: build and run Djelic BCH tests once
+# 
+djelic:
+	git clone https://github.com/Parrot-Developers/bch.git $@
+
+.PHONY: djelictest
+djelictest:	djelic/Documentation/bch/nat_tu_tool
+
+djelic/Documentation/bch/nat_tu_tool: djelic
+	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
+
+djelic_bch.o:	CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic
+djelic_bch.o:	djelic djelic/lib/bch.c
+	$(CC) $(CFLAGS) -c -o $@ $^
+
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.
