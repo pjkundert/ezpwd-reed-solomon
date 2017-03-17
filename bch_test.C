@@ -1,4 +1,8 @@
 
+/*
+ * bch_test	-- Iterate all available BCH codecs, comparing their speeds
+ */
+
 #include <ezpwd/asserter>
 
 // Djelic GPLv2+ BCH implementation from Linux kernel.  Requires "standalone" shims for user-space

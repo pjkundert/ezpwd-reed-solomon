@@ -313,6 +313,11 @@ bch_test.o:	bch_test.C
 bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
+bch_itron.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
+bch_itron.o:	bch_itron.C
+bch_itron:	bch_itron.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 
@@ -336,14 +341,16 @@ schifra:
 djelic:
 	git clone https://github.com/Parrot-Developers/bch.git $@
 
+djelic/lib/bch.c: djelic
+
 .PHONY: djelictest
-djelictest:	djelic/Documentation/bch/nat_tu_tool
+djelictest:	djelic/Documentation/bch/nat_tu_tool djelic
 
 djelic/Documentation/bch/nat_tu_tool: djelic
 	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
 
 djelic_bch.o:	CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic
-djelic_bch.o:	djelic djelic/lib/bch.c
+djelic_bch.o:	djelic/lib/bch.c
 	$(CC) $(CFLAGS) -c -o $@ $^
 
 
