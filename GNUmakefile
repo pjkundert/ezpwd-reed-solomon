@@ -309,14 +309,30 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 # 
 
 bch_test.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
-bch_test.o:	bch_test.C
-bch_test:	bch_test.o djelic_bch.o
+bch_test.o:	bch_test.C djelic/include
+bch_test:	bch_test.o djelic_bch.o # or, djelic_bch_debug.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bch_itron.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
-bch_itron.o:	bch_itron.C
+bch_itron.o:	bch_itron.C djelic/include
 bch_itron:	bch_itron.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
+
+itron_test:	bch_itron
+	./bch_itron			&& exit 0 || exit 1 # expect success
+
+qi_test_1.o:	qi_test_1.C
+qi_test_1:	qi_test_1.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
+
+qi_test_2.o:	qi_test_2.C
+qi_test_2:	qi_test_2.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+boost_test:	qi_test_1 qi_test_2
+	./qi_test_1 < qi_test_1_good.txt	&& exit 0 || exit 1 # expect success
+	./qi_test_1 < qi_test_1_bad.txt		&& exit 1 || exit 0 # expect failure
+	./qi_test_2 				&& exit 0 || exit 1 # expect success
 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
@@ -336,22 +352,26 @@ schifra:
 # 
 # Djelic BCH implementation.  Used by some tests (also, foundation for EZPWD BCH implementation)
 # 
-# djelic-test: build and run Djelic BCH tests once
+# djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
 djelic:
-	git clone https://github.com/Parrot-Developers/bch.git $@
+	git clone https://github.com/pjkundert/bch.git $@
 
+djelic/include \
 djelic/lib/bch.c: djelic
 
 .PHONY: djelictest
-djelictest:	djelic/Documentation/bch/nat_tu_tool djelic
+djelictest:	djelic/Documentation/bch/nat_tu_tool
 
 djelic/Documentation/bch/nat_tu_tool: djelic
 	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
 
 djelic_bch.o:	CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic
-djelic_bch.o:	djelic/lib/bch.c
-	$(CC) $(CFLAGS) -c -o $@ $^
+djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+djelic_bch_debug.o: CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic -DLOGGING
+djelic_bch_debug.o: djelic_bch_debug.c	djelic/lib/bch.c djelic/Documentation/bch/bch_debug.c
+	$(CC) $(CFLAGS) -c -o $@ $<
 
 
 # 
