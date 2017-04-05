@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <bitset>
 
 #include <boost/fusion/include/std_pair.hpp>
 
@@ -133,6 +134,69 @@ itron::container_t		parse(
 }
 
 
+bool				test_SCM(
+				    ezpwd::asserter    &assert,
+				    struct bch_control *bch,
+				    const std::pair<std::string,std::string>
+				    		       &t )
+{
+    if ( assert.ISEQUAL( t.first.size(), size_t( 96U ))) {
+	std::cout
+	    << assert << " " << "expected SCM of 12 bytes (96 bits), not " << t.first.size() << " bits"
+	    << std::endl;
+	return false;
+    }
+    std::cout << t.first << t.second << std::endl;
+    
+    // Convert each cluster of 8 bits into a msg byte.  Any leading bits that do not consititue a full byte
+    // initialize the low bits of the first byte.
+    std::vector<uint8_t>	msg;
+    for ( int	 		b	= t.first.size()
+	      ; b > 0
+	      ; b -= 8 ) {
+	std::bitset<8>		byte( t.first.substr( b < 8 ? 0 : b - 8,
+						      b < 8 ? b : 8 ));
+	msg.insert( msg.begin(), uint8_t( byte.to_ulong() ));
+    }
+
+    // Decode the body of the message (bytes 2-12) with the BCH codec.  This should correct up to
+    // bch->t (2) unknown bit errors anywhere in the message.  We have the delivered parity bits in
+    // msg[10-11] at the end of the message, and we do not have the XOR of the original/delivered
+    // parity bits.
+    unsigned int		errloc[96];
+    int				corr	= decode_bch( bch, &msg[2], 8,
+						      &msg[10],	// delivered parity
+						      0,	// XOR of original/delivered parity
+						      0,	// syndrome results
+						      errloc);	// resultant error locations
+    if ( corr < 0 )
+	std::cout << "; BCH decode failed" << std::endl;
+    else if ( corr == 0 ) 
+	std::cout << "; BCH decode validated message as correct" << std::endl;
+    else if ( corr > 0 && unsigned( corr ) < bch->t )
+	std::cout << "; BCH decode corrects " << corr << " bits w/ capacity to spare" << std::endl;
+    else if ( corr > 0 && unsigned( corr ) == bch->t )
+	std::cout << "; BCH decode corrects " << corr << " bits at capacity (no confidence)" << std::endl;
+    else if ( corr > 0 && unsigned( corr ) > bch->t )
+	std::cout << "; BCH decode corrects " << corr << " bits over capacity (probably incorrect)" << std::endl;
+    if ( corr > 0 && unsigned( corr ) <= bch->t ) {
+	std::string		fixed( t.first );
+	std::string		loctn( t.first.size(), ' ' );
+	for ( int ei = 0
+		  ; ei < corr
+		  ; ++ei ) {
+	    unsigned int	i	= 16 + errloc[ei];
+	    fixed[i]			= fixed[i] == '0' ? '1' : '0';
+	    loctn[i]			= '^';
+	}
+	std::cout << fixed << std::endl
+		  << loctn << " (fixed " << corr << " bits)"
+		  << std::endl;
+    }
+	
+    return corr < 0 || unsigned( corr ) <= bch->t; 
+}
+
 #if 1
 
 int main()
@@ -155,9 +219,10 @@ int main()
     std::string			filename( "bch_itron.txt" );
     std::ifstream		ifs( filename, std::ifstream::in );
     itron::container_t		tests( parse( ifs, filename ));
-    for ( auto &&t : tests )
-	std::cout << t.first << " : " << t.second << std::endl;
-
+    for ( auto &&t : tests ) {
+	assert.ISTRUE( test_SCM( assert, bch, t ));
+    }
+    
     return assert.failures ? 1 : 0;
 }
 
