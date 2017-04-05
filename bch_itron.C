@@ -134,58 +134,62 @@ itron::container_t		parse(
 }
 
 
-bool				test_SCM(
+std::pair<bool,std::string>	correct_SCM(
 				    ezpwd::asserter    &assert,
 				    struct bch_control *bch,
-				    const std::pair<std::string,std::string>
-				    		       &t )
+				    const std::string  &recvd )
 {
-    if ( assert.ISEQUAL( t.first.size(), size_t( 96U ))) {
+    if ( assert.ISEQUAL( recvd.size(), size_t( 96U ))) {
 	std::cout
-	    << assert << " " << "expected SCM of 12 bytes (96 bits), not " << t.first.size() << " bits"
+	    << assert << " " << "expected SCM of 12 bytes (96 bits), not " << recvd.size() << " bits"
 	    << std::endl;
-	return false;
+	return std::pair<bool,std::string>( false, recvd );
     }
-    std::cout << t.first << t.second << std::endl;
     
     // Convert each cluster of 8 bits into a msg byte.  Any leading bits that do not consititue a full byte
     // initialize the low bits of the first byte.
     std::vector<uint8_t>	msg;
-    for ( int	 		b	= t.first.size()
+    for ( int	 		b	= recvd.size()
 	      ; b > 0
 	      ; b -= 8 ) {
-	std::bitset<8>		byte( t.first.substr( b < 8 ? 0 : b - 8,
+	std::bitset<8>		byte( recvd.substr( b < 8 ? 0 : b - 8,
 						      b < 8 ? b : 8 ));
 	msg.insert( msg.begin(), uint8_t( byte.to_ulong() ));
     }
 
     // Decode the body of the message (bytes 2-12) with the BCH codec.  This should correct up to
-    // bch->t (2) unknown bit errors anywhere in the message.  We have the delivered parity bits in
-    // msg[10-11] at the end of the message, and we do not have the XOR of the original/delivered
+    // bch->t (ie. 2) unknown bit errors anywhere in the message.  We have the delivered parity bits
+    // in msg[10-11] at the end of the message, and we do not have the XOR of the computed/delivered
     // parity bits.
     unsigned int		errloc[96];
     int				corr	= decode_bch( bch, &msg[2], 8,
 						      &msg[10],	// delivered parity
-						      0,	// XOR of original/delivered parity
+						      0,	// XOR of computed/delivered parity
 						      0,	// syndrome results
 						      errloc);	// resultant error locations
     if ( corr < 0 )
-	std::cout << "; BCH decode failed" << std::endl;
+	std::cout << " ; BCH decode failed" << std::endl;
     else if ( corr == 0 ) 
-	std::cout << "; BCH decode validated message as correct" << std::endl;
+	std::cout << " ; BCH decode validated message as correct" << std::endl;
     else if ( corr > 0 && unsigned( corr ) < bch->t )
-	std::cout << "; BCH decode corrects " << corr << " bits w/ capacity to spare" << std::endl;
+	std::cout << " ; BCH decode corrects " << corr << " bits w/ capacity to spare" << std::endl;
     else if ( corr > 0 && unsigned( corr ) == bch->t )
-	std::cout << "; BCH decode corrects " << corr << " bits at capacity (no confidence)" << std::endl;
+	std::cout << " ; BCH decode corrects " << corr << " bits at capacity (no confidence)" << std::endl;
     else if ( corr > 0 && unsigned( corr ) > bch->t )
-	std::cout << "; BCH decode corrects " << corr << " bits over capacity (probably incorrect)" << std::endl;
-    if ( corr > 0 && unsigned( corr ) <= bch->t ) {
-	std::string		fixed( t.first );
-	std::string		loctn( t.first.size(), ' ' );
+	std::cout << " ; BCH decode corrects " << corr << " bits over capacity (probably incorrect)" << std::endl;
+    std::string			fixed( recvd );
+    if ( corr > 0 ) {
+	// Some corrections; maybe even beyond capacity?
+	std::string		loctn( recvd.size(), ' ' );
 	for ( int ei = 0
 		  ; ei < corr
 		  ; ++ei ) {
-	    unsigned int	i	= 16 + errloc[ei];
+	    // Compute the byte/bit indices.  BCH-protected payload starts at 2nd byte.  The bit
+	    // number offsets in the bit-string are in the reverse order of the bit numbers in the
+	    // data bytes.
+	    unsigned int	byte_i	= errloc[ei] / 8;
+	    unsigned int	bit_i	= errloc[ei] % 8;
+	    unsigned int	i	= ( 2 + byte_i ) * 8 + ( 7 - bit_i );
 	    fixed[i]			= fixed[i] == '0' ? '1' : '0';
 	    loctn[i]			= '^';
 	}
@@ -193,8 +197,9 @@ bool				test_SCM(
 		  << loctn << " (fixed " << corr << " bits)"
 		  << std::endl;
     }
-	
-    return corr < 0 || unsigned( corr ) <= bch->t; 
+
+    // Return <valid> flag (verified or corrected), and fixed string of bits (may be different than recvd)
+    return std::pair<bool,std::string>( corr >= 0, fixed );
 }
 
 #if 1
@@ -220,7 +225,40 @@ int main()
     std::ifstream		ifs( filename, std::ifstream::in );
     itron::container_t		tests( parse( ifs, filename ));
     for ( auto &&t : tests ) {
-	assert.ISTRUE( test_SCM( assert, bch, t ));
+	std::cout << t.first << t.second << std::endl;
+	const std::string       &recvd	= t.first;
+	auto validated			= correct_SCM( assert, bch, recvd );
+	if ( validated.first ) {
+	    // We think this is probalby a valid SCM message; BCH either verified as-is, or
+	    // corrected errors w/in capacity.
+	    bool		valid	= validated.first;
+	    std::string	       &fixed	= validated.second;
+	    if ( valid ) {
+		if ( fixed != recvd ) {
+		    // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
+		    auto revalidate	= correct_SCM( assert, bch, fixed );
+		    if ( assert.ISEQUAL( revalidate.first, true, "re-validated fixed record not longer valid!" )
+			 || assert.ISEQUAL( fixed, revalidate.second, "re-validated fixed record was changed!" ))
+			std::cout << " ; BCH revalidation failed"  << std::endl
+				  << fixed << " != " << std::endl
+				  << revalidate.second
+				  << std::endl;
+		
+		    // Lets see if the valid/fixed record is in the set of tests; if it is, it better be a valid SCM message!
+		    if ( tests.find( fixed ) != tests.end() ) {
+			std::string &result	= tests[fixed];
+			std::cout << " ; BCH correction corroberated by independently received message: "  << std::endl
+				  << fixed << result
+				  << std::endl;
+			if ( assert.ISTRUE( result.find( "SCM" ) != std::string::npos )) { // "SCM" in result
+			    std::cout
+				<< assert << " ;  expected valid SCM in corrected message, not " << result
+				<< std::endl;
+			}
+		    }
+		}
+	    }
+	}
     }
     
     return assert.failures ? 1 : 0;
