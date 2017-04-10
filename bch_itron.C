@@ -134,7 +134,7 @@ itron::container_t		parse(
 }
 
 
-std::pair<bool,std::string>	correct_SCM(
+std::pair<int,std::string>	correct_SCM(
 				    ezpwd::asserter    &assert,
 				    struct bch_control *bch,
 				    const std::string  &recvd )
@@ -143,7 +143,7 @@ std::pair<bool,std::string>	correct_SCM(
 	std::cout
 	    << assert << " " << "expected SCM of 12 bytes (96 bits), not " << recvd.size() << " bits"
 	    << std::endl;
-	return std::pair<bool,std::string>( false, recvd );
+	return std::pair<int,std::string>( -1, recvd );
     }
     
     // Convert each cluster of 8 bits into a msg byte.  Any leading bits that do not consititue a full byte
@@ -198,8 +198,9 @@ std::pair<bool,std::string>	correct_SCM(
 		  << std::endl;
     }
 
-    // Return <valid> flag (verified or corrected), and fixed string of bits (may be different than recvd)
-    return std::pair<bool,std::string>( corr >= 0, fixed );
+    // Return validity (-'ve if invalid, otherwise # of bits corrected), and the (possibly fixed)
+    // string of bits (may be different than recvd)
+    return std::pair<int,std::string>( corr, fixed );
 }
 
 #if 1
@@ -226,35 +227,70 @@ int main()
     itron::container_t		tests( parse( ifs, filename ));
     for ( auto &&t : tests ) {
 	std::cout << t.first << t.second << std::endl;
-	const std::string       &recvd	= t.first;
-	auto validated			= correct_SCM( assert, bch, recvd );
-	if ( validated.first ) {
+	const std::string      &recvd	= t.first;
+	auto			valid	= correct_SCM( assert, bch, recvd );
+	int			corr	= valid.first;
+	if ( corr >= 0 ) {
 	    // We think this is probalby a valid SCM message; BCH either verified as-is, or
 	    // corrected errors w/in capacity.
-	    bool		valid	= validated.first;
-	    std::string	       &fixed	= validated.second;
-	    if ( valid ) {
-		if ( fixed != recvd ) {
-		    // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
-		    auto revalidate	= correct_SCM( assert, bch, fixed );
-		    if ( assert.ISEQUAL( revalidate.first, true, "re-validated fixed record not longer valid!" )
-			 || assert.ISEQUAL( fixed, revalidate.second, "re-validated fixed record was changed!" ))
-			std::cout << " ; BCH revalidation failed"  << std::endl
-				  << fixed << " != " << std::endl
-				  << revalidate.second
-				  << std::endl;
-		
-		    // Lets see if the valid/fixed record is in the set of tests; if it is, it better be a valid SCM message!
-		    if ( tests.find( fixed ) != tests.end() ) {
-			std::string &result	= tests[fixed];
-			std::cout << " ; BCH correction corroberated by independently received message: "  << std::endl
-				  << fixed << result
-				  << std::endl;
-			if ( assert.ISTRUE( result.find( "SCM" ) != std::string::npos )) { // "SCM" in result
-			    std::cout
-				<< assert << " ;  expected valid SCM in corrected message, not " << result
-				<< std::endl;
-			}
+	    std::string	       &fixed	= valid.second;
+	    assert.ISEQUAL( corr > 0, fixed != recvd, "Changes detected don't match corrections indicated" );
+	    if ( fixed != recvd ) {
+	        // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
+	        auto		reval	= correct_SCM( assert, bch, fixed );
+	        if ( assert.ISTRUE( reval.first >= 0, "re-validated fixed record not longer valid!" )
+		     || assert.ISEQUAL( fixed, reval.second, "re-validated fixed record was changed!" ))
+		    std::cout << " ; BCH revalidation failed"  << std::endl
+			      << fixed << " != " << std::endl
+			      << reval.second
+			      << std::endl;
+
+		// Lets decode the SCM message.  ID (26 bits) and Consumption (24 bits)
+		unsigned long	ertid	= std::bitset<26>(
+	            fixed.substr( 21, 2 ) + fixed.substr( 56, 24 )).to_ulong();
+		unsigned long	erttype	= std::bitset<4>(
+	            fixed.substr( 26, 4 )).to_ulong();
+		unsigned long	tampphy	= std::bitset<2>(
+	            fixed.substr( 24, 2 )).to_ulong();
+		unsigned long	tampenc	= std::bitset<2>(
+	            fixed.substr( 30, 2 )).to_ulong();
+		unsigned long	consump	= std::bitset<24>(
+		    fixed.substr( 32, 24 )).to_ulong();
+		unsigned long	checksum= std::bitset<16>(
+		    fixed.substr( 80, 16 )).to_ulong();
+		// Lets produce a message similar to this:
+		// SCM:{ID:35489984 Type:12 Tamper:{Phy:01 Enc:00} Consumption:  343152 CRC:0xDD2A}}
+		std::ostringstream decoss;
+		decoss
+		    << "SCM:{ID:"	<< ertid
+		    << " Type:"		<< std::setw( 2 ) << erttype
+		    << " Tamper:{Phy:"	<< std::setw( 2 ) << std::setfill( '0' ) << tampphy
+		    << " Enc:"		<< std::setw( 2 ) << std::setfill( '0' ) << tampenc
+		    << "} Consumption:"	<< std::setw( 8 ) << std::setfill( ' ' ) << std::dec << consump
+		    << " CRC:0x"	<< std::setw( 4 ) << std::setfill( '0' ) << std::hex << std::uppercase << checksum
+		    << "}}";
+		std::string	decode( decoss.str() );
+
+	        // Lets see if the valid/fixed record is in the set of tests; if it is, it better be a valid SCM message!
+		bool		found = tests.find( fixed ) != tests.end();
+		if ( corr > 0 && found )
+		    std::cout << fixed << ": (corroberated, corrected)    " << decode << std::endl;
+		else if ( corr == 0 && found )
+		    std::cout << fixed << ": (corroberated)               " << decode << std::endl;
+		else if ( corr > 0 ) 
+		    std::cout << fixed << ": (              corrected)    " << decode << std::endl;
+		else
+		    std::cout << fixed << ": (not found, but decoded)     " << decode << std::endl;
+
+	        if ( found ) {
+		    std::string &result	= tests[fixed];
+		    std::cout << " ; BCH correction corroberated by independently received message: "  << std::endl
+			      << fixed << result
+			      << std::endl;
+		    if ( assert.ISTRUE( result.find( decode ) != std::string::npos )) { // matching decoded "SCM..." in result
+			std::cout
+			    << assert << " ;  expected valid SCM in corrected message, not " << result
+			    << std::endl;
 		    }
 		}
 	    }
