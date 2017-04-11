@@ -35,7 +35,7 @@ using boost::optional;
 // Djelic GPLv2+ BCH implementation from Linux kernel.  Requires "standalone" shims for user-space
 // to build lib/bch.c implementation; API matches kernel.
 extern "C" {
-#include <linux/bch.h>
+#include "djelic_bch.h"
 }
 
 

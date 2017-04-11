@@ -124,7 +124,10 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsvalidate					\
 		rspwd_test					\
 		ezcod_test					\
-		rskey_test
+		rskey_test					\
+		bch_test					\
+		bch_itron
+
 
 EXTEST =	$(EXCOMP)
 
@@ -197,7 +200,7 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 clean:
 	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
 	      $(JSCOMP) $(JSCOMP:=.mem)						\
-	      ezcod.o
+	      ezcod.o djelic_bch*.o
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
@@ -305,19 +308,22 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 
 
 # 
-# BCH tests.  Requires "standalone" shims for building Kernel code in user space
+# BCH tests.
 # 
 
-bch_test.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
-bch_test.o:	bch_test.C djelic/include
+bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bch_test.o:	bch_test.C
 bch_test:	bch_test.o djelic_bch.o # or, djelic_bch_debug.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-bch_itron.o:	CXXFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include
+
+bch_itron.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
 bch_itron.o:	bch_itron.C djelic/include
+bch_itron: 	CXXFLAGS += -L /usr/local/lib # boost
 bch_itron:	bch_itron.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
 
+.PHONY: itron_test
 itron_test:	bch_itron
 	./bch_itron			&& exit 0 || exit 1 # expect success
 
@@ -350,7 +356,21 @@ schifra:
 	git clone https://github.com/ArashPartow/schifra.git
 
 # 
-# Djelic BCH implementation.  Used by some tests (also, foundation for EZPWD BCH implementation)
+# Djelic BCH implementation.  Foundation for EZPWD BCH implementation
+# 
+#     We provide the original Djelic "BCH" Linux Kernel API implementation, from source.
+# This means that we require you to git checkout the Djelic source code, in order to either
+# build the djelic_bch.o target (for use in C/C++ projects), or to simply build your "C"
+# target directly using the djleic_bch.c source.
+#   - Requires Djelic "standalone" shims for building Kernel code in user space
+#   - Also requires the additional "standalone" linux/errno.h shim for non-Linux builds
+# 
+#     djelic_bch.h	 	-- API declarations
+#     djelic_bch{_debug}.c	-- API definitions
+# 
+#     You can build the djelic_bch.o object files for non-"C" projects to use, or simply compile the
+# djelic_bch.c file directly into your "C" application (to avoid needing to pre-compile the object
+# files to satisfy your build).
 # 
 # djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
@@ -366,11 +386,14 @@ djelictest:	djelic/Documentation/bch/nat_tu_tool
 djelic/Documentation/bch/nat_tu_tool: djelic
 	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
 
-djelic_bch.o:	CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic
+djelic_bch.c:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+djelic_bch.o:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
 djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
 	$(CC) $(CFLAGS) -c -o $@ $<
-djelic_bch_debug.o: CFLAGS += -I djelic/Documentation/bch/standalone -I djelic/include -I djelic -DLOGGING
-djelic_bch_debug.o: djelic_bch_debug.c	djelic/lib/bch.c djelic/Documentation/bch/bch_debug.c
+
+djelic_bch_debug.c: CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -DLOGGING
+djelic_bch_debug.o: CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -DLOGGING
+djelic_bch_debug.o: djelic_bch_debug.c	djelic/lib/bch.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
