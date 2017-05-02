@@ -5,7 +5,7 @@ SHELL		= /bin/bash
 # 
 #    Defaults to system C/C++; define CXX to use a specific C++ compiler.  Supported across:
 # 
-# g++    4.8 - 5.1	-- Recommended; fastest
+# g++    4.8 - 6.3	-- Recommended; fastest (compilation produces some incorrect [-Wmaybe-uninitialized] warnings)
 # clang  3.6		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
@@ -125,6 +125,7 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rspwd_test					\
 		ezcod_test					\
 		rskey_test					\
+		bchsimple					\
 		bch_test					\
 		bch_itron
 
@@ -311,9 +312,14 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 # BCH tests.
 # 
 
+bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchsimple.o:	bchsimple.C
+bchsimple:	bchsimple.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
 bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
 bch_test.o:	bch_test.C
-bch_test:	bch_test.o djelic_bch.o # or, djelic_bch_debug.o
+bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 
@@ -366,7 +372,7 @@ schifra:
 #   - Also requires the additional "standalone" linux/errno.h shim for non-Linux builds
 # 
 #     djelic_bch.h	 	-- API declarations
-#     djelic_bch{_debug}.c	-- API definitions
+#     djelic_bch.c		-- API definitions
 # 
 #     You can build the djelic_bch.o object files for non-"C" projects to use, or simply compile the
 # djelic_bch.c file directly into your "C" application (to avoid needing to pre-compile the object
@@ -389,11 +395,6 @@ djelic/Documentation/bch/nat_tu_tool: djelic
 djelic_bch.c:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
 djelic_bch.o:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
 djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
-	$(CC) $(CFLAGS) -c -o $@ $<
-
-djelic_bch_debug.c: CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -DLOGGING
-djelic_bch_debug.o: CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -DLOGGING
-djelic_bch_debug.o: djelic_bch_debug.c	djelic/lib/bch.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
 
