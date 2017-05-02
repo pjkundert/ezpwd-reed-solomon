@@ -313,12 +313,12 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 # 
 
 bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bchsimple.o:	bchsimple.C
+bchsimple.o:	bchsimple.C c++/ezpwd/bch_base
 bchsimple:	bchsimple.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bch_test.o:	bch_test.C
+bch_test.o:	bch_test.C c++/ezpwd/bch_base
 bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
@@ -383,6 +383,7 @@ schifra:
 djelic:
 	git clone https://github.com/pjkundert/bch.git $@
 
+c++/ezpwd/bch_base \
 djelic/include \
 djelic/lib/bch.c: djelic
 
