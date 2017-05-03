@@ -47,7 +47,7 @@ CFLAGS		= # -O3 already defined
 # master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
 # 
 EMSDK		= ./emscripten/emsdk_portable
-EMSDK_VERSION	= sdk-master-64bit # latest
+EMSDK_VERSION	= latest # sdk-master-64bit # latest
 EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
 
 EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=`pwd`/emscripten:$${PATH} && em++
