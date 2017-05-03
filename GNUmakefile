@@ -126,8 +126,10 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		ezcod_test					\
 		rskey_test					\
 		bchsimple					\
-		bch_test					\
-		bch_itron
+		bch_test
+
+# Don't include bch_itron: too dependent on recent boost, etc.
+#		bch_itron
 
 
 EXTEST =	$(EXCOMP)

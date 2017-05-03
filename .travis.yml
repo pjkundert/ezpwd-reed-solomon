@@ -14,7 +14,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-4.9
-            - libboost-filesystem-dev
       env:
         - CXX_COMPILER=g++-4.9
         - CC_COMPILER=gcc-4.9
@@ -25,7 +24,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-5
-            - libboost-filesystem-dev
       env:
         CXX_COMPILER=g++-5
         CC_COMPILER=gcc-5
@@ -36,7 +34,6 @@ matrix:
             - ubuntu-toolchain-r-test
           packages:
             - g++-6
-            - libboost-filesystem-dev
       env:
         CXX_COMPILER=g++-6
         CC_COMPILER=gcc-6
@@ -48,7 +45,6 @@ matrix:
             - llvm-toolchain-precise-3.6
           packages:
             - clang-3.6
-            - libboost-filesystem-dev
       env:
         CXX_COMPILER=clang++-3.6
         CC_COMPILER=clang-3.6
@@ -60,7 +56,6 @@ matrix:
             - llvm-toolchain-precise-3.7
           packages:
             - clang-3.7
-            - libboost-filesystem-dev
       env:
         CXX_COMPILER=clang++-3.7
         CC_COMPILER=clang-3.7
