@@ -1038,7 +1038,8 @@ var server = {
     : $ brew install swig
     : $ make -C ezpwd-reed-solomon/swig/python install
     : $ pip install web.py
-    : $ ezpwd-reed-solomon/examples/ezcod_api/server.py --prefix api
+    : $ cd ezpwd-reed-solomon/examples/ezcod_api
+    : $ ./server.py --prefix api --bind localhost:8000
 
     | Argument               | Description                                         |
     |------------------------+-----------------------------------------------------|
@@ -1071,7 +1072,24 @@ var server = {
     For example, to get the details of an EZCOD using =wget=:
     : $ wget -S --header='Content-Type: application/json'         \
     :     -qO - --post-data '{"ezcod":"r3u08mpvt.d", "parity":3}' \
-    :     http://localhost:8000/v1.7.0
+    :     http://localhost:8000/api/v1.7.0
+    : HTTP/1.1 200 OK
+    :  Cache-Control: no-cache
+    :  Content-Type: application/json
+    :  Transfer-Encoding: chunked
+    :  Date: Wed, 03 May 2017 12:31:38 GMT
+    :  Server: localhost
+    : {
+    :    "accuracy": 0.0,
+    :    "certainty": 1.0,
+    :    "confidence": 100,
+    :    "ezcod": "R3U 08M PVT.JKG",
+    :    "latitude": 53.55553865432739,
+    :    "latitude_error": 0.0,
+    :    "longitude": -113.87387037277222,
+    :    "longitude_error": 0.0,
+    :    "precision": 9
+    : }
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
