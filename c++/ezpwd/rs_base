@@ -85,6 +85,11 @@
 
 namespace ezpwd {
 
+    // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
+    template <size_t N, size_t B=2> struct log_{       enum { value = 1 + log_<N/B, B>::value }; };
+    template <size_t B>		    struct log_<1, B>{ enum { value = 0 }; };
+    template <size_t B>		    struct log_<0, B>{ enum { value = 0 }; };
+
     //
     // reed_solomon_base - Reed-Solomon codec generic base class
     //

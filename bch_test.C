@@ -7,19 +7,7 @@
 
 // Djelic GPLv2+ BCH "C" API implementation from Linux kernel.  Requires "standalone" shims for
 // user-space to build lib/bch.c implementation; API matches kernel.
-#include <ezpwd/bch_base>
-
-
-// 
-// Compare BCH (N, ...) implementations.
-// 
-//     Iterates over all available correction power T values available for the BCH code of size 2^M-1
-// 
-//     eg.     255
-template <size_t N, size_t B=2>	struct log_{       enum { value = 1 + log_<N/B, B>::value }; };
-template <size_t B>		struct log_<1, B>{ enum { value = 0 }; };
-template <size_t B>		struct log_<0, B>{ enum { value = 0 }; };
-    
+#include <ezpwd/bch>
 
 
 //
@@ -40,7 +28,7 @@ double 				compare(
     
     // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
     // Compute the minimum M required for codeword size N (rounding up to next higher M).
-    size_t			M( log_< N + 1 >::value );
+    size_t			M( ezpwd::log_< N + 1 >::value );
     struct ezpwd::bch_control  *bch;
     size_t			T	= 0;
     while ( !! ( bch = ezpwd::init_bch( M, ++T, 0 ))) {

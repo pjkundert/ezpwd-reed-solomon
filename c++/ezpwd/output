@@ -9,6 +9,7 @@
 #include <sstream>
 #include <set>
 #include <map>
+#include <vector>
 
 // 
 // ezpwd::hexchr	-- escape/hexify char c, output using func/meth f, in width w >= 2

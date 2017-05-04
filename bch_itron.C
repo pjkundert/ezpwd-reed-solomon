@@ -34,10 +34,15 @@ using boost::optional;
 
 // Djelic GPLv2+ BCH implementation from Linux kernel.  Requires "standalone" shims for user-space
 // to build lib/bch.c implementation; API matches kernel.
+/*
 extern "C" {
 #include "djelic_bch.h"
 }
+*/
 
+#include <ezpwd/bch>
+
+typedef ezpwd::BCH<255, 239, 2>	BCH_ITRON;
 
 namespace itron {
 
@@ -136,7 +141,7 @@ itron::container_t		parse(
 
 std::pair<int,std::string>	correct_SCM(
 				    ezpwd::asserter    &assert,
-				    struct bch_control *bch,
+				    BCH_ITRON	       &bch_itron,
 				    const std::string  &recvd )
 {
     if ( assert.ISEQUAL( recvd.size(), size_t( 96U ))) {
@@ -162,20 +167,21 @@ std::pair<int,std::string>	correct_SCM(
     // in msg[10-11] at the end of the message, and we do not have the XOR of the computed/delivered
     // parity bits.
     unsigned int		errloc[96];
-    int				corr	= decode_bch( bch, &msg[2], 8,
-						      &msg[10],	// delivered parity
-						      0,	// XOR of computed/delivered parity
-						      0,	// syndrome results
-						      errloc);	// resultant error locations
+    int				corr	= ezpwd::decode_bch(
+					      bch_itron._bch, &msg[2], 8,
+					      &msg[10],	// delivered parity
+					      0,	// XOR of computed/delivered parity
+					      0,	// syndrome results
+					      errloc);	// resultant error locations
     if ( corr < 0 )
 	std::cout << " ; BCH decode failed" << std::endl;
     else if ( corr == 0 ) 
 	std::cout << " ; BCH decode validated message as correct" << std::endl;
-    else if ( corr > 0 && unsigned( corr ) < bch->t )
+    else if ( corr > 0 && unsigned( corr ) < bch_itron.T )
 	std::cout << " ; BCH decode corrects " << corr << " bits w/ capacity to spare" << std::endl;
-    else if ( corr > 0 && unsigned( corr ) == bch->t )
+    else if ( corr > 0 && unsigned( corr ) == bch_itron.T )
 	std::cout << " ; BCH decode corrects " << corr << " bits at capacity (no confidence)" << std::endl;
-    else if ( corr > 0 && unsigned( corr ) > bch->t )
+    else if ( corr > 0 && unsigned( corr ) > bch_itron.T )
 	std::cout << " ; BCH decode corrects " << corr << " bits over capacity (probably incorrect)" << std::endl;
     std::string			fixed( recvd );
     if ( corr > 0 ) {
@@ -214,11 +220,11 @@ int main()
     // generating the internal tables.  However, I've confirmed that it is 0b10110111101100011 ==
     // 0o267543 == 0x16f63.  Strangely, when generating the BCH code using a 16-bit CRC generator,
     // other projects (namely rtl-amr) use the polynomial 0x6f63...
-    struct bch_control	       *bch	= init_bch( 8, 2, 0 );
-    assert.ISEQUAL( bch->m,		  8U );
-    assert.ISEQUAL( bch->n,		255U );
-    assert.ISEQUAL( bch->t,		  2U );
-    assert.ISEQUAL( bch->ecc_bits,	 16U );
+    BCH_ITRON			bch_itron;
+    assert.ISEQUAL( bch_itron._bch->m,		  8U );
+    assert.ISEQUAL( bch_itron._bch->n,		255U );
+    assert.ISEQUAL( bch_itron._bch->t,		  2U );
+    assert.ISEQUAL( bch_itron._bch->ecc_bits,	 16U );
 
     // Iterate over a bunch of SCM messages with various errors, seeing if they can be corrected.
     // Parse records of type "11111001....0101 : <result>\n" from the file.
@@ -228,7 +234,7 @@ int main()
     for ( auto &&t : tests ) {
 	std::cout << t.first << t.second << std::endl;
 	const std::string      &recvd	= t.first;
-	auto			valid	= correct_SCM( assert, bch, recvd );
+	auto			valid	= correct_SCM( assert, bch_itron, recvd );
 	int			corr	= valid.first;
 	if ( corr >= 0 ) {
 	    // We think this is probalby a valid SCM message; BCH either verified as-is, or
@@ -237,7 +243,7 @@ int main()
 	    assert.ISEQUAL( corr > 0, fixed != recvd, "Changes detected don't match corrections indicated" );
 	    if ( fixed != recvd ) {
 	        // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
-	        auto		reval	= correct_SCM( assert, bch, fixed );
+	        auto		reval	= correct_SCM( assert, bch_itron, fixed );
 	        if ( assert.ISTRUE( reval.first >= 0, "re-validated fixed record not longer valid!" )
 		     || assert.ISEQUAL( fixed, reval.second, "re-validated fixed record was changed!" ))
 		    std::cout << " ; BCH revalidation failed"  << std::endl
