@@ -3,7 +3,6 @@
 #include <vector>
 #include <iostream>
 #include <random>
-#include <sstream>
 
 #include <ezpwd/asserter>
 #include <ezpwd/output>
@@ -30,7 +29,7 @@ int main()
         ezpwd::bch_control                 &bch_codec( *bch );	// By Galois order, Correction capacity
 #else
         //ezpwd::bch_base		bch_codec( 8, 2 );	// By Galois order, Correction capacity, flexibly
-        ezpwd::BCH<255,239,5>		bch_codec;	// By Codeword, Payload and Correction capacities, exactly
+        ezpwd::BCH<255,239,2>		bch_codec;	// By Codeword, Payload and Correction capacities, exactly
 #endif
 
 #if defined( EZPWD_BCH_FIXED )
@@ -89,21 +88,25 @@ int main()
 		}
 
 		// Success; If differences were found, they better be in the parity data!
-		for ( size_t i = 0; i < 9; ++i )
+		for ( size_t i = 0; i < 8; ++i )
 		    if ( assert.ISEQUAL( corrected[i], codeword[i], 
 					 std::string( "Failed recovery of " ) << bch_codec
 					 << " codeword w/ " << e << " bit errors" ))
 			std::cout << assert << std::endl;
 	    }
 	}
-	if ( assert.failures )
-	    std::cout
-		<< bch_codec << ": " << assert.failures << " tests failed." << std::endl;
-	else
-	    std::cout
-		<< bch_codec << ": All tests passed." << std::endl;
+	std::cout
+	    << bch_codec << ": ";
     } catch( std::exception &exc ) {
 	assert.FAILURE( "Exception", exc.what() );
+	std::cout << assert << std::endl;
     }
+
+    if ( assert.failures )
+	std::cout
+	    << assert.failures << " tests failed." << std::endl;
+    else
+	std::cout
+	    << "All tests passed." << std::endl;
     return assert.failures ? 1 : 0;
 }

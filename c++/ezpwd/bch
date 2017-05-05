@@ -49,6 +49,8 @@ namespace ezpwd {
     public:
 	ezpwd::bch_control     *_bch;
 
+				bch_base( const bch_base & ) = delete; // no copy-constructor
+
 				bch_base(
 				    size_t	m,
 				    size_t	t,
@@ -394,12 +396,11 @@ namespace ezpwd {
 				BCH()
 				    : bch<SYMBOLS, CORRECTION>()
 	{
-	    if ( this->_bch->t != T || this->_bch->n != N || this->_bch->n - this->_bch->ecc_bits != LOAD ) {
+	    if ( this->_bch->t != T || this->_bch->n != N
+		 || this->_bch->n - this->_bch->ecc_bits != LOAD ) {
 		std::ostringstream err;
 		this->output( err )
-		    << " specified doesn't match underlying "
-		    << bch<SYMBOLS, CORRECTION>( *this )
-		    << " produced.";
+		    << " specified doesn't match underlying " << *this->_bch << " produced.";
 		EZPWD_RAISE_OR_ABORT( std::runtime_error, err.str().c_str() );
 	    }
 	}
