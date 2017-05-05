@@ -330,49 +330,68 @@
   Djelic for [[https://github.com/Parrot-Developers/bch][making this available]] under GPLv2+!
 
 ** ezpwd::...bch: C++ BCH API
-
-   The stock Linux Kernel C API is retained as-is, and is made available in the =ezpwd::= C++ namespace.
-   Initializing a BCH codec:
-   #+BEGIN_SRC C++
-   #include <ezpwd/bch_base>
-   // Allocate a BCH codec w/ 2^8-1 == 255 bit codeword size, and 2 bits of correction capacity.
-   // This results in a BCH( 255, 239, 2) codec: 255-bit codeword, 239-bit data payload capacity,
-   // hence 255-239 == 16 bits of parity.
-   ezpwd::bch_control *bch = ezpwd::init_bch( 8, 2, 0 );
-   #+END_SRC
-
-   Run =bch_test= to see all available BCH codec.
-
-   Encoding parity bits on the end of an existing message is performed something like this:
-
-   #+BEGIN_SRC C++
-   std::array<uint8_t,10>		codeword= {
-       0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,		// data
-       0, 0 };							// parity, initialized to 0
-   unsigned int len = 8;
-   uint8_t *data = &codeword[0];
-   uint8_t *parity = &codeword[len];
-   ezpwd::encode_bch( bch, data, len, parity );
-   #+END_SRC
    
-   Decoding and correcting using the convenience API that receives error locations and applies
-   correction(s) to supplied data:
-   #+BEGIN_SRC C++
-   int corrections = correct_bch( bch, data, len, parity );
-   #+END_SRC
+   A C++ implementation in many ways similar to the ezpwd::RS<...> is provided.  There are 3 classes
+   (=ezpwd::bch_base=, =ezpwd::bch<...>= and =ezpwd::BCH<...>=), but the recommended one is
+   =ezpwd::BCH<...>=.
+   
+   Creating a BCH codec w/ precisely the desired codeword size, payload and bit-error correction
+   capacity (constructor throws exception if no match BCH codec is available):
+   : #include <ezpwd/bch>
+   : ezpwd::BCH<255,239,2> bch_codec;	// By Codeword, Payload and Correction capacities, exactly
+   
+   Encoding into a container of uint8_t:
+   : std::vector<uint8_t> codeword = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF }	// 8 data
+   : bch_codec.encode( codeword ) // + 2 parity added
 
-   Of course, the stock Linux Kernel API is available; it does not correct in-place, and the caller
-   must perform the bit-error corrections at the error locations detected by the API:
-   #+BEGIN_SRC C++
-   unsigned int errloc[2]; // must be at least bch->t in size
-   int corrections = decode_bch( bch, data, len, parity, 0, 0, errloc );
-   for ( int n = 0; n < corrections; ++n )
-       if ( errloc[n] < 8*len )
-           data[errloc[n]/8] ^= 1 << (errloc[n] % 8);
-   #+END_SRC
+   Decoding (and correcting errors)
+   : int corrections = bch_codec.decode( codeword );
+   : assert( corrections > 0 ); // fail if BCH decode failed
+   : codeword.resize( codeword.size() - bch_codec.ecc_bytes() ); // discard parity
 
-   See =bchsimple.C= and =bch_test.C= for some basic examples, and =bch_itron.C= for a more advanced
-   implementation in a real protocol.
+*** Classic Djelic Linux Kernel API
+    The stock Linux Kernel C API is retained as-is, and is made available in the =ezpwd::= C++ namespace.
+    Initializing a BCH codec:
+    #+BEGIN_SRC C++
+    #include <ezpwd/bch_base>
+    // Allocate a BCH codec w/ 2^8-1 == 255 bit codeword size, and 2 bits of correction capacity.
+    // This results in a BCH( 255, 239, 2) codec: 255-bit codeword, 239-bit data payload capacity,
+    // hence 255-239 == 16 bits of parity.
+    ezpwd::bch_control *bch = ezpwd::init_bch( 8, 2, 0 );
+    #+END_SRC
+   
+    Run =bch_test= to see all available BCH codec.
+   
+    Encoding parity bits on the end of an existing message is performed something like this:
+   
+    #+BEGIN_SRC C++
+    std::array<uint8_t,10>		codeword= {
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,		// data
+        0, 0 };							// parity, initialized to 0
+    unsigned int len = 8;
+    uint8_t *data = &codeword[0];
+    uint8_t *parity = &codeword[len];
+    ezpwd::encode_bch( bch, data, len, parity );
+    #+END_SRC
+    
+    Decoding and correcting using the convenience API that receives error locations and applies
+    correction(s) to supplied data:
+    #+BEGIN_SRC C++
+    int corrections = correct_bch( bch, data, len, parity );
+    #+END_SRC
+   
+    Of course, the stock Linux Kernel API is available; it does not correct in-place, and the caller
+    must perform the bit-error corrections at the error locations detected by the API:
+    #+BEGIN_SRC C++
+    unsigned int errloc[2]; // must be at least bch->t in size
+    int corrections = decode_bch( bch, data, len, parity, 0, 0, errloc );
+    for ( int n = 0; n < corrections; ++n )
+        if ( errloc[n] < 8*len )
+            data[errloc[n]/8] ^= 1 << (errloc[n] % 8);
+    #+END_SRC
+   
+    See =bchsimple.C= and =bch_test.C= for some basic examples, and =bch_itron.C= for a more advanced
+    implementation in a real protocol.
 
 * RSKEY: Data Key API
 
