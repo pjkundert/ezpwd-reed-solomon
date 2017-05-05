@@ -425,23 +425,24 @@ namespace ezpwd {
 	}
     }; // class BCH
 
-} // namespace ezpwd
 
-// 
-// std::ostream << ezpwd::BCH<...>
-// 
-//     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
-// 
-// NOTE: clang/gcc disagree on the scoping of operator<< template/non-template functions...
-// 
-template <size_t SYMBOLS, size_t PAYLOAD, size_t CORRECTION>
-inline
-std::ostream		       &operator<<(
+    // 
+    // std::ostream << ezpwd::BCH<...>
+    // 
+    //     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
+    // 
+    // NOTE: clang/gcc disagree on the scoping of operator<< template/non-template functions...
+    // 
+    template <size_t SYMBOLS, size_t PAYLOAD, size_t CORRECTION>
+    inline
+    std::ostream	       &operator<<(
 				    std::ostream       &lhs,
 				    const ezpwd::BCH<SYMBOLS, PAYLOAD, CORRECTION>
 				    		       &rhs )
-{
-    return rhs.output( lhs );
-}
+    {
+	return rhs.output( lhs );
+    }
+
+} // namespace ezpwd
 
 #endif // _EZPWD_BCH

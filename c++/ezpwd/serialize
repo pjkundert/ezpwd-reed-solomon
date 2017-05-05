@@ -536,18 +536,16 @@ namespace ezpwd {
 	    }
 	}; // class serialize::base_generic
     } // namespace serialize
-} // namespace ezpwd
 
-template < size_t N, typename TABLES >
-std::ostream		       &operator<<(
+    template < size_t N, typename TABLES >
+    std::ostream	       &operator<<(
 				    std::ostream       &lhs,
 				    const ezpwd::serialize::base_generic<N,TABLES>
 						       &rhs )
-{
-    return rhs.output( lhs );
-}
+    {
+	return rhs.output( lhs );
+    }
 
-namespace ezpwd {
     namespace serialize {
 	// 
 	// ezpwd::serialize::base<N> -- Arbitrary bases (other than those with specializations below)

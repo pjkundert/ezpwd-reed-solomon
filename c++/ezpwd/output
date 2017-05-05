@@ -299,41 +299,46 @@ namespace ezpwd {
 	    return c;
 	}
     }; // class streambuf_to_buffer
+
 } // namespace ezpwd
 
 namespace std {
-inline
-ezpwd::buf_t		operator<<(
+
+    inline
+    ezpwd::buf_t	operator<<(
 			    const ezpwd::buf_t &buf,
 			    const std::string  &str )
-{
-    if ( buf.first && str.size() + 1 <= buf.second ) {
-	std::copy( str.begin(), str.end(), buf.first );
-	buf.first[str.size()]		= 0;
-	return ezpwd::buf_t( buf.first + str.size(), buf.second - str.size() );
-    } else if ( buf.first && buf.second ) {
-	std::copy( str.begin(), str.begin() + buf.second - 1, buf.first );
-	buf.first[buf.second-1]		= 0;
-	return ezpwd::buf_t( buf.first + buf.second - 1, 1 );
+    {
+	if ( buf.first && str.size() + 1 <= buf.second ) {
+	    std::copy( str.begin(), str.end(), buf.first );
+	    buf.first[str.size()]	= 0;
+	    return ezpwd::buf_t( buf.first + str.size(), buf.second - str.size() );
+	} else if ( buf.first && buf.second ) {
+	    std::copy( str.begin(), str.begin() + buf.second - 1, buf.first );
+	    buf.first[buf.second-1]	= 0;
+	    return ezpwd::buf_t( buf.first + buf.second - 1, 1 );
+	}
+	return buf; // NULL pointer or 0 size.
     }
-    return buf; // NULL pointer or 0 size.
-}
+
+
+    // 
+    // <std::string> << ...
+    // 
+    //     Useful (but inefficient) standard output formatting directly to a std::string.  Use only for
+    // testing code, for efficiency reasons...
+    // 
+    template < typename T >
+    inline
+    std::string		operator<<(
+			    const std::string  &lhs,
+			    const T 	       &rhs )
+    {
+	std::ostringstream oss;
+	oss << rhs;
+	return std::string( lhs ).append( oss.str() );
+    }
+
 } // namespace std
-// 
-// <std::string> << ...
-// 
-//     Useful (but inefficient) standard output formatting directly to a std::string.  Use only for
-// testing code, for efficiency reasons...
-// 
-template < typename T >
-inline
-std::string			operator<<(
-				    const std::string  &lhs,
-				    const T 	       &rhs )
-{
-    std::ostringstream oss;
-    oss << rhs;
-    return std::string( lhs ).append( oss.str() );
-}
 
 #endif // _EZPWD_OUTPUT
