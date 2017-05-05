@@ -85,6 +85,11 @@
 
 namespace ezpwd {
 
+    // ezpwd::log_<N,B> -- compute the log base B of N at compile-time
+    template <size_t N, size_t B=2> struct log_{       enum { value = 1 + log_<N/B, B>::value }; };
+    template <size_t B>		    struct log_<1, B>{ enum { value = 0 }; };
+    template <size_t B>		    struct log_<0, B>{ enum { value = 0 }; };
+
     //
     // reed_solomon_base - Reed-Solomon codec generic base class
     //
@@ -382,23 +387,21 @@ namespace ezpwd {
 	    const
 	= 0;
     }; // class reed_solomon_base
-} // namespace ezpwd
 
-// 
-// std::ostream << ezpwd::reed_solomon<...>
-// 
-//     Output a R-S codec description in standard form eg. RS(255,253)
-// 
-inline
-std::ostream		       &operator<<(
+    // 
+    // std::ostream << ezpwd::reed_solomon<...>
+    // 
+    //     Output a R-S codec description in standard form eg. RS(255,253)
+    // 
+    inline
+    std::ostream	       &operator<<(
 				    std::ostream       &lhs,
 				    const ezpwd::reed_solomon_base
 						       &rhs )
-{
-    return rhs.output( lhs );
-}
+    {
+	return rhs.output( lhs );
+    }
 
-namespace ezpwd {
     //
     // gfpoly - default field polynomial generator functor.
     //

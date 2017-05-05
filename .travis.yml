@@ -27,6 +27,16 @@ matrix:
       env:
         CXX_COMPILER=g++-5
         CC_COMPILER=gcc-5
+    - compiler: gcc
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-6
+      env:
+        CXX_COMPILER=g++-6
+        CC_COMPILER=gcc-6
     - compiler: clang
       addons:
         apt:

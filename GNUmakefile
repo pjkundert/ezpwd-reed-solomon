@@ -5,8 +5,8 @@ SHELL		= /bin/bash
 # 
 #    Defaults to system C/C++; define CXX to use a specific C++ compiler.  Supported across:
 # 
-# g++    4.8 - 5.1	-- Recommended; fastest
-# clang  3.6		-- Recommended
+# g++    4.8 - 6.3	-- Recommended; fastest (compilation produces some incorrect [-Wmaybe-uninitialized] warnings)
+# clang  3.6+		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
 CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
@@ -47,7 +47,7 @@ CFLAGS		= # -O3 already defined
 # master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
 # 
 EMSDK		= ./emscripten/emsdk_portable
-EMSDK_VERSION	= sdk-master-64bit # latest
+EMSDK_VERSION	= latest # sdk-master-64bit # latest
 EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
 
 EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=`pwd`/emscripten:$${PATH} && em++
@@ -124,7 +124,14 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsvalidate					\
 		rspwd_test					\
 		ezcod_test					\
-		rskey_test
+		rskey_test					\
+		bchsimple					\
+		bchclassic					\
+		bch_test
+
+# Don't include bch_itron: too dependent on recent boost, etc.
+#		bch_itron
+
 
 EXTEST =	$(EXCOMP)
 
@@ -197,7 +204,7 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 clean:
 	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
 	      $(JSCOMP) $(JSCOMP:=.mem)						\
-	      ezcod.o
+	      ezcod.o djelic_bch*.o
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
@@ -303,6 +310,50 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
+
+# 
+# BCH tests.
+# 
+
+bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchsimple.o:	bchsimple.C c++/ezpwd/bch_base
+bchsimple:	bchsimple.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+bchclassic.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchclassic.o:	bchclassic.C c++/ezpwd/bch_base
+bchclassic:	bchclassic.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bch_test.o:	bch_test.C c++/ezpwd/bch_base
+bch_test:	bch_test.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+
+bch_itron.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
+bch_itron.o:	bch_itron.C djelic/include
+bch_itron: 	CXXFLAGS += -L /usr/local/lib # boost
+bch_itron:	bch_itron.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
+
+.PHONY: itron_test
+itron_test:	bch_itron
+	./bch_itron			&& exit 0 || exit 1 # expect success
+
+qi_test_1.o:	qi_test_1.C
+qi_test_1:	qi_test_1.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+qi_test_2.o:	qi_test_2.C
+qi_test_2:	qi_test_2.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+boost_test:	qi_test_1 qi_test_2
+	./qi_test_1 < qi_test_1_good.txt	&& exit 0 || exit 1 # expect success
+	./qi_test_1 < qi_test_1_bad.txt		&& exit 1 || exit 0 # expect failure
+	./qi_test_2 				&& exit 0 || exit 1 # expect success
+
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.
 # 
@@ -313,18 +364,48 @@ phil-karn/librs.a:
 	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
 
 # 
-# Build Schifra R-S implementation.  Used by some tests.
+# Schifra R-S implementation.  Used by some tests.
 # 
-# schifra:	schifra.tgz
-#	tar xzf $<
-#	make -C schifra all
-#
-# schifra.tgz:
-#	wget -O $@ http://www.schifra.com/downloads/schifra.tgz
-#
-
 schifra:
 	git clone https://github.com/ArashPartow/schifra.git
+
+# 
+# Djelic BCH implementation.  Foundation for EZPWD BCH implementation
+# 
+#     We provide the original Djelic "BCH" Linux Kernel API implementation, from source.
+# This means that we require you to git checkout the Djelic source code, in order to either
+# build the djelic_bch.o target (for use in C/C++ projects), or to simply build your "C"
+# target directly using the djleic_bch.c source.
+#   - Requires Djelic "standalone" shims for building Kernel code in user space
+#   - Also requires the additional "standalone" linux/errno.h shim for non-Linux builds
+# 
+#     djelic_bch.h	 	-- API declarations
+#     djelic_bch.c		-- API definitions
+# 
+#     You can build the djelic_bch.o object files for non-"C" projects to use, or simply compile the
+# djelic_bch.c file directly into your "C" application (to avoid needing to pre-compile the object
+# files to satisfy your build).
+# 
+# djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
+# 
+djelic:
+	git clone https://github.com/pjkundert/bch.git $@
+
+c++/ezpwd/bch_base \
+djelic/include \
+djelic/lib/bch.c: djelic
+
+.PHONY: djelictest
+djelictest:	djelic/Documentation/bch/nat_tu_tool
+
+djelic/Documentation/bch/nat_tu_tool: djelic
+	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
+
+djelic_bch.c:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+djelic_bch.o:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
+	$(CC) $(CFLAGS) -c -o $@ $<
+
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.

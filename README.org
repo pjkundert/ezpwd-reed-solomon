@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.6.0
+#+TITLE: EZPWD Reed-Solomon Version 1.7.0
 
 * Reed-Solomon Loss/Error Correction
 
@@ -55,13 +55,13 @@
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
-   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/ezcod.js]].
+   [[ https://cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/ezcod.js]].
 
     For example, to use the EZCOD position encoding API in your website, add
     this at the end of your website template, before your application.js:
     #+BEGIN_SRC HTML
     <script
-      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/ezcod.js">
+      src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/ezcod.js">
     </script>
     #+END_SRC
 
@@ -324,6 +324,75 @@
     remove them after =rs.decode()= finishes.  The =rs.nroots()= method reports
     the number of parity symbols.
 
+* BCH Error Correction
+
+  Implements the Linux Kernel API for BCH error correction encoding and decoding.  Thanks to Ivan
+  Djelic for [[https://github.com/Parrot-Developers/bch][making this available]] under GPLv2+!
+
+** ezpwd::...bch: C++ BCH API
+   
+   A C++ implementation in many ways similar to the ezpwd::RS<...> is provided.  There are 3 classes
+   (=ezpwd::bch_base=, =ezpwd::bch<...>= and =ezpwd::BCH<...>=), but the recommended one is
+   =ezpwd::BCH<...>=.
+   
+   Creating a BCH codec w/ precisely the desired codeword size, payload and bit-error correction
+   capacity (constructor throws exception if no match BCH codec is available):
+   : #include <ezpwd/bch>
+   : ezpwd::BCH<255,239,2> bch_codec;	// By Codeword, Payload and Correction capacities, exactly
+   
+   Encoding into a container of uint8_t:
+   : std::vector<uint8_t> codeword = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF }	// 8 data
+   : bch_codec.encode( codeword ) // + 2 parity added
+
+   Decoding (and correcting errors)
+   : int corrections = bch_codec.decode( codeword );
+   : assert( corrections > 0 ); // fail if BCH decode failed
+   : codeword.resize( codeword.size() - bch_codec.ecc_bytes() ); // discard parity
+
+*** Classic Djelic Linux Kernel API
+    The stock Linux Kernel C API is retained as-is, and is made available in the =ezpwd::= C++ namespace.
+    Initializing a BCH codec:
+    #+BEGIN_SRC C++
+    #include <ezpwd/bch_base>
+    // Allocate a BCH codec w/ 2^8-1 == 255 bit codeword size, and 2 bits of correction capacity.
+    // This results in a BCH( 255, 239, 2) codec: 255-bit codeword, 239-bit data payload capacity,
+    // hence 255-239 == 16 bits of parity.
+    ezpwd::bch_control *bch = ezpwd::init_bch( 8, 2, 0 );
+    #+END_SRC
+   
+    Run =bch_test= to see all available BCH codec.
+   
+    Encoding parity bits on the end of an existing message is performed something like this:
+   
+    #+BEGIN_SRC C++
+    std::array<uint8_t,10>		codeword= {
+        0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF,		// data
+        0, 0 };							// parity, initialized to 0
+    unsigned int len = 8;
+    uint8_t *data = &codeword[0];
+    uint8_t *parity = &codeword[len];
+    ezpwd::encode_bch( bch, data, len, parity );
+    #+END_SRC
+    
+    Decoding and correcting using the convenience API that receives error locations and applies
+    correction(s) to supplied data:
+    #+BEGIN_SRC C++
+    int corrections = correct_bch( bch, data, len, parity );
+    #+END_SRC
+   
+    Of course, the stock Linux Kernel API is available; it does not correct in-place, and the caller
+    must perform the bit-error corrections at the error locations detected by the API:
+    #+BEGIN_SRC C++
+    unsigned int errloc[2]; // must be at least bch->t in size
+    int corrections = decode_bch( bch, data, len, parity, 0, 0, errloc );
+    for ( int n = 0; n < corrections; ++n )
+        if ( errloc[n] < 8*len )
+            data[errloc[n]/8] ^= 1 << (errloc[n] % 8);
+    #+END_SRC
+   
+    See =bchsimple.C= and =bch_test.C= for some basic examples, and =bch_itron.C= for a more advanced
+    implementation in a real protocol.
+
 * RSKEY: Data Key API
 
   Asking a user to reliably enter even a few bytes of data (eg. a product key
@@ -362,7 +431,7 @@
    Load the rskey.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/rskey.js">
+     src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/rskey.js">
    </script>
    #+END_SRC
 
@@ -452,7 +521,7 @@
 
 #+BEGIN_SRC Javascript
 <script
-  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/rskey.js">
+  src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/rskey.js">
 </script>
 <script>
 var client = {
@@ -674,7 +743,7 @@ var server = {
    Load the ezcod.js Javascript into your project:
    #+BEGIN_SRC HTML
    <script
-    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/ezcod.js">
+    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/ezcod.js">
    </script>
    #+END_SRC
 
@@ -743,7 +812,7 @@ var server = {
       };
    </script>
    <script async onload="jquery_release()"
-       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.6.0/js/ezpwd/ezcod.js">
+       src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/ezcod.js">
    </script>
    <script defer onload="jquery_loaded()"
        src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
@@ -988,7 +1057,8 @@ var server = {
     : $ brew install swig
     : $ make -C ezpwd-reed-solomon/swig/python install
     : $ pip install web.py
-    : $ ezpwd-reed-solomon/examples/ezcod_api/server.py --prefix api
+    : $ cd ezpwd-reed-solomon/examples/ezcod_api
+    : $ ./server.py --prefix api --bind localhost:8000
 
     | Argument               | Description                                         |
     |------------------------+-----------------------------------------------------|
@@ -998,12 +1068,12 @@ var server = {
     | --log <file>           | Put logs into the given file                        |
 
     The REST API URL always includes the version =v#.#.#=; for the above command
-    the API is hosted at: http://localhost:8000/api/v1.6.0.  To get the details
+    the API is hosted at: http://localhost:8000/api/v1.7.0.  To get the details
     for an EZCOD, encode a request with the EZCOD as a query option.  For
     example, visit this with a web browser:
-    http://localhost:8000/api/v1.6.0?ezcod=r3u08mpvt.d.  This will return the
+    http://localhost:8000/api/v1.7.0?ezcod=r3u08mpvt.d.  This will return the
     decoded data as HTML.  To get it in JSON form, append =.json= to the API
-    requests path: http://localhost:8000/api/v1.6.0.json?ezcod=r3u08mpvt.d.
+    requests path: http://localhost:8000/api/v1.7.0.json?ezcod=r3u08mpvt.d.
 
     This demo application supports GET query options and POST form variables (or
     body JSON of the form ={...}= or =[{...},...]= with object properties)
@@ -1021,7 +1091,24 @@ var server = {
     For example, to get the details of an EZCOD using =wget=:
     : $ wget -S --header='Content-Type: application/json'         \
     :     -qO - --post-data '{"ezcod":"r3u08mpvt.d", "parity":3}' \
-    :     http://localhost:8000/v1.6.0
+    :     http://localhost:8000/api/v1.7.0
+    : HTTP/1.1 200 OK
+    :  Cache-Control: no-cache
+    :  Content-Type: application/json
+    :  Transfer-Encoding: chunked
+    :  Date: Wed, 03 May 2017 12:31:38 GMT
+    :  Server: localhost
+    : {
+    :    "accuracy": 0.0,
+    :    "certainty": 1.0,
+    :    "confidence": 100,
+    :    "ezcod": "R3U 08M PVT.JKG",
+    :    "latitude": 53.55553865432739,
+    :    "latitude_error": 0.0,
+    :    "longitude": -113.87387037277222,
+    :    "longitude_error": 0.0,
+    :    "precision": 9
+    : }
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
