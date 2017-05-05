@@ -188,22 +188,23 @@ namespace ezpwd {
 	}
 	return err;
     }
-}
 
-// 
-// <ostream> << <ezpwd::bch_control> -- output codec in standard BCH( N, N-ECC, T ) form
-// 
-inline
-std::ostream		       &operator<<(
+    // 
+    // <ostream> << <ezpwd::bch_control> -- output codec in standard BCH( N, N-ECC, T ) form
+    // 
+    inline
+    std::ostream	       &operator<<(
 				    std::ostream       &lhs,
 				    const ezpwd::bch_control
-						       &bch )
-{
-    return lhs
-	<< "BCH( "	<< std::setw( 3 ) << bch.n
-	<< ", "		<< std::setw( 3 ) << bch.n - bch.ecc_bits
-	<< ", "		<< std::setw( 3 ) << bch.t
-	<< " )";
-}
+				    		       &bch )
+    {
+	return lhs
+	    << "BCH( "	<< std::setw( 3 ) << bch.n
+	    << ", "		<< std::setw( 3 ) << bch.n - bch.ecc_bits
+	    << ", "		<< std::setw( 3 ) << bch.t
+	    << " )";
+    }
+
+} // namespace ezpwd
 
 #endif // _EZPWD_BCH_BASE

@@ -6,7 +6,7 @@ SHELL		= /bin/bash
 #    Defaults to system C/C++; define CXX to use a specific C++ compiler.  Supported across:
 # 
 # g++    4.8 - 6.3	-- Recommended; fastest (compilation produces some incorrect [-Wmaybe-uninitialized] warnings)
-# clang  3.6		-- Recommended
+# clang  3.6+		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
 CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
@@ -126,6 +126,7 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		ezcod_test					\
 		rskey_test					\
 		bchsimple					\
+		bchclassic					\
 		bch_test
 
 # Don't include bch_itron: too dependent on recent boost, etc.
@@ -317,6 +318,11 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
 bchsimple.o:	bchsimple.C c++/ezpwd/bch_base
 bchsimple:	bchsimple.o djelic_bch.o
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+bchclassic.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchclassic.o:	bchclassic.C c++/ezpwd/bch_base
+bchclassic:	bchclassic.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include

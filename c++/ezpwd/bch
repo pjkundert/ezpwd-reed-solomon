@@ -32,6 +32,19 @@ namespace ezpwd {
     // of parity ECC bits will be selected by the algorithm.  You need to compute the maximum
     // non-parity payload by computing _bch->n - _bch->ecc_bits.
     // 
+    //     The data and parity bits must always be on separate blocks of int8_t/uint8_t-sized data
+    // in the container.  This is required because the underlying API must break the data and parity
+    // out as separate arrays for processing.  So, if the computed ecc_bits is not evenly divisible
+    // by 8, some care must be taken to ensure that it is packed into exactly ecc_bytes of data at
+    // the end of the supplied container.  Alternatively, it can be kept in a separate container.
+    // This is probably safest, as the bch_base/bch/BCH classes will never attempt to resize the
+    // data/parity containers when supplied separately.
+    // 
+    //     Like the Reed-Solomon APIs, the bch_base/bch/BCH APIs will alter the size of a variable
+    // container in encode(...), to add the BCH ECC "parity" data (eg. std::vector, std::string).
+    // Fixed containers (eg. std::array) are never resized, and it is assumed that ecc_bytes of
+    // parity data exist at the end of the container.
+    // 
     class bch_base {
     public:
 	ezpwd::bch_control     *_bch;
@@ -121,6 +134,7 @@ namespace ezpwd {
 	    data.resize( data.size() + ecc_bytes() );
 	    return encode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ));
 	}
+
 	template < typename T >
 	int			encode(
 				    const std::vector<T>&data,
@@ -191,6 +205,8 @@ namespace ezpwd {
 	//
 	// decode -- container interface, w/ optional corrected bit-error positions reported
 	// 
+	//     Does not correct errors in parity!
+	// 
 	int			decode(
 				    std::string	       &data,
 				    std::vector<unsigned int>
@@ -212,6 +228,38 @@ namespace ezpwd {
 	    const
 	{
 	    typedef uint8_t	uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+			   uTpair( (uT *)&parity.front(), (uT *)&parity.front() + parity.size() ),
+			   position );
+	}
+
+	template < typename T >
+	int			decode(
+				    std::vector<T>     &data,
+				    std::vector<unsigned int>
+				    		       *position= 0 )
+	    const
+	{
+	    typedef typename std::make_unsigned<T>::type
+				uT;
+	    typedef std::pair<uT *, uT *>
+				uTpair;
+	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
+			   position );
+	}
+
+	template < typename T >
+	int			decode(
+				    std::vector<T>     &data,
+				    std::vector<T>     &parity,
+				    std::vector<unsigned int>
+				    		       *position= 0 )
+	    const
+	{
+	    typedef typename std::make_unsigned<T>::type
+				uT;
 	    typedef std::pair<uT *, uT *>
 				uTpair;
 	    return decode( uTpair( (uT *)&data.front(), (uT *)&data.front() + data.size() ),
@@ -305,6 +353,20 @@ namespace ezpwd {
     }; // class bch
 
     // 
+    // std::ostream << ezpwd::bch_base
+    // 
+    //     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
+    // 
+    inline
+    std::ostream	       &operator<<(
+				    std::ostream       &lhs,
+				    const ezpwd::bch_base
+						       &rhs )
+    {
+	return rhs.output( lhs );
+    }
+
+    // 
     // ezpwd::BCH<SYMBOLS, PAYLOAD, CAPACITY> -- Standard BCH codec types
     // 
     //     Specify and create a standard BCH codec with exactly the specified capacities.  We create
@@ -334,9 +396,9 @@ namespace ezpwd {
 	{
 	    if ( this->_bch->t != T || this->_bch->n != N || this->_bch->n - this->_bch->ecc_bits != LOAD ) {
 		std::ostringstream err;
-		this->output( err ) // complex, b/c we can't use operator<<, yet
-		    << " specified doesn't match underlying ";
-		bch<SYMBOLS, CORRECTION>( *this ).output( err )
+		this->output( err )
+		    << " specified doesn't match underlying "
+		    << bch<SYMBOLS, CORRECTION>( *this )
 		    << " produced.";
 		EZPWD_RAISE_OR_ABORT( std::runtime_error, err.str().c_str() );
 	    }
@@ -361,23 +423,16 @@ namespace ezpwd {
 		<< " )";
 	}
     }; // class BCH
+
 } // namespace ezpwd
 
 // 
-// std::ostream << ezpwd::bch_base
 // std::ostream << ezpwd::BCH<...>
 // 
 //     Output a BCH codec description in standard form eg. BCH( 255, 239,   2 )
 // 
-inline
-std::ostream		       &operator<<(
-				    std::ostream       &lhs,
-				    const ezpwd::bch_base
-				    		       &rhs )
-{
-    return rhs.output( lhs );
-}
-
+// NOTE: clang/gcc disagree on the scoping of operator<< template/non-template functions...
+// 
 template <size_t SYMBOLS, size_t PAYLOAD, size_t CORRECTION>
 inline
 std::ostream		       &operator<<(
