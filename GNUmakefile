@@ -152,7 +152,8 @@ javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
 
 swig-python:	swig-python-install
-swig-python-%:
+swig-python-install: c++/ezpwd/ezcod c++/ezpwd/bch
+swig-python-%:	
 	make -C swig/python $*
 
 valgrind:	testex-valgrind\ -v\ --leak-check=full
@@ -316,17 +317,17 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++
 # 
 
 bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bchsimple.o:	bchsimple.C c++/ezpwd/bch_base
+bchsimple.o:	bchsimple.C c++/ezpwd/bch
 bchsimple:	bchsimple.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bchclassic.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bchclassic.o:	bchclassic.C c++/ezpwd/bch_base
+bchclassic.o:	bchclassic.C c++/ezpwd/bch
 bchclassic:	bchclassic.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bch_test.o:	bch_test.C c++/ezpwd/bch_base
+bch_test.o:	bch_test.C c++/ezpwd/bch
 bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
@@ -391,7 +392,7 @@ schifra:
 djelic:
 	git clone https://github.com/pjkundert/bch.git $@
 
-c++/ezpwd/bch_base \
+c++/ezpwd/bch \
 djelic/include \
 djelic/lib/bch.c: djelic
 

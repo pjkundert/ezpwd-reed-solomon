@@ -94,6 +94,23 @@ int main()
 					 << " codeword w/ " << e << " bit errors" ))
 			std::cout << assert << std::endl;
 	    }
+#if ! defined( EZPWD_BCH_CLASSIC )
+	    // Try the inline versions (only available in C++ API)
+	    std::string			raw( "abc" );
+	    std::string			enc	= bch_codec.encoded( raw );
+	    std::string			err	= enc;
+	    err[0]			       ^= 0x40;
+	    err[2]			       ^= 0x08;
+	    std::string			dec	= bch_codec.decoded( err );
+	    if ( assert.ISEQUAL( dec.substr( 0, 3 ), raw,
+				 std::string( "decoded/encoded of " )	<< bch_codec
+				 << " codeword failed, encoded '0x"	<< ezpwd::hexstr( raw )
+				 << "' to '0x"				<< ezpwd::hexstr( enc )
+				 << "', decoded '0x"			<< ezpwd::hexstr( err )
+				 << "' to '0x"				<< ezpwd::hexstr( dec )
+				 << "'" ))
+		std::cout << assert << std::endl;
+#endif
 	}
 	std::cout
 	    << bch_codec << ": ";

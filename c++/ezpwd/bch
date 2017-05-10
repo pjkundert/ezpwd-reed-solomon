@@ -334,7 +334,36 @@ namespace ezpwd {
 		position->resize( corrects );
 	    return corrects;
 	}
-	
+
+	//
+	// {en,de}coded -- returns an encoded/corrected copy of the provided container
+	//
+	// NOTE:
+	// 
+	//     Must return exceptions on failure; If exceptions inhibited, returns a
+	// default-constructed instance of the supplied data container.  This may be sufficient to
+	// reliably deduce failure; if not, this interface should not be used.
+	// 
+	template <typename C>
+	C			encoded(
+				    C			data )
+	    const
+	{
+	    if ( encode( data ) < 0 )
+		EZPWD_RAISE_OR_RETURN( std::runtime_error, "BCH: Could not encode data", C() );
+	    return data;
+	}
+
+	template <typename C>
+	C			decoded(
+				    C			data )
+	    const
+	{
+	    if ( decode( data ) < 0 )
+		EZPWD_RAISE_OR_RETURN( std::runtime_error, "BCH: Could not decode data", C() );
+	    return data;
+	}
+
     }; // class bch_base
 
     template < size_t SYMBOLS, size_t CORRECTION >
