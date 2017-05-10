@@ -326,7 +326,7 @@ namespace ezpwd {
 	    const
 	{
 	    if ( position )
-		position->resize( t() );
+		position->resize( t() * 2 ); // may be able to correct beyond stated capacity!
 	    int			corrects	= ezpwd::correct_bch(
 						      this->_bch, data, len, parity, 0, 0,
 						      position ? &(*position)[0] : 0 );
