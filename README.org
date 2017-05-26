@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.7.0
+#+TITLE: EZPWD Reed-Solomon Version 1.7.1
 
 * Reed-Solomon Loss/Error Correction
 
@@ -13,6 +13,14 @@
   The Javascript APIs are produced from the C++ implementation using
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
+
+** Installing
+
+   EZPWD Reed-Solomon depends on:
+
+  | Package        | For? | Description                      |
+  |----------------+------+----------------------------------|
+  | linux-libc-dev | BCH  | System linux/errno.h file        |
 
 ** Performance
 
@@ -121,7 +129,7 @@
    some improvements and conversion to C++) is available under the terms of the
    LGPL.
 
-*** GPLv3 Licensing
+*** GPLv3+ Licensing
 
     If your application complies with the terms of the GPLv3, then you can use
     EZPWD Reed-Solomon based APIs without cost.  All users of your software
@@ -822,158 +830,6 @@ var server = {
    </script>
    #+END_SRC
 
-** Python Library: ezpwd\_reed\_solomon
-
-   The Python =ezpwd_reed_solomon= package contains an =ezcod= sub-module.
-   While fully functional, it is designed to be simple to augment, should your
-   geolocation encoding needs be unique.
-
-   It is extremely simple to add new EZCOD APIs to the Python binding.  Simply
-   edit the =swig/python/ezcod/ezcod.i= file, and re-install the Python binding.
-   For example, to add a new binding class called =ezcod.ezcod_20mm_15= (with
-   20mm accuracy in 12 location encoding symbols + .99997 certainty in 3 parity
-   symbols), add the following to the bottom of =ezcod.i=:
-   #+BEGIN_EXAMPLE
-   %template(ezcod_20mm_15)	ezpwd::ezcod<3,12>;
-   #+END_EXAMPLE
-
-*** =ezpwd_reed_solomon.ezcod=
-
-    Classes are provided to produce three variants of EZCOD by default: 3m (9
-    symbols) of location accuracy, plus 1, 2 or 3 Reed-Solomon parity symbols.
-    They are named =ezcod_3_10=, =ezcod_3_11= and =ezcod_3_12=, respectively,
-    indicating the default 3m accuracy, and the total number of symbols.
-    #+BEGIN_EXAMPLE
-    $ python
-    >>> from ezpwd_reed_solomon import ezcod
-    #+END_EXAMPLE
-
-    The API supports the following classes, methods and attributes:
-
-**** =ezcod_3_{10,11,12}( "<EZCOD>"|[lat,[lon,[seper,[chunk]]]] )=
-
-     Creates an <ezcod> instance containing the specified geolocation (defaults
-     to latitude 0.0, longitude 0.0, '.' separator and chunk 3).  If a string is
-     supplied, it is decoded (if possible; an Exception is raised if the
-     provided EZCOD is invalid).
-     #+BEGIN_EXAMPLE
-     >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
-     >>> print repr( EZCOD )
-     <R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm>
-     #+END_EXAMPLE
-
-**** =ezcod_3_{10,11,12}.encode( [precision] )=
-
-     Encodes the current =ezcod_3_{10,11,12}='s =.latitude= and =.longitude= to
-     the given number of symbols of precision (default: 9, or 3m).  The accuracy
-     may be anywhere from 1 to 12 (20mm accuracy) symbols.
-     #+BEGIN_EXAMPLE
-     >>> print EZCOD.encode( 12 )
-     R3U 06B MJ3 EDD.K56
-     #+END_EXAMPLE
-
-**** =ezcod_3_{10,11,12}.decode( "<EZCOD>" )=
-
-     Any variant of =ezcod_3_{10,11,12}= can decode a valid EZCOD with the
-     expected amount (or more) parity, so long as it contains a '.' or '!' to
-     separate the position and R-S parity symbols.
-
-     The percentage certainty is returned -- the proportion of expected R-S
-     parity symbols that remain unused after error detection and correction.  A
-     value of 0 indicates that the EZCOD's R-S decoding did not fail, but no
-     parity symbols remain in excess to verify its validity.
-     #+BEGIN_EXAMPLE
-     >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
-     100
-     >>> EZCOD.latitude
-     53.49999999627471
-     >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
-     67
-     >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
-     34
-     >>> print repr( EZCOD )
-     <R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm>
-     >>>
-     #+END_EXAMPLE
-
-     If any symbols are unknown, replace them with either =_= or =?= to
-     indicate that they are erasures (and consume only a single symbol of R-S
-     parity to correct).  Any undetected erroneous symbol corrected by the R-S
-     codec consumes 2 parity symbols.  A failure to decode (too many errors or
-     erasures) will raise a =RuntimeError= exception:
-     #+BEGIN_EXAMPLE
-     >>> EZCOD.decode( "r3u 06b mj3 __d.__6" )
-     Traceback (most recent call last):
-       File "<stdin>", line 1, in <module>
-         ...
-     RuntimeError: ezpwd::ezcod::decode: Error correction failed; too many erasures
-     >>> EZCOD.decode( "r3u 06b mj3 eXd.__6" )
-     Traceback (most recent call last):
-       File "<stdin>", line 1, in <module>
-         ...
-     RuntimeError: ezpwd::ezcod::decode: Error correction failed; R-S decode failed
-     #+END_EXAMPLE
-
-     If an EZCOD codec expecting fewer R-S parity symbols (eg. an EZCOD 3:10
-     codec) is used to decode an EZCOD with more parity (eg. an EZCOD 3:12 code
-     w/ 3 parity), it will only decode with the "strength" of the shorter codec.
-
-     For example, even though an EZCOD 3:12 offers almost 5-nines probability of
-     correctness (1-1/32^3 == P(.99997)), if you use an EZCOD 3:10 codec to
-     decode it, it will only use one of the R-S parity symbols, and thus only be
-     able to correct 1 erasure (instead of 1 error and 1 erasure).  Furthermore,
-     it will only be able to provide 1-nines probability of correctness (1-1/32
-     == P(.96875))
-     #+BEGIN_EXAMPLE
-     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 edd.k56")
-     100
-     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 edd.k56")
-     100
-     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 ed_.k56") # even though 3 parity available
-     67
-     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 ed_.k56") # all codec parity capacity used!
-     0
-     >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 e__.k56")
-     34
-     >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 e__.k56")
-     Traceback (most recent call last):
-       File "<stdin>", line 1, in <module>
-         ...
-     RuntimeError: reed-solomon: number of erasures exceeds capacity (number of roots)
-     #+END_EXAMPLE
-
-**** =ezcod_3_{10,11,12}= Instance Attributes
-
-     The following attributes are available in each =ezcod_3_{10,11,12}=
-     instance:
-
-     | Attribute        | Type  | Range         | Description                              |
-     |------------------+-------+---------------+------------------------------------------|
-     | latitude         | float | [-90,90]      | Geographical position in degrees         |
-     | longitude        | float | [-180,180]    | ''                                       |
-     | latitude\_error  | float | [0,inf]       | Axis error in meters                     |
-     | longitude\_error | float | [0,inf]       | ''                                       |
-     | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters  |
-     | precision        | int   | [1,12]        | Desired number of location symbols       |
-     | confidence       | int   | [0,100]       | Percentage of parity symbols remaining   |
-     | certainty        | float | [0.0,1.0]     | Certainty that EZCOD decoded was correct |
-     | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols    |
-     | separator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE         |
-     | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH             |
-     | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator      |
-     | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator      |
-     | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator   |
-     | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator   |
-     | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator   |
-     | CHK\_NONE        | char  | '\xff'        | Output no space between chunks           |
-     | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks        |
-     | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks        |
-     | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks        |
-
-     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG= (avoid
-     =SEP_NONE=) for =separator=, so that the EZCOD parser can unambiguously
-     determine the total EZCOD size, and the number of parity symbols to expect.
-
 ** Robustness
 
    All symbols after the initial 9 are Reed-Solomon code symbols.  Each R-S
@@ -1112,6 +968,238 @@ var server = {
 
     You can supply single objects, or a list:
     : ... --post-data '[{"ezcod":"r3u08mpvt.d"},{"latlon:" "53.5,-113.8"}'
+
+* Python Library: =ezpwd_reed_solomon=
+
+  The Python =ezpwd_reed_solomon= package currently contains an =ezcod=
+  sub-module, and a BCH sub-module.  While fully functional, they are designed
+  to be simple to augment, should your BCH codec or geolocation encoding needs
+  be unique.
+
+  It is extremely simple to add new EZCOD or BCH APIs to the Python bindings.
+  Simply edit the =swig/python/ezcod/ezcod.i= (or =.../BCH/BCH.i=) file, and
+  re-install the Python binding.
+
+  For example, to add a new binding class called =ezcod.ezcod_20mm_15= (with
+  20mm accuracy in 12 location encoding symbols + .99997 certainty in 3 parity
+  symbols), add the following to the bottom of =ezcod.i=:
+  #+BEGIN_EXAMPLE
+  %template(ezcod_20mm_15)	ezpwd::ezcod<3,12>;
+  #+END_EXAMPLE
+
+
+** =ezpwd_reed_solomon.BCH=
+
+   The BCH module provides several BCH codec classes.  Presently, all are
+   implemented using Ivan Djelic's implementation, straight from the Linux
+   kernel.
+
+   The basic API (provided in =bch_base=) is specified in terms of Galois field
+   order 'm' (from 5-9), and bit-error correction capacity 't'.  A BCH codec is
+   provided (if possible) with the specified capacity.  The BCH codeword size is
+   2^m-1, and the number of ECC bits required to achieve bit-error correction
+   capacity 't' is computed.  Thus, the resultant =codec='s data payload
+   capacity could be computed using:
+   : 2 ** m - 1 - codec.ecc_bits()
+
+   | Class                   | Description                                    |
+   |-------------------------+------------------------------------------------|
+   | =bch_base=              | Obtain a BCH codec by specifying M             |
+   |                         | (Galois order; codeword size == 2^M-1) and     |
+   |                         | T (bit-error correction capacity)              |
+   |                         |                                                |
+   | =bch_255_<T>=           | Specify a pre-defined codeword size            |
+   | - =bch_255_1=           | (2^M-1), and bit-error capacity T              |
+   | - =bch_255_2=           |                                                |
+   | - =bch_255_3=           |                                                |
+   | - =bch_255_4=           |                                                |
+   | - =bch_255_5=           |                                                |
+   | - =bch_255_6=           |                                                |
+   | - =bch_255_7=           |                                                |
+   | - =bch_255_8=           |                                                |
+   |                         |                                                |
+   | =BCH_255_<PAYLOAD>-<T>= | Specific BCH codec by fully specifying         |
+   | - =BCH_255_191_8=       | the Codeword, Payload and T bit-error capacity |
+   | - =BCH_255_199_7=       |                                                |
+   | - =BCH_255_207_6=       |                                                |
+   | - =BCH_255_215_5=       |                                                |
+   | - =BCH_255_223_4=       |                                                |
+   | - =BCH_255_231_3=       |                                                |
+   | - =BCH_255_239_2=       |                                                |
+   | - =BCH_255_247_1=       |                                                |
+
+ In the future, the BCH.BCH_... version may be re-implemented using C++
+ templates, to provide optimizations available due to the predetermined fixed
+ size of internal tables.  Therefore, it is recommended that the fixed
+ BCH_... version be used if possible.
+
+ All codecs provide:
+
+ | Method      | Description                                                     |
+ |-------------+-----------------------------------------------------------------|
+ | t()         | The bit-error correction capacity                               |
+ | ecc_bits()  | The number of BCH parity bits                                   |
+ | ecc_bytes() | The number of BCH parity bytes                                  |
+ | encoded()   | Return the BCH encoded data, w/ ECC bytes appended              |
+ | decoded()   | Return the BCH decoded and corrected data (*not* discarding ECC bytes) |
+
+ #+BEGIN_SRC python
+   import BCH
+ 
+   def flip( data, bit ):
+       return data[:bit // 8] + chr( ord( data[bit // 8] ) ^ 1 << bit % 8) + data[bit // 8 + 1:]
+ 
+   flexi16 = BCH.bch_base( 8, 2 )
+ 
+   ori = 'abc'
+   enc = flexi16.encoded( ori )
+
+   # Add some bit-errors
+   err = flip( enc, 14 )
+   err = flip( err, 7 )
+   #err = flip( err, 21 ) # over bit-error correction capacity
+
+   # Decode and test
+   dec = flexi16.decoded( err )
+   assert dec[:3] == ori
+ #+END_SRC
+
+** =ezpwd_reed_solomon.ezcod=
+
+   Classes are provided to produce three variants of EZCOD by default: 3m (9
+   symbols) of location accuracy, plus 1, 2 or 3 Reed-Solomon parity symbols.
+   They are named =ezcod_3_10=, =ezcod_3_11= and =ezcod_3_12=, respectively,
+   indicating the default 3m accuracy, and the total number of symbols.
+   #+BEGIN_EXAMPLE
+   $ python
+   >>> from ezpwd_reed_solomon import ezcod
+   #+END_EXAMPLE
+
+   The API supports the following classes, methods and attributes:
+
+*** =ezcod_3_{10,11,12}("<EZCOD>"|[lat,[lon,...]])=
+
+    Creates an <ezcod> instance containing the specified geolocation (defaults
+    to latitude 0.0, longitude 0.0, '.' separator and chunk 3).  If a string is
+    supplied, it is decoded (if possible; an Exception is raised if the
+    provided EZCOD is invalid).
+    #+BEGIN_EXAMPLE
+    >>> EZCOD = ezcod.ezcod_3_12( 53.5, -113.8 )
+    >>> print repr( EZCOD )
+    <R3U 06B MJ3.JXR (100%)  ==  +53.5000000000, -113.8000000000 +/-   0.00mm>
+    #+END_EXAMPLE
+
+*** =ezcod_3_{10,11,12}.encode([precision])=
+
+    Encodes the current =ezcod_3_{10,11,12}='s =.latitude= and =.longitude= to
+    the given number of symbols of precision (default: 9, or 3m).  The accuracy
+    may be anywhere from 1 to 12 (20mm accuracy) symbols.
+    #+BEGIN_EXAMPLE
+    >>> print EZCOD.encode( 12 )
+    R3U 06B MJ3 EDD.K56
+    #+END_EXAMPLE
+
+*** =ezcod_3_{10,11,12}.decode("<EZCOD>")=
+
+    Any variant of =ezcod_3_{10,11,12}= can decode a valid EZCOD with the
+    expected amount (or more) parity, so long as it contains a '.' or '!' to
+    separate the position and R-S parity symbols.
+
+    The percentage certainty is returned -- the proportion of expected R-S
+    parity symbols that remain unused after error detection and correction.  A
+    value of 0 indicates that the EZCOD's R-S decoding did not fail, but no
+    parity symbols remain in excess to verify its validity.
+    #+BEGIN_EXAMPLE
+    >>> print EZCOD.decode( "r3u 06b mj3 edd.k56" )
+    100
+    >>> EZCOD.latitude
+    53.49999999627471
+    >>> print EZCOD.decode( "r3u O6b m_3 edd.k56" )
+    67
+    >>> print EZCOD.decode( "r3u O6b mX3 edd.k56" )
+    34
+    >>> print repr( EZCOD )
+    <R3U 06B MJ3.JXR ( 34%)  ==  +53.4999999963, -113.8000000734 +/-   19.4mm>
+    >>>
+    #+END_EXAMPLE
+
+    If any symbols are unknown, replace them with either =_= or =?= to
+    indicate that they are erasures (and consume only a single symbol of R-S
+    parity to correct).  Any undetected erroneous symbol corrected by the R-S
+    codec consumes 2 parity symbols.  A failure to decode (too many errors or
+    erasures) will raise a =RuntimeError= exception:
+    #+BEGIN_EXAMPLE
+    >>> EZCOD.decode( "r3u 06b mj3 __d.__6" )
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+        ...
+    RuntimeError: ezpwd::ezcod::decode: Error correction failed; too many erasures
+    >>> EZCOD.decode( "r3u 06b mj3 eXd.__6" )
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+        ...
+    RuntimeError: ezpwd::ezcod::decode: Error correction failed; R-S decode failed
+    #+END_EXAMPLE
+
+    If an EZCOD codec expecting fewer R-S parity symbols (eg. an EZCOD 3:10
+    codec) is used to decode an EZCOD with more parity (eg. an EZCOD 3:12 code
+    w/ 3 parity), it will only decode with the "strength" of the shorter codec.
+
+    For example, even though an EZCOD 3:12 offers almost 5-nines probability of
+    correctness (1-1/32^3 == P(.99997)), if you use an EZCOD 3:10 codec to
+    decode it, it will only use one of the R-S parity symbols, and thus only be
+    able to correct 1 erasure (instead of 1 error and 1 erasure).  Furthermore,
+    it will only be able to provide 1-nines probability of correctness (1-1/32
+    == P(.96875))
+    #+BEGIN_EXAMPLE
+    >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 edd.k56")
+    100
+    >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 edd.k56")
+    100
+    >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 ed_.k56") # even though 3 parity available
+    67
+    >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 ed_.k56") # all codec parity capacity used!
+    0
+    >>> ezcod.ezcod_3_12().decode("r3u 06b mj3 e__.k56")
+    34
+    >>> ezcod.ezcod_3_10().decode("r3u 06b mj3 e__.k56")
+    Traceback (most recent call last):
+      File "<stdin>", line 1, in <module>
+        ...
+    RuntimeError: reed-solomon: number of erasures exceeds capacity (number of roots)
+    #+END_EXAMPLE
+
+*** =ezcod_3_{10,11,12}= Instance Attributes
+
+    The following attributes are available in each =ezcod_3_{10,11,12}=
+    instance:
+
+    | Attribute        | Type  | Range         | Description                              |
+    |------------------+-------+---------------+------------------------------------------|
+    | latitude         | float | [-90,90]      | Geographical position in degrees         |
+    | longitude        | float | [-180,180]    | ''                                       |
+    | latitude\_error  | float | [0,inf]       | Axis error in meters                     |
+    | longitude\_error | float | [0,inf]       | ''                                       |
+    | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters  |
+    | precision        | int   | [1,12]        | Desired number of location symbols       |
+    | confidence       | int   | [0,100]       | Percentage of parity symbols remaining   |
+    | certainty        | float | [0.0,1.0]     | Certainty that EZCOD decoded was correct |
+    | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols    |
+    | separator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE         |
+    | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH             |
+    | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator      |
+    | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator      |
+    | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator   |
+    | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator   |
+    | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator   |
+    | CHK\_NONE        | char  | '\xff'        | Output no space between chunks           |
+    | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks        |
+    | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks        |
+    | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks        |
+
+    It is recommended to use either =SEP_DOT= (default) or =SEP_BANG= (avoid
+    =SEP_NONE=) for =separator=, so that the EZCOD parser can unambiguously
+    determine the total EZCOD size, and the number of parity symbols to expect.
 
 * RSPWD: Password Correction API
 

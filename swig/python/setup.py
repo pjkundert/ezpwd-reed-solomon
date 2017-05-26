@@ -15,8 +15,35 @@ ezcod_module			= Extension(
         "ezcod/ezcod.i",
     ],
     include_dirs		= [ "../../c++" ],
-    swig_opts			= [ "-c++", "-I./ezcod", "-I../../c++", "-outdir", "ezcod" ],
+    swig_opts			= [ "-c++",
+                                      "-I./ezcod",
+                                      "-I../../c++",
+                                    "-outdir",
+                                      "ezcod" ],
     extra_compile_args		= [ "-std=c++11", "-O3" ],
+    libraries			= []
+)
+
+bch_module			= Extension(
+    "_BCH",
+    sources			= [
+        "BCH/BCH.i",
+    ],
+    include_dirs		= [ "../../c++",
+                                    "../../standalone",
+                                    "../../djelic/Documentation/bch/standalone",
+                                    "../../djelic/include" ],
+    swig_opts			= [ "-c++",
+                                      "-I./BCH",
+                                      "-I../../c++",
+                                      "-I../../standalone",
+                                      "-I../../djelic/Documentation/bch/standalone",
+                                      "-I../../djelic/include",
+                                    "-outdir",
+                                      "BCH" ],
+    extra_objects		= [ "../../djelic_bch.o" ],
+    extra_compile_args		= [ "-std=c++11", "-O3" ],
+    extra_link_args		= [ "-std=c++11", "-O3" ],
     libraries			= []
 )
 
@@ -27,15 +54,17 @@ setup(
     author			= "Perry Kundert",
     author_email		= "perry@hardconsulting.com",
     url				= "https://github.com/pjkundert/ezpwd_reed_solomon",
-    description			= """Python bindings for ezpwd_reed_solomon ezcod""",
-    ext_modules			= [ ezcod_module ],
+    description			= """Python bindings for ezpwd_reed_solomon ezcod, BCH""",
+    ext_modules			= [ ezcod_module, bch_module ],
     packages			= [
         "ezpwd_reed_solomon",
-        "ezpwd_reed_solomon/ezcod"
+        "ezpwd_reed_solomon/ezcod",
+        "ezpwd_reed_solomon/BCH"
     ],
     package_dir			= {
         "ezpwd_reed_solomon":		".",
         "ezpwd_reed_solomon/ezcod":	"./ezcod",
+        "ezpwd_reed_solomon/BCH":	"./BCH",
     },
     install_requires		= install_requires,
     license			= "Dual License; GPLv3 and Proprietary",

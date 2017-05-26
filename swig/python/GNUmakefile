@@ -1,5 +1,6 @@
 SHELL		= /bin/bash
-BINDINGS	= ezcod
+BINDINGS	= ezcod		\
+		  BCH
 
 all:
 	@echo "Python Bindings: $(BINDINGS)"
