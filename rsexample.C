@@ -17,6 +17,7 @@
 
 #include <ezpwd/rs>
 #include <ezpwd/corrector>
+#include <ezpwd/output>
 
 #include <ezpwd/definitions>	// must be included in one C++ compilation unit
 

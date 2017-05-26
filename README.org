@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.7.0
+#+TITLE: EZPWD Reed-Solomon Version 1.7.1
 
 * Reed-Solomon Loss/Error Correction
 
@@ -13,6 +13,14 @@
   The Javascript APIs are produced from the C++ implementation using
   =emscripten=, and are very performant.  All Javascript is available for
   inclusion in websites via MaxCDN.
+
+** Installing
+
+   EZPWD Reed-Solomon depends on:
+
+  | Package        | For? | Description                      |
+  |----------------+------+----------------------------------|
+  | linux-libc-dev | BCH  | System linux/errno.h file        |
 
 ** Performance
 
