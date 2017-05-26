@@ -42,3 +42,7 @@ qi_test_1
 qi_test_2
 bchsimple
 bchclassic
+swig/python/ezcod/ezcod.py
+swig/python/ezcod/ezcod_wrap.cpp
+swig/python/BCH/BCH.py
+swig/python/BCH/BCH_wrap.cpp
