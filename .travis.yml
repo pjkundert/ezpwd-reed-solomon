@@ -59,6 +59,28 @@ matrix:
       env:
         CXX_COMPILER=clang++-3.7
         CC_COMPILER=clang-3.7
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
+          packages:
+            - clang-3.8
+      env:
+        CXX_COMPILER=clang++-3.8
+        CC_COMPILER=clang-3.8
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - llvm-toolchain-precise-3.8
+          packages:
+            - clang-3.8
+      env:
+        CXX_COMPILER=clang++-3.8
+        CC_COMPILER=clang-3.8
 
 script: 
   - $CXX_COMPILER --version
