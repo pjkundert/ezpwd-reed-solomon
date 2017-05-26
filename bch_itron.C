@@ -211,7 +211,7 @@ std::pair<int,std::string>	correct_SCM(
 
 #if 1
 
-int main()
+int main( int argc, const char **argv )
 {
     ezpwd::asserter		assert;
 
@@ -227,8 +227,9 @@ int main()
     assert.ISEQUAL( bch_itron._bch->ecc_bits,	 16U );
 
     // Iterate over a bunch of SCM messages with various errors, seeing if they can be corrected.
-    // Parse records of type "11111001....0101 : <result>\n" from the file.
-    std::string			filename( "bch_itron.txt" );
+    // Parse records of type "11111001....0101 : <result>\n" from the file in the first command-line
+    // arg (or bch_itron.txt, by default)
+    std::string			filename( argc >= 2 ? argv[1] : "bch_itron.txt" );
     std::ifstream		ifs( filename, std::ifstream::in );
     itron::container_t		tests( parse( ifs, filename ));
     for ( auto &&t : tests ) {
