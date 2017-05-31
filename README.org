@@ -934,12 +934,12 @@ var server = {
     : $ cd ezpwd-reed-solomon/examples/ezcod_api
     : $ ./server.py --prefix api --bind localhost:8000
 
-    | Argument               | Description                                         |
-    |------------------------+-----------------------------------------------------|
-    | --bind <i'face>:<port> | Bind the web server to the given interface and port |
-    | --analytics <id>       | Issue Google Analytics code using the given ID      |
-    | --prefix <path>        | Host the REST API at the URL: <path>/<version>      |
-    | --log <file>           | Put logs into the given file                        |
+    | Argument                | Description                                         |
+    |-------------------------+-----------------------------------------------------|
+    | =--bind <iface>:<port>= | Bind the web server to the given interface and port |
+    | =--analytics <id>=      | Issue Google Analytics code using the given ID      |
+    | =--prefix <path>=       | Host the REST API at the URL: <path>/<version>      |
+    | =--log <ffile>=         | Put logs into the given file                        |
 
     The REST API URL always includes the version =v#.#.#=; for the above command
     the API is hosted at: http://localhost:8000/api/v1.7.0.  To get the details
@@ -953,14 +953,14 @@ var server = {
     body JSON of the form ={...}= or =[{...},...]= with object properties)
     matching:
 
-    | Keyword   | Description                                |
-    |-----------+--------------------------------------------|
-    | ezcod     | An EZCOD 3:10/11/12                        |
-    | latlon    | A "Lat,Lon" pair as a string               |
-    | latitude  | A geographic Latitude in degrees           |
-    | longitude | A geographic Longitude in degrees          |
-    | precision | The number of symbols of geolocation data  |
-    | parity    | The number of desired EZCOD parity symbols |
+    | Keyword     | Description                                |
+    |-------------+--------------------------------------------|
+    | =ezcod=     | An EZCOD 3:10/11/12                        |
+    | =latlon=    | A "Lat,Lon" pair as a string               |
+    | =latitude=  | A geographic Latitude in degrees           |
+    | =longitude= | A geographic Longitude in degrees          |
+    | =precision= | The number of symbols of geolocation data  |
+    | =parity=    | The number of desired EZCOD parity symbols |
 
     For example, to get the details of an EZCOD using =wget=:
     : $ wget -S --header='Content-Type: application/json'         \
@@ -1045,61 +1045,75 @@ var server = {
    | - =BCH_255_239_2=       |                                                |
    | - =BCH_255_247_1=       |                                                |
 
- In the future, the BCH.BCH_... version may be re-implemented using C++
- templates, to provide optimizations available due to the predetermined fixed
- size of internal tables.  Therefore, it is recommended that the fixed
- BCH_... version be used if possible.
+   In the future, the BCH.BCH_... version may be re-implemented using C++
+   templates, to provide optimizations available due to the predetermined fixed
+   size of internal tables.  Therefore, it is recommended that the fixed
+   BCH_... version be used if possible.
+  
+   All codecs provide:
+  
+   | Method        | Description                                                            |
+   |---------------+------------------------------------------------------------------------|
+   | =t()=         | The bit-error correction capacity                                      |
+   | =ecc_bits()=  | The number of BCH parity bits                                          |
+   | =ecc_bytes()= | The number of BCH parity bytes                                         |
+   | =encoded()=   | Return the BCH encoded data, w/ ECC bytes appended                     |
+   | =decoded()=   | Return the BCH decoded and corrected data (*not* discarding ECC bytes) |
+  
+   Here's some sample code illustrating some simple use-cases for the
+   =ezpwd_reed_solomon.BCH= module:
+  
+   #+LATEX: {\footnotesize
+   #+BEGIN_SRC ipython :session :exports both
+     from ezpwd_reed_solomon import BCH
+   
+     def flip( data, bit ):
+       if isinstance( data, str ):
+         return data[:bit // 8] + chr( ord( data[bit // 8] ) ^ 1 << bit % 8) + data[bit // 8 + 1:]
+       elif isinstance( data, tuple ):
+         return data[:bit // 8] + (data[bit // 8] ^ 1 << bit % 8,) + data[bit // 8 + 1:]
+       elif isinstance( data, list ):
+         return data[:bit // 8] + [data[bit // 8] ^ 1 << bit % 8,] + data[bit // 8 + 1:]
+       raise RuntimeError( "Unhandled sequence: %r" % data )
+   
+     flexi16 = BCH.bch_base( 8, 2 )
+   
+     ori = 'abc'
+     enc = flexi16.encoded( ori )
+  
+     # Add some bit-errors
+     err = flip( enc, 14 )
+     err = flip( err, 7 )
+     #err = flip( err, 21 ) # over bit-error correction capacity
+  
+     # Decode and test
+     dec = flexi16.decoded( err )
+     assert dec[:3] == ori
+  
+     # The error positions can be returned; a special BCH.error_position container type
+     # must be used (due to the vagaries of the Swig-generated Python wrapper).
+     data = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]
+     codeword = flexi16.encoded( data )
+  
+     erroneous = list( codeword )
+     erroneous[1] ^= 1 << 3 # introduce an error in the 4rd bit of the 2nd byte; 12th bit (bit index 11)
+     positions = BCH.error_position()
+     corrected = flexi16.decoded( erroneous, positions )
+     assert corrected == codeword and len( positions ) == 1 and positions[0] == 11, \
+       "'codeword:  %r'\n'erroneous: %r'\n'corrected: %r'\n'positions: %r'" % (
+         codeword, erroneous, corrected, list( positions ))
+     "'codeword:  %r'\n'erroneous: %r'\n'corrected: %r'\n'positions: %r'" % (
+       codeword, erroneous, corrected, list( positions ))
+  
+   #+END_SRC
+  
+   #+RESULTS:
+   : 'codeword:  (1, 35, 69, 103, 137, 171, 205, 239, 203, 187)'
+   : 'erroneous: [1, 43, 69, 103, 137, 171, 205, 239, 203, 187]'
+   : 'corrected: (1, 35, 69, 103, 137, 171, 205, 239, 203, 187)'
+   : 'positions: [11]'
 
- All codecs provide:
-
- | Method      | Description                                                     |
- |-------------+-----------------------------------------------------------------|
- | t()         | The bit-error correction capacity                               |
- | ecc_bits()  | The number of BCH parity bits                                   |
- | ecc_bytes() | The number of BCH parity bytes                                  |
- | encoded()   | Return the BCH encoded data, w/ ECC bytes appended              |
- | decoded()   | Return the BCH decoded and corrected data (*not* discarding ECC bytes) |
-
- #+BEGIN_SRC python
-   import BCH
- 
-   def flip( data, bit ):
-     if isinstance( data, str ):
-       return data[:bit // 8] + chr( ord( data[bit // 8] ) ^ 1 << bit % 8) + data[bit // 8 + 1:]
-     elif isinstance( data, tuple ):
-       return data[:bit // 8] + (data[bit // 8] ^ 1 << bit % 8,) + data[bit // 8 + 1:]
-     elif isinstance( data, list ):
-       return data[:bit // 8] + [data[bit // 8] ^ 1 << bit % 8,] + data[bit // 8 + 1:]
-     raise RuntimeError( "Unhandled sequence: %r" % data )
- 
-   flexi16 = BCH.bch_base( 8, 2 )
- 
-   ori = 'abc'
-   enc = flexi16.encoded( ori )
-
-   # Add some bit-errors
-   err = flip( enc, 14 )
-   err = flip( err, 7 )
-   #err = flip( err, 21 ) # over bit-error correction capacity
-
-   # Decode and test
-   dec = flexi16.decoded( err )
-   assert dec[:3] == ori
-
-   # The error positions can be returned; a special BCH.error_position container type
-   # must be used (due to the vagaries of the Swig-generated Python wrapper).
-   data = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]
-   codeword = flexi16.encoded( data )
-
-   erroneous = list( codeword )
-   erroneous[1] ^= 1 << 3 # introduce an error in the 4rd bit of the 2nd byte; 12th bit (bit index 11)
-   positions = BCH.error_position()
-   corrected = flexi16.decoded( erroneous, positions )
-   assert corrected == codeword and len( positions ) == 1 and positions[0] == 12, \
-       "codeword: %r\nerroneous: %r\ncorrected: %r\npositions: %r" % (
-           codeword, erroneous, corrected, list( positions ))
-
- #+END_SRC
+   #+LATEX: }
 
 ** =ezpwd_reed_solomon.ezcod=
 
@@ -1211,28 +1225,28 @@ var server = {
     The following attributes are available in each =ezcod_3_{10,11,12}=
     instance:
 
-    | Attribute        | Type  | Range         | Description                              |
-    |------------------+-------+---------------+------------------------------------------|
-    | latitude         | float | [-90,90]      | Geographical position in degrees         |
-    | longitude        | float | [-180,180]    | ''                                       |
-    | latitude\_error  | float | [0,inf]       | Axis error in meters                     |
-    | longitude\_error | float | [0,inf]       | ''                                       |
-    | accuracy         | float | [0,inf]       | Average of error ellipse axes in meters  |
-    | precision        | int   | [1,12]        | Desired number of location symbols       |
-    | confidence       | int   | [0,100]       | Percentage of parity symbols remaining   |
-    | certainty        | float | [0.0,1.0]     | Certainty that EZCOD decoded was correct |
-    | chunk            | int   | [0,6]         | Spaces every 'chunk' position symbols    |
-    | separator        | char  | '.', '!', ' ' | SEP\_NONE/DEFAULT/DOT/BANG/SPACE         |
-    | space            | char  | ' ', '-'      | CHK\_NONE/DEFAULT/SPACE/DASH             |
-    | SEP\_NONE        | char  | '\xff'        | Output no position/parity separator      |
-    | SEP\_DEFAULT     | char  | '\x00'        | Output no position/parity separator      |
-    | SEP\_DOT         | char  | '.' (default) | Output a '.' position/parity separator   |
-    | SEP\_BANG        | char  | '!'           | Output a '!' position/parity separator   |
-    | SEP\_SPACE       | char  | ' '           | Output a ' ' position/parity separator   |
-    | CHK\_NONE        | char  | '\xff'        | Output no space between chunks           |
-    | CHK\_DEFAULT     | char  | '\x00'        | Output the default between chunks        |
-    | CHK\_SPACE       | char  | ' ' (default) | Output a ' ' space between chunks        |
-    | CHK\_DASH        | char  | '-'           | Output a '-' space between chunks        |
+    | Attribute         | Type  | Range         | Description                              |
+    |-------------------+-------+---------------+------------------------------------------|
+    | =latitude=        | float | [-90,90]      | Geographical position in degrees         |
+    | =longitude=       | float | [-180,180]    | ''                                       |
+    | =latitude_error=  | float | [0,inf]       | Axis error in meters                     |
+    | =longitude_error= | float | [0,inf]       | ''                                       |
+    | =accuracy=        | float | [0,inf]       | Average of error ellipse axes in meters  |
+    | =precision=       | int   | [1,12]        | Desired number of location symbols       |
+    | =confidence=      | int   | [0,100]       | Percentage of parity symbols remaining   |
+    | =certainty=       | float | [0.0,1.0]     | Certainty that EZCOD decoded was correct |
+    | =chunk=           | int   | [0,6]         | Spaces every 'chunk' position symbols    |
+    | =separator=       | char  | '.', '!', ' ' | =SEP_NONE/DEFAULT/DOT/BANG/SPACE=        |
+    | =space=           | char  | ' ', '-'      | =CHK_NONE/DEFAULT/SPACE/DASH=            |
+    | =SEP_NONE=        | char  | '\xff'        | Output no position/parity separator      |
+    | =SEP_DEFAULT=     | char  | '\x00'        | Output no position/parity separator      |
+    | =SEP_DOT=         | char  | '.' (default) | Output a '.' position/parity separator   |
+    | =SEP_BANG=        | char  | '!'           | Output a '!' position/parity separator   |
+    | =SEP_SPACE=       | char  | ' '           | Output a ' ' position/parity separator   |
+    | =CHK_NONE=        | char  | '\xff'        | Output no space between chunks           |
+    | =CHK_DEFAULT=     | char  | '\x00'        | Output the default between chunks        |
+    | =CHK_SPACE=       | char  | ' ' (default) | Output a ' ' space between chunks        |
+    | =CHK_DASH=        | char  | '-'           | Output a '-' space between chunks        |
 
     It is recommended to use either =SEP_DOT= (default) or =SEP_BANG= (avoid
     =SEP_NONE=) for =separator=, so that the EZCOD parser can unambiguously

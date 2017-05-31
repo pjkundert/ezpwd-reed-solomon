@@ -84,6 +84,6 @@ erroneous = list( codeword )
 erroneous[1] ^= 1 << 3 # introduce an error in the 4rd bit of the 2nd byte; 12th bit (bit index 11)
 positions = BCH.error_position()
 corrected = flexi16.decoded( erroneous, positions )
-assert corrected == codeword and len( positions ) == 1 and positions[0] == 12, \
-    "codeword: %r\nerroneous: %r\ncorrected: %r\npositions: %r" % (
+assert corrected == codeword and len( positions ) == 1 and positions[0] == 11, \
+    "'codeword:  %r'\n'erroneous: %r'\n'corrected: %r'\n'positions: %r'" % (
         codeword, erroneous, corrected, list( positions ))
