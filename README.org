@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.7.1
+#+TITLE: EZPWD Reed-Solomon Version 1.7.2
 
 * Reed-Solomon Loss/Error Correction
 
@@ -356,6 +356,24 @@
    : int corrections = bch_codec.decode( codeword );
    : assert( corrections > 0 ); // fail if BCH decode failed
    : codeword.resize( codeword.size() - bch_codec.ecc_bytes() ); // discard parity
+
+   The =encoded= and =decoded= methods return a copy of the supplied std::string
+   or =vector=/=array= container of uint8_t, optionally with a
+   =std::vector<int>= of error positions filled in.  The =encoded= adds the
+   parity; =decoded= corrects the errors, optionally filling in the positions.
+
+   Enhance some raw data w/ BCH parity:
+   : std::vector<uint8_t> data = { 0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF }	// 8 data
+   : std::vector<uint8_t> codeword = bch_codec.encoded( data ); // 8 data + 2 parity
+
+   Introduce an error into the parity-enhanced BCH codeword, and ensure that the
+   recovered error positions matches the expected number and location of the
+   error introduced:
+   : std::vector<uint8_t> erroneous = codeword;
+   : erroneous[1] ^= 1<<3; // introduce an error in the 4rd bit of the 2nd byte; the 12th bit (bit index 11)
+   : std::vector<int> positions;
+   : std::vector<uint8_t> corrected = bch_codec.decoded( erroneous, positions );
+   : assert( corrected == codeword && positions.size() == 1 && positions[0] == 11 );
 
 *** Classic Djelic Linux Kernel API
     The stock Linux Kernel C API is retained as-is, and is made available in the =ezpwd::= C++ namespace.
@@ -987,7 +1005,6 @@ var server = {
   %template(ezcod_20mm_15)	ezpwd::ezcod<3,12>;
   #+END_EXAMPLE
 
-
 ** =ezpwd_reed_solomon.BCH=
 
    The BCH module provides several BCH codec classes.  Presently, all are
@@ -1047,7 +1064,13 @@ var server = {
    import BCH
  
    def flip( data, bit ):
+     if isinstance( data, str ):
        return data[:bit // 8] + chr( ord( data[bit // 8] ) ^ 1 << bit % 8) + data[bit // 8 + 1:]
+     elif isinstance( data, tuple ):
+       return data[:bit // 8] + (data[bit // 8] ^ 1 << bit % 8,) + data[bit // 8 + 1:]
+     elif isinstance( data, list ):
+       return data[:bit // 8] + [data[bit // 8] ^ 1 << bit % 8,] + data[bit // 8 + 1:]
+     raise RuntimeError( "Unhandled sequence: %r" % data )
  
    flexi16 = BCH.bch_base( 8, 2 )
  
@@ -1062,6 +1085,20 @@ var server = {
    # Decode and test
    dec = flexi16.decoded( err )
    assert dec[:3] == ori
+
+   # The error positions can be returned; a special BCH.error_position container type
+   # must be used (due to the vagaries of the Swig-generated Python wrapper).
+   data = [0x01, 0x23, 0x45, 0x67, 0x89, 0xAB, 0xCD, 0xEF]
+   codeword = flexi16.encoded( data )
+
+   erroneous = list( codeword )
+   erroneous[1] ^= 1 << 3 # introduce an error in the 4rd bit of the 2nd byte; 12th bit (bit index 11)
+   positions = BCH.error_position()
+   corrected = flexi16.decoded( erroneous, positions )
+   assert corrected == codeword and len( positions ) == 1 and positions[0] == 12, \
+       "codeword: %r\nerroneous: %r\ncorrected: %r\npositions: %r" % (
+           codeword, erroneous, corrected, list( positions ))
+
  #+END_SRC
 
 ** =ezpwd_reed_solomon.ezcod=

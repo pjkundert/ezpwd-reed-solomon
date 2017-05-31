@@ -32,6 +32,15 @@
     }
 }
 
+// 
+// Instantiate some of the required vector types used by the en/decode APIs
+// 
+%include "std_vector.i"
+namespace std {
+    %template(error_position)	vector<int>;
+    %template(uint8_vector)	vector<unsigned char>;
+}
+
 %include ezpwd/bch
 
 %extend ezpwd::bch_base {
@@ -53,14 +62,17 @@
     // 
     // Support some known container types for {en,de}coded template
     //
-
     %template(encoded) encoded<std::string>;
     %template(decoded) decoded<std::string>;
+    %template(encoded) encoded<std::vector<unsigned char>>;
+    %template(decoded) decoded<std::vector<unsigned char>>;
 };
 
 %extend ezpwd::BCH {
     %template(encoded) encoded<std::string>;
     %template(decoded) decoded<std::string>;
+    %template(encoded) encoded<std::vector<unsigned char>>;
+    %template(decoded) decoded<std::vector<unsigned char>>;
 };
 
 // Ship a few 8-bit bch/BCH<...> class template instantiations

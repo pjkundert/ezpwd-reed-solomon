@@ -211,8 +211,7 @@ namespace ezpwd {
 	// 
 	int			decode(
 				    std::string	       &data,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
@@ -225,8 +224,7 @@ namespace ezpwd {
 	int			decode(
 				    std::string	       &data,
 				    std::string	       &parity,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef uint8_t	uT;
@@ -240,8 +238,7 @@ namespace ezpwd {
 	template < typename T >
 	int			decode(
 				    std::vector<T>     &data,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -256,8 +253,7 @@ namespace ezpwd {
 	int			decode(
 				    std::vector<T>     &data,
 				    std::vector<T>     &parity,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -273,8 +269,7 @@ namespace ezpwd {
 	int			decode(
 				    std::array<T,N>    &data,
 				    int			pad	= 0, // ignore 'pad' symbols at start of array
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    typedef typename std::make_unsigned<T>::type
@@ -284,18 +279,20 @@ namespace ezpwd {
 	    return decode( uTpair( (uT *)&data.front() + pad, (uT *)&data.front() + data.size() ),
 			   position );
 	}
+
 	// 
 	// decode -- denote data+parity or data, parity using pairs of uint8_t iterators
 	// decode -- decode and correct BCH codeword, returning number of corrections, or -1 if failed
 	// 
 	//    Corrects data in-place (unlike the basic Djelic Linux Kernel API, which only returns
-	// error positions.
+	// error positions.  For consistency with ezpwd::rs..., we report all error positions as
+	// std::vector<int>, even though the underlying Djelic API reports them as arrays of
+	// unsigned int.
 	// 
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    return decode( data.first, data.second - data.first - ecc_bytes(), data.second - ecc_bytes(),
@@ -307,8 +304,7 @@ namespace ezpwd {
 						       &data,
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( size_t( parity.second - parity.first ) != ecc_bytes() ) {
@@ -321,20 +317,19 @@ namespace ezpwd {
 				    uint8_t	       *data,
 				    size_t		len,
 				    uint8_t            *parity,
-				    std::vector<unsigned int>
-				    		       *position= 0 )
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( position )
 		position->resize( t() * 2 ); // may be able to correct beyond stated capacity!
 	    int			corrects	= ezpwd::correct_bch(
 						      this->_bch, data, len, parity, 0, 0,
-						      position ? &(*position)[0] : 0 );
+						      position ? (unsigned int *)&(*position)[0] : 0 );
 	    if ( position && corrects >= 0 )
 		position->resize( corrects );
 	    return corrects;
 	}
-
+	
 	//
 	// {en,de}coded -- returns an encoded/corrected copy of the provided container
 	//
@@ -343,6 +338,8 @@ namespace ezpwd {
 	//     Must return exceptions on failure; If exceptions inhibited, returns a
 	// default-constructed instance of the supplied data container.  This may be sufficient to
 	// reliably deduce failure; if not, this interface should not be used.
+	// 
+	//     Overloads decoded to also allow recovery of corrected error positions and count.
 	// 
 	template <typename C>
 	C			encoded(
@@ -360,6 +357,17 @@ namespace ezpwd {
 	    const
 	{
 	    if ( decode( data ) < 0 )
+		EZPWD_RAISE_OR_RETURN( std::runtime_error, "BCH: Could not decode data", C() );
+	    return data;
+	}
+
+	template <typename C>
+	C			decoded(
+				    C			data,
+				    std::vector<int>   &position )
+	    const
+	{
+	    if ( decode( data, &position ) < 0 )
 		EZPWD_RAISE_OR_RETURN( std::runtime_error, "BCH: Could not decode data", C() );
 	    return data;
 	}
