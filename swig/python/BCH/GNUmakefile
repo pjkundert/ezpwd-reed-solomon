@@ -34,7 +34,7 @@ python-BCH-test:	runme.py python-BCH
 	python $<
 
 python-BCH-clean:
-	rm -f *.o *.so *.pyc
+	rm -f *.cpp *.o *.so *.pyc
 
 # Forces re-build of Swig-generated code (if desired)
 python-BCH-pristine: python-BCH-clean

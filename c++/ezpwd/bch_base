@@ -156,21 +156,26 @@ namespace ezpwd {
     // correct_bch -- corrects data (but not parity!), as suggested by decode_bch, above
     // 
     //     A convenience interface that defaults all of the not strictly required parameters, and
-    // automatically corrects bit-errors in data.  Does not attempt to correct bit errors found in
-    // the parity data.  If not supplied, 'errloc' is allocated internally; otherwise, it is assumed
-    // to be of at least size bch->t (the maximum error correction capacity of the BCH codec).
+    // automatically corrects bit-errors in data *and* the supplied parity.  Does not attempt to
+    // correct bit errors found in the parity data.  If not supplied, 'errloc' is allocated
+    // internally; otherwise, it is assumed to be of at least size bch->t (the minimum error
+    // correction capacity of the BCH codec).
+    // 
+    //     However, beware -- at larger values of T, the actual correction capacity of the BCH codec
+    // could be greater than the requested T.  Therefore, it is recommended that you always supply a
+    // larger than required errloc array; recommend T*2?
     // 
     inline
     int				correct_bch( 
 				    struct bch_control *bch,
 				    uint8_t            *data,
 				    unsigned int	len,
-				    const uint8_t      *recv_ecc,
+				    uint8_t	       *recv_ecc,
 				    const uint8_t      *calc_ecc= 0,
 				    const unsigned int *syn	= 0,
-				    unsigned int       *errloc	= 0 ) // must be sized at least bch->t!
+				    unsigned int       *errloc	= 0 ) // must be sized at least bch->t; often, greater!
     {
-	unsigned int		_errloc[511]; // much larger than the correction capacity of largest support BCH codec
+	unsigned int		_errloc[511]; // much larger than the correction capacity of largest supported BCH codec
 	if ( ! errloc )
 	    errloc			= _errloc;
 	int			err	= decode_bch( bch, data, len, recv_ecc, calc_ecc, syn, errloc );
@@ -178,11 +183,15 @@ namespace ezpwd {
 	    // A +'ve number of bit-error correction locations were found
 	    for ( int n = 0; n < err; ++n ) {
 		/**
-		 * if (errloc[n] < 8*len), then n-th error is located in data and can be
-		 * corrected with statement data[errloc[n]/8] ^= 1 << (errloc[n] % 8);
+		 * if (errloc[n] < 8*len), then n-th error is located in data and can be corrected
+		 * with statement data[errloc[n]/8] ^= 1 << (errloc[n] % 8).  If in the parity, it
+		 * is assumed to be located at the end of the data, so offset by 'len' bytes.
 		 */
-		if ( errloc[n] < 8*len) {
-		    data[errloc[n]/8]  ^= 1 << (errloc[n] % 8);
+		if ( errloc[n] < 8*len ) {
+		    data[errloc[n] / 8]	^= 1 << ( errloc[n] % 8 );
+		} else if ( recv_ecc && errloc[n] < 8 * len + 8 * bch->ecc_bytes ) {
+		    recv_ecc[errloc[n] / 8 - len]
+					^= 1 << ( errloc[n] % 8 );
 		}
 	    }
 	}
