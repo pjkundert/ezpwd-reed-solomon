@@ -1258,3 +1258,23 @@ var server = {
   detection and correction.
 
 ** Javascript Library: js/ezpwd/rspwd.js
+* Background
+
+  An excellent and easy to understand [[https://innovation.vivint.com/introduction-to-reed-solomon-bc264d0794f8][overview of basic Reed-Solomon]].
+
+** Toward \(O(N*log(N))\)
+
+Moving toward faster algorithms is somewhat impeded by patent risk.  However, there are [[https://news.ycombinator.com/item?id=14290617][some
+possible approaches]].  Here is an interesting Apache 2 licensed (allowing Commercial use and [[https://www.apache.org/licenses/GPL-compatibility.html][GPLv3
+compatibility]]): [[https://github.com/Bulat-Ziganshin/FastECC][FastECC Reed-Solomon encoder by Bulat-Ziganshin]].  It achieves good performance on
+encoding, but does not implement Erasure or Error detection/correction.  The key paper describing
+the algorithm:
+
+- [[https://pdfs.semanticscholar.org/141d/c4ee4cca45b4ed1c07f890f758e427597db8.pdf][An Efficient (n,k) Information Dispersal Algorithm based on Fermat Number Transforms]]
+
+A newer paper is implemented in the BSD licensed (allowing Commercial use and GPLv3
+compatibility) [[https://github.com/catid/leopard][Leopard Reed-Solomon en/decoder by Christopher A. Taylor]]:
+
+- [[https://github.com/SianJhengLin/Fast-algorithms-of-Reed-Solomon-erasure-codes][Novel Polynomial Basis and Its Application to Reed-Solomon Erasure Codes]] 
+
+
