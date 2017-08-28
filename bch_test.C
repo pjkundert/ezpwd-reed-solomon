@@ -3,6 +3,12 @@
  * bch_test	-- Iterate all available BCH codecs, comparing their speeds
  */
 
+#include <vector>
+#include <map>
+#include <set>
+#include <iostream>
+#include <random>
+
 #include <ezpwd/asserter>
 
 // Djelic GPLv2+ BCH "C" API implementation from Linux kernel.  Requires "standalone" shims for
@@ -44,6 +50,10 @@ double 				compare(
     return 0.0;
 }
 
+std::minstd_rand		randomizer;
+std::uniform_int_distribution<uint8_t>
+				random_byte( 0, 255 );
+
 int main()
 {
     ezpwd::asserter		assert;
@@ -67,5 +77,112 @@ int main()
 
     std::cout << std::endl << "BCH(...) EZPWD vs. Djelic's: " << avg/cnt << "% faster (avg.)" << std::endl;
 
+
+    // Evaluate the following BCH codec, to determine its effectiveness at detecting random bit
+    // errors.
+    constexpr size_t		sym	= 255;
+    constexpr size_t		pay	= 239;		// max. net payload
+    constexpr size_t		par	= sym - pay;
+    constexpr size_t		cap	= 2;
+    constexpr size_t		paymin	= cap * 2;
+
+    // Due to there being no way (presently) to specify a number of payload bits
+    // that is a fraction of the (bit-packed) container supplied, there is no way to
+    // use the ezpwd::bch API to supply the full 239-bit payload; the next lower
+    // multiple of an 8-bit byte (232) is the maximum possible.
+    std::vector<size_t>		len	{
+	8, 16, 32, 50, 64, 80, 100, 128, 200, 232, pay
+    };
+    size_t			run	= 1000000;
+    ezpwd::BCH<sym,pay,cap>	bch;
+
+    std::cout
+	<< std::setw( 8 * ( bch.t() * 2 + 2 )) << std::left << "Corrections"
+	<< " | " << std::right << "Description"
+	<< std::endl;
+    
+    for ( int i = -1; i <= int( bch.t() ) * 2; ++i )
+	std::cout
+	    << std::setw( 8 ) << i;
+    std::cout
+	<< " | "
+	<< std::endl
+	<< std::string( 8 * ( bch.t() * 2 + 2 ), '-' )
+	<< " | "
+	<< std::endl;
+    for ( size_t l : len ) {
+	std::vector<uint8_t>	payload( ( l + 7 ) / 8 );
+	for ( uint8_t &v : payload )
+	    v				= random_byte( randomizer );
+	std::uniform_int_distribution<size_t>
+			random_msgbit( 0, par + l - 1 );	// [0,parity + payload)
+	int		e_max	= std::min( l, bch.t() * 4 );
+	for ( int e			= 0
+		  ; e <= e_max + 1
+		  ; ++e ) { // > e_max --> random date
+	    std::map<int,size_t> errfix;			// bit errors fixed:  [-1,paymin] --> <count>
+	    for ( size_t test = 0; test < run; ++test ) {
+		// For each test, change a byte and re-generate parity.  We want to get a valid
+		// distribution of error correction capacity; not the capacity of any specific
+		// codeword.  Always execute on test == 0!
+		payload[test % payload.size()]
+		    			= random_byte( randomizer );
+		std::vector<uint8_t>
+		    		parity( ( par + 7 ) / 8 );
+		for ( uint8_t &v : parity )
+		    v			= random_byte( randomizer );
+
+		// Test for correction of all random data.  May change parity!
+		std::vector<uint8_t>
+		    		errload( payload );
+
+		int		fixed	= -1;
+		if ( e <= e_max ) {
+		    // Test for correction of 'e' bit errors; fills in parity with BCH ECC data
+		    bch.encode( payload, parity );
+		    std::set<int> used;
+		    for ( int en = 0; en < e; ++en ) {
+			while ( true ) {
+			    size_t eb = random_msgbit( randomizer );
+			    if ( used.find( eb ) != used.end() )
+				continue;
+			    used.insert( eb );
+			    if ( eb < l ) {
+				// Payload corruption
+				errload[eb/8]  ^= uint8_t( 1 ) << ( eb % 8 );
+			    } else {
+				// Parity corruption
+				parity[(eb-l)/8] ^= uint8_t( 1 ) << ( (eb-l) % 8 );
+			    }
+			    break;
+			}
+		    }
+		}
+
+		try { fixed		= bch.decode( errload, parity ); } catch ( ... ) { fixed = -1; }
+		++errfix[fixed >= 0 ? fixed : -1];
+	    }
+	    for ( int i = -1; i <= int( bch.t() * 2 ); ++i )
+		std::cout
+		    << std::setw( 8 ) << errfix[i];
+
+	    std::cout
+		<< " | BCH("		<< std::setw( 3 ) << sym
+		<< ","			<< std::setw( 3 ) << pay
+		<< ","			<< std::setw( 3 ) << cap
+		<< ") w/ "		<< std::setw( 3 ) << l
+		<< " payload, ";
+	    if ( e > e_max )
+		std::cout
+		    << "random data/parity"
+		    << std::endl
+		    << std::endl;
+	    else
+		std::cout
+		    << e << " bit errors"
+		    << std::endl;
+	}
+    }
+    
     return assert.failures ? 1 : 0;
 }
