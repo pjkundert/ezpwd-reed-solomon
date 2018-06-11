@@ -40,13 +40,13 @@ CFLAGS		= # -O3 already defined
 #     Instead of 'latest', choose a specific version known to work.  To see
 # what's available, use:
 # 
-#         $ cd emscripten/emsdk_portable   
+#         $ cd emscripten/emsdk-portable   
 #         $ ./emsdk list
 # 
 #     At time of writing, 1.35.0 is "latest", but doesn't work (1.34.1 did, I believe).  The current
 # master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
 # 
-EMSDK		= ./emscripten/emsdk_portable
+EMSDK		= ./emscripten/emsdk-portable
 EMSDK_VERSION	= latest # sdk-master-64bit # latest
 EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
 
@@ -414,7 +414,7 @@ djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
 #    Presently only works on OS-X as far as I know. Should use a Docker instance.
 # 
 emscripten:	emscripten/python2 				\
-		emscripten/emsdk_portable/emscripten		\
+		emscripten/emsdk-portable/emscripten		\
 		FORCE
 	$(EMXX_ACTIVATE)
 
@@ -422,11 +422,11 @@ emscripten/python2:
 	mkdir -p emscripten
 	ln -fs $$( which python2.7 ) emscripten/python2
 
-emscripten/emsdk_portable/emscripten: emscripten/emsdk_portable
+emscripten/emsdk-portable/emscripten: emscripten/emsdk-portable
 	cd $< && ./emsdk update && ./emsdk install latest
 	touch $@
 
-emscripten/emsdk_portable: emscripten/emsdk-portable.tar.gz
+emscripten/emsdk-portable: emscripten/emsdk-portable.tar.gz
 	mkdir -p emscripten
 	tar -C emscripten -xzf $<
 	touch $@
