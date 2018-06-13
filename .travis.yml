@@ -1,5 +1,5 @@
 sudo: required
-dist: precise
+dist: trusy
 language: cpp
 
 perl:
@@ -37,50 +37,46 @@ matrix:
       env:
         CXX_COMPILER=g++-6
         CC_COMPILER=gcc-6
-    - compiler: clang
+    - compiler: gcc
       addons:
         apt:
           sources:
             - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.6
           packages:
-            - clang-3.6
+            - g++-7
       env:
-        CXX_COMPILER=clang++-3.6
-        CC_COMPILER=clang-3.6
+        CXX_COMPILER=g++-7
+        CC_COMPILER=gcc-7
     - compiler: clang
       addons:
         apt:
           sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.7
-          packages:
-            - clang-3.7
-      env:
-        CXX_COMPILER=clang++-3.7
-        CC_COMPILER=clang-3.7
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.8
-          packages:
-            - clang-3.8
-      env:
-        CXX_COMPILER=clang++-3.8
-        CC_COMPILER=clang-3.8
-    - compiler: clang
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-            - llvm-toolchain-precise-3.9
+            - llvm-toolchain-trusty-3.9
           packages:
             - clang-3.9
       env:
         CXX_COMPILER=clang++-3.9
         CC_COMPILER=clang-3.9
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-4.0
+          packages:
+            - clang-4.0
+      env:
+        CXX_COMPILER=clang++-4.0
+        CC_COMPILER=clang-4.0
+    - compiler: clang
+      addons:
+        apt:
+          sources:
+            - llvm-toolchain-trusty-5.0
+          packages:
+            - clang-5.0
+      env:
+        CXX_COMPILER=clang++-5.0
+        CC_COMPILER=clang-5.0
 
 script: 
   - $CXX_COMPILER --version
