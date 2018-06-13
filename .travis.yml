@@ -1,5 +1,5 @@
-sudo: required
-dist: trusy
+sudo: false
+dist: trusty
 language: cpp
 
 perl:
