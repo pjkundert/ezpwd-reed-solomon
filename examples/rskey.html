@@ -34,10 +34,16 @@
                 $.holdReady(false);	// ... 'til Emscripten code run-time is initialized
             };
         };
+	var Module = {
+            onRuntimeInitialized: function() {
+                jquery_release(); // Emscripten run-time has been initialized
+            }
+	};
     </script>
-    <script type="text/javascript" async onload="jquery_release()"
-            src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/rskey.js"
-            ></script>
+    <script type="text/javascript" async
+            src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.8.0/js/ezpwd/rskey.js"
+	    srctest="rskey.js"> <!-- access a sym-link to locally built version if desired -->
+    </script>
 </head>
 <body>
     <h3>RSKEY Encoding and Correction.</h3>

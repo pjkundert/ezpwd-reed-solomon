@@ -47,13 +47,22 @@ $def with ( content )
                 $$.holdReady(false);	// ... 'til Emscripten code runtime is initialized
             };
         };
+        var Module = {
+            onRuntimeInitialized: function() {
+                jquery_release(); // Emscripten run-time has been initialized
+            }
+        };
     </script>
-    <script type="text/javascript" async onload="jquery_release()"
-            src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.7.0/js/ezpwd/ezcod.js"></script>
+    <script type="text/javascript" async
+	    src="//cdn.rawgit.com/pjkundert/ezpwd-reed-solomon/v1.8.0/js/ezpwd/ezcod.js"
+	    srctest="static/js/ezcod.js"> <!-- access a sym-link to locally built version if desired -->
+    </script>
     <script type="text/javascript" defer onload="jquery_loaded()"
-            src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+            src="//ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js">
+    </script>
     <script type="text/javascript" defer
-            src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js"></script>
+            src="//maxcdn.bootstrapcdn.com/bootstrap/3.3.4/js/bootstrap.min.js">
+    </script>
 
     $if analytics:
         <script type="text/javascript">

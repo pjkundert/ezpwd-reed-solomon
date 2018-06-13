@@ -56,36 +56,35 @@ CHEERP_EMXX	= /opt/cheerp/bin/clang++
 
 EMXX		= $(EMSDK_EMXX)
 EMXX_ACTIVATE	= $(EMSDK_ACTIVATE)
-EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s NO_EXIT_RUNTIME=1 -s ASSERTIONS=2
+EMXXFLAGS	= --memory-init-file 0 -s DISABLE_EXCEPTION_CATCHING=0 -s NO_EXIT_RUNTIME=1 -s ASSERTIONS=2 -s SINGLE_FILE=1 -s EXTRA_EXPORTED_RUNTIME_METHODS='["cwrap"]'
 
-EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS="[			\
-			'_ezcod_3_10_encode',			\
-			'_ezcod_3_10_decode',			\
-			'_ezcod_3_11_encode',			\
-			'_ezcod_3_11_decode',			\
-			'_ezcod_3_12_encode',			\
-			'_ezcod_3_12_decode',			\
-			'_free' ]"
-EMXX_EXPORTS_RSPWD = -s EXPORTED_FUNCTIONS="[			\
-			'_rspwd_encode_1',			\
-			'_rspwd_encode_2',			\
-			'_rspwd_encode_3',			\
-			'_rspwd_encode_4',			\
-			'_rspwd_encode_5',			\
-			'_free' ]"
-EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS="[			\
-			'_rskey_2_encode',			\
-			'_rskey_2_decode',			\
-			'_rskey_3_encode',			\
-			'_rskey_3_decode',			\
-			'_rskey_4_encode',			\
-			'_rskey_4_decode',			\
-			'_rskey_5_encode',			\
-			'_rskey_5_decode',			\
-			'_free' ]"
-EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS="[ '_main' ]"
-
-
+# 
+# I am uncertain why, but these function names must be unquoted; neither single
+# nor double-quoting works correctly in Emscripten 1.38.5.
+# 
+EMXX_EXPORTS_EZCOD = -s EXPORTED_FUNCTIONS='[			\
+			_ezcod_3_10_encode,			\
+			_ezcod_3_10_decode,			\
+			_ezcod_3_11_encode,			\
+			_ezcod_3_11_decode,			\
+			_ezcod_3_12_encode,			\
+			_ezcod_3_12_decode ]'
+EMXX_EXPORTS_RSPWD = -s EXPORTED_FUNCTIONS='[			\
+			_rspwd_encode_1,			\
+			_rspwd_encode_2,			\
+			_rspwd_encode_3,			\
+			_rspwd_encode_4,			\
+			_rspwd_encode_5 ]'
+EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS='[			\
+			_rskey_2_encode,			\
+			_rskey_2_decode,			\
+			_rskey_3_encode,			\
+			_rskey_3_decode,			\
+			_rskey_4_encode,			\
+			_rskey_4_decode,			\
+			_rskey_5_encode,			\
+			_rskey_5_decode ]'
+EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS='[ _main ]'
 
 EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
 
@@ -102,7 +101,6 @@ JSPROD =	js/ezpwd/ezcod.js				\
 		js/ezpwd/rspwd.js				\
 		js/ezpwd/rskey.js
 
-
 JSCOMP =	rsexample.js					\
 		rssimple.js					\
 		rsembedded.js					\
@@ -111,7 +109,7 @@ JSCOMP =	rsexample.js					\
 		ezcod_test.js					\
 		rskey_test.js
 
-JSTEST =	$(JSCOMP) rskey_node.js
+JSTEST =	$(JSCOMP)
 
 EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsexample					\
@@ -152,8 +150,8 @@ javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
 
 swig-python:	swig-python-install
-swig-python-install: c++/ezpwd/ezcod c++/ezpwd/bch
-swig-python-%:	
+swig-python-install: c++/ezpwd/ezcod
+swig-python-%:	 djelic_bch.o
 	make -C swig/python $*
 
 valgrind:	testex-valgrind\ -v\ --leak-check=full
@@ -204,7 +202,8 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 
 clean:
 	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
-	      $(JSCOMP) $(JSCOMP:=.mem)						\
+	      $(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
+	      $(JSPROD) $(JSPROD:.js=.wasm)					\
 	      ezcod.o djelic_bch*.o
 	make -C phil-karn clean
 
