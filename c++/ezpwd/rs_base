@@ -98,7 +98,7 @@ namespace ezpwd {
 	virtual size_t		datum()		const = 0;	// a data element's bits
 	virtual size_t		symbol()	const = 0;	// a symbol's bits
 	virtual int		size()		const = 0;	// R-S block size (maximum total symbols)
-	virtual int		nroots()	const = 0;	// R-S roots (parity symbols)
+	virtual unsigned	nroots()	const = 0;	// R-S roots (parity symbols)
 	virtual	int		load()		const = 0;	// R-S net payload (data symbols)
 
 	virtual		       ~reed_solomon_base()
@@ -604,7 +604,7 @@ namespace ezpwd {
 	    return SIZE;
 	}
 
-	virtual int		nroots() const
+	virtual unsigned	nroots() const
 	{
 	    return NROOTS;
 	}
@@ -988,16 +988,16 @@ namespace ezpwd {
 	    typedef std::array< TYP, NROOTS+1 >
 				typ_nroots_1;
 	    typedef std::array< int, NROOTS >
-				int_nroots;
+				uint_nroots;
 
 	    typ_nroots_1	lambda  { { 0 } };
 	    typ_nroots		syn;
 	    typ_nroots_1	b;
 	    typ_nroots_1	t;
 	    typ_nroots_1	omega;
-	    int_nroots		root;
+	    uint_nroots		root;
 	    typ_nroots_1	reg;
-	    int_nroots		loc;
+	    uint_nroots		loc;
 	    int			count	= 0;
 
 	    // Check length parameter and erasures for validity
