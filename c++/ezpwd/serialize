@@ -88,6 +88,7 @@ namespace ezpwd {
 	template < size_t N > struct standard { };
 	template < size_t N > struct standard_url { };
 	template < size_t N > struct ezpwd { };
+	template < size_t N > struct safe { };
 	template < size_t N > struct crockford { };
 
 	// 
@@ -176,8 +177,8 @@ namespace ezpwd {
 				    encoder { {
 		'0', '1', '2', '3', '4', '5', '6', '7',
 		'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
-		'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P',
-		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y',
+		'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', // 'O' --> '0'
+		'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', // 'S' --> '5', 'Z' --> '2'
 	    } };
 	
 	    static const constexpr std::array<char,127>
@@ -193,6 +194,14 @@ namespace ezpwd {
 	    } };
 	}; // struct serialize::ezpwd<32>
 	
+	template <> struct	safe<32> {
+	    // Same as ezpwd<32>; unambiguous ASCII (case insensitive)
+	    static const constexpr std::array<char,32>
+				    encoder = ezpwd<32>::encoder;
+	    static const constexpr std::array<char,127>
+				    decoder = ezpwd<32>::decoder;
+	}; // struct serialize::safe<32>
+
 	template <> struct	crockford<32> {
 	    static const constexpr std::array<char,32>
 				    encoder { {
@@ -317,6 +326,32 @@ namespace ezpwd {
 		41, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, nv, nv, nv, nv,     // pqrstuvwxyz{|}~
 	    } };
 	}; // struct serialize::ezpwd<64>
+
+	// safe -- Unambiguous ASCII + 6 URL-safe symbols: 0123456789ABCDEFGHJKLMNPQRSTUVWXYabcdefghijkmnopqrstuvwxyz + .:+?#^
+	template <> struct	safe<64> {
+	    static const constexpr std::array<char,64>	// '.:+?#^' are URL safe, and we treat '-' as whitespace
+				encoder { {
+	/*  0 */'0', '1', '2', '3', '4', '5', '6', '7',
+	/*  8 */'8', '9', 'A', 'B', 'C', 'D', 'E', 'F',
+	/* 16 */'G', 'H', 'J', 'K', 'L', 'M', 'N', 'P', // 'O' --> '0'
+	/* 24 */'Q', 'R', 'T', 'U', 'V', 'W', 'X', 'Y', // 'S' --> '5', 'Z' --> '2'
+	/* 32 */'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h',
+	/* 40 */'i', 'j', 'k', 'l', 'm', 'n', 'o', 'p',
+	/* 48 */'q', 'r', 's', 't', 'u', 'v', 'w', 'x',
+	/* 56 */'y', 'z', '.', ':', '+', '?', '#', '^'
+	    } };
+	    static const constexpr std::array<char,127>
+				decoder { {
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, ws, ws, ws, ws, ws, nv, nv, // 9-13: <TAB>,<NL>,<VT>,<FF>,<CR>
+		nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, nv, //
+		ws, nv, nv, 62, nv, nv, nv, nv, nv, nv, 62, 62, 58, ws, 58, nv, //  !"#$%&` ()*+,-./  '-' is whitespace
+		 0,  1,  2,  3,  4,  5,  6,  7,  8,  9, 59, 59, nv, pd, nv, 61, // 01234567 89:;<=>?  '=' is pad
+		 0, 10, 11, 12, 13, 14, 15, 16, 17,  1, 18, 19, 20, 21, 22,  0, // @ABCDEFG HIJKLMNO
+		23, 24, 25,  5, 26, 27, 28, 29, 30, 31,  2, nv, nv, nv, 63, nv, // PQRSTUVW XYZ[\]^_
+		nv, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, // `abcdefg hijklmno
+		47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 57, nv,  1, nv, ws,     // pqrstuvw xyz{|}~
+	    } };
+	}; // struct serialize::safe<64>
 
 	// 
 	// base_generic<N, TABLES> -- generic base-N conversion using TABLES<N>.  Doesn't have scatter/gather.
@@ -977,6 +1012,8 @@ namespace ezpwd {
 	// 
 	typedef base< 32, ezpwd< 32 >>
 	    			base32;
+	typedef base< 32, safe< 32 >>
+	    			base32_safe;
 	typedef base< 32, hex< 32 >>
 	    			base32_hex;
 	typedef base< 32, serialize::standard< 32 >>
@@ -1175,6 +1212,8 @@ namespace ezpwd {
 	// 
 	typedef base< 64, ezpwd< 64 >>
 	    			base64;
+	typedef base< 64, safe< 64 >>
+	    			base64_safe;
 	typedef base< 64, standard< 64 >>
 				base64_standard;
 	typedef base< 64, standard_url< 64 >>

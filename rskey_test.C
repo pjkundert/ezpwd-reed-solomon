@@ -19,7 +19,10 @@ typedef std::vector<uint8_t>	u8vec_t;
 typedef std::vector<int8_t>	s8vec_t;
 
 
-template <size_t PARITY>
+template <
+    size_t			PARITY,				// number of R-S parity bytes
+    size_t			N	= 32,			//  default to base-32; 64 for larger payload
+    typename			SERIAL	= ezpwd::serialize::base< N, ezpwd::serialize::ezpwd< N >>>
 void				test_rskey(
 				    ezpwd::asserter    &assert,
 				    const u8vec_t      &raw,
@@ -28,7 +31,7 @@ void				test_rskey(
 {
     char			enc[1024];
     std::copy( raw.begin(), raw.end(), enc );
-    int				encres	= ezpwd::rskey_encode<PARITY>( raw.size(), enc, raw.size(), sizeof enc, sep );
+    int				encres	= ezpwd::rskey_encode<PARITY,N>( raw.size(), enc, raw.size(), sizeof enc, sep );
     if ( assert.ISEQUAL( key, std::string( enc )))
 	std::cout << assert << std::endl;
     if ( assert.ISEQUAL( encres, int( key.size() )))
@@ -48,8 +51,8 @@ void				test_rskey(
 			if ( e+2 <= load ) {
 			    // error.  Consumes 2 parity.  Flip low bit of decoded base-32 symbol and re-encode
 			    e	       += 2;
-			    dec[j]	= ezpwd::serialize::ezpwd<32>::encoder[
-					      ezpwd::serialize::ezpwd<32>::decoder[
+			    dec[j]	= SERIAL::encoder[
+					      SERIAL::decoder[
 					          dec[j]] ^ 1];
 			} else {
 			    // erasure.  Consumes 1 parity
@@ -62,7 +65,7 @@ void				test_rskey(
 	    }
 	}
 
-	int			decres	= ezpwd::rskey_decode<PARITY>( raw.size(), dec, key.size(), sizeof dec );
+	int			decres	= ezpwd::rskey_decode<PARITY,N>( raw.size(), dec, key.size(), sizeof dec );
 	if ( assert.ISTRUE( decres >= 0 or load > PARITY )) {
 		std::cout
 		    << assert << ": Unexpected failure at " << load << "-symbol erasure load; should handle "
@@ -489,6 +492,37 @@ int				main( int, char ** )
     test_rskey<5>( assert,
         u8vec_t { 0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE, 0xFD, 0xFC, 0x7e, 0x7f, 0x08, 0x81 },
         "000G4-0YYYU-XYQYK-Y120G-T8P84" );
+    // SHA256 (32-byte) hash of "The quick brown fox jumped over the lazy dog.":
+    // 0x68B1282B91DE2C054C36629CB8DD447F12F096D3E3C587978DC2248444633483
+    test_rskey<5,64>( assert,
+        u8vec_t {
+	0x68, 0xB1, 0x28, 0x2B, 0x91, 0xDE, 0x2C, 0x05,
+	0x4C, 0x36, 0x62, 0x9C, 0xB8, 0xDD, 0x44, 0x7F,
+	0x12, 0xF0, 0x96, 0xD3, 0xE3, 0xC5, 0x87, 0x97,
+	0x8D, 0xC2, 0x24, 0x84, 0x44, 0x63, 0x34, 0x83 },
+	"TB4iAz-7XB0MC-DgAVoD-v4YrBq-fnFdrQ-XPdV8e-b4HdD8-C5vwVI", 6 );
+    // Some Ethereum wallets. 20 bytes (26.6666 6-bit symbols); 27 bytes (36 6-bit symbols)
+    // 0x994f602DE60f385be23F122Cb8ec81D1717d8E24
+    test_rskey<5,64>( assert,
+        u8vec_t {
+	0x99, 0x4f, 0x60, 0x2D, 0xE6, 0x0f, 0x38, 0x5b,
+	0xe2, 0x3F, 0x12, 0x2C, 0xb8, 0xec, 0x81, 0xD1,
+	0x71, 0x7d, 0x8E, 0x24 },
+	"gL?aBXQF-E5pcFr8m-oEs1uP5?-dcGHmSeW", 8 );
+    // 0xB3e6544d0c2aDe4AD7c072036a5CC01623d3D1Ae
+    test_rskey<5,64>( assert,
+        u8vec_t {
+	0xB3, 0xe6, 0x54, 0x4d, 0x0c, 0x2a, 0xDe, 0x4A,
+	0xD7, 0xc0, 0x72, 0x03, 0x6a, 0x5C, 0xC0, 0x16,
+	0x23, 0xd3, 0xD1, 0xAe },
+	"m#RLKGqk-xelPq783-Tft05cFK-uTyHcl8Z", 8 );
+    // 0xB3e6544d0c2aDe4AD7c072036a5CC01623d3D1Ae
+    test_rskey<8,64>( assert,
+        u8vec_t {
+	0xB3, 0xe6, 0x54, 0x4d, 0x0c, 0x2a, 0xDe, 0x4A,
+	0xD7, 0xc0, 0x72, 0x03, 0x6a, 0x5C, 0xC0, 0x16,
+	0x23, 0xd3, 0xD1, 0xAe },
+	"m#RLK-Gqkxe-lPq78-3Tft0-5cFKu-Tyz8Q-CBULi", 5 );
 
     if ( assert.failures )
 	std::cout

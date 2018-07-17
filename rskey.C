@@ -39,14 +39,20 @@
 // 
 
 namespace ezpwd {
-    template < size_t PARITY >
+    template <
+	size_t			PARITY,				// number of R-S parity bytes
+	size_t			N	= 32,			//  default to base-32; 64 for larger payload
+	typename		SERIAL	= serialize::base< N, serialize::safe< N >>>
     int				rskey_encode( size_t, char *, size_t, size_t, size_t sep=0 );
-    template < size_t PARITY >
+    template <
+	size_t			PARITY,				// number of R-S parity bytes
+	size_t			N	= 32,			//  default to base-32; 64 for larger payload
+	typename		SERIAL	= serialize::base< N, serialize::safe< N >>>
     int				rskey_decode( size_t, char *, size_t, size_t );
 } // namespace ezpwd
 
 extern "C" {
-
+    // Base-32 API (default)
     // ABCDE-FG
     int rskey_2_encode( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
     {
@@ -87,6 +93,96 @@ extern "C" {
 	return ezpwd::rskey_decode<5>( rawsiz, buf, buflen, bufsiz );
     }
 
+    // Base-64 API
+    int rskey_2_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<2,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_2_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<2,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH
+    int rskey_3_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<3,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_3_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<3,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1
+    int rskey_4_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<4,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_4_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<4,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K
+    int rskey_5_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<5,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_5_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<5,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K-A
+    int rskey_6_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<6,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_6_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<6,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K-AB
+    int rskey_7_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<7,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_7_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<7,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K-ABC
+    int rskey_8_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<8,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_8_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<8,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K-ABCD
+    int rskey_9_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<9,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_9_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<9,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
+    // ABCDE-FGH1K-ABCDE
+    int rskey_10_encode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz, size_t sep )
+    {
+	return ezpwd::rskey_encode<10,64>( rawsiz, buf, buflen, bufsiz, sep );
+    }
+    int rskey_10_decode_64( size_t rawsiz, char *buf, size_t buflen, size_t bufsiz )
+    {
+	return ezpwd::rskey_decode<10,64>( rawsiz, buf, buflen, bufsiz );
+    }
+
 } // extern "C"
 
 namespace ezpwd {
@@ -100,7 +196,10 @@ namespace ezpwd {
 //     The maximum raw data capacity is limited by expansion due to base-32 encoding, and maximum
 // payload of the RS(31,31-PARITY) codec used.
 // 
-template < size_t PARITY >					// number of R-S parity bytes
+template <
+    size_t			PARITY,				// number of R-S parity bytes
+    size_t			N,				//  default to base-32; 64 for larger payload
+    typename			SERIAL>
 int				rskey_encode(
 				    size_t		rawsiz,	// number of data payload bytes
 				    char	       *buf,	// <= BITS bits raw data
@@ -108,25 +207,25 @@ int				rskey_encode(
 				    size_t		bufsiz,	// buffer available
 				    size_t		sep )	// separator (eg. every 5 symbols)
 {
-    size_t			keysiz	= ezpwd::serialize::base32::encode_size( rawsiz ); // no padding
+    size_t			keysiz	= SERIAL::encode_size( rawsiz ); // no padding
     int				res;
     try {
 	// Check that specified rawsiz payload isn't beyond RS(31,31-PARITY) codec payload capacity,
 	// and that the supplied number of data bytes isn't beyond the specified payload.
-	if ( ezpwd::serialize::base32::encode_size( rawsiz ) > 31-PARITY )
+	if ( SERIAL::encode_size( rawsiz ) >= N-PARITY )
 	    throw std::runtime_error( 
 	        std::string( "specified data payload of " ) << rawsiz
-		<< " when base-32 encoded yields " << ezpwd::serialize::base32::encode_size( rawsiz )
-		<< " symbols, which is > " << 31-PARITY
-		<< " bytes, exceeding the RS(31,31-" << PARITY << ") capacity" );
+		<< " when base-" << N << " encoded yields " << SERIAL::encode_size( rawsiz )
+		<< " symbols, which is > " << N-1-PARITY
+		<< " bytes, exceeding the RS(" << N-1 << ","<< N-1 << "-" << PARITY << ") capacity" );
 	if ( buflen > rawsiz )
 	    throw std::runtime_error( 
 	        std::string( "too much data (" ) << buflen << " > " << rawsiz
 		<< " bytes) for specified data payload" );
 	std::string		key( keysiz, 0 );
-	ezpwd::serialize::base32::scatter( buf, buf + buflen, key.begin() );
-	ezpwd::corrector<PARITY,32>::encode( key );
-	ezpwd::serialize::base32::encode( key.begin(), key.begin() + keysiz );
+	SERIAL::scatter( buf, buf + buflen, key.begin() );
+	ezpwd::corrector<PARITY,N>::encode( key );
+	SERIAL::encode( key.begin(), key.begin() + keysiz );
 	if ( key.size() > sep )
 	    for ( size_t i = ( key.size() - 1 ) / sep; i > 0; --i )
 		key.insert( i * sep, 1, '-' );
@@ -139,7 +238,7 @@ int				rskey_encode(
     } catch ( std::exception &exc ) {
 	ezpwd::streambuf_to_buffer sbf( buf, bufsiz );
 	std::ostream( &sbf )
-	    << "rskey_encode<" << PARITY << "> failed: " << exc.what();
+	    << "rskey_encode<" << PARITY << "," << N << "> failed: " << exc.what();
 	res				= -1;
     }
     return res;
@@ -155,7 +254,10 @@ int				rskey_encode(
 // integer percentage confidence, roughly the percentage of the parity that remained unconsumed by
 // any required error correction.
 // 
-template < size_t PARITY >
+template <
+    size_t			PARITY,				// number of R-S parity bytes
+    size_t			N,				//  default to base-32; 64 for larger payload
+    typename			SERIAL>
 int				rskey_decode(
 				    size_t		rawsiz,	// number of data payload bytes
 				    char	       *buf,
@@ -163,11 +265,11 @@ int				rskey_decode(
 				    size_t		bufsiz )// buffer available
 {
     int				confidence;
-    size_t			keysiz	= ezpwd::serialize::base32::encode_size( rawsiz );
+    size_t			keysiz	= SERIAL::encode_size( rawsiz );
 
     try {
 	// 
-	// Decode data (not parity) from base-32.  Every invalid symbol is considered an erasure.
+	// Decode data (not parity) from base-N.  Every invalid symbol is considered an erasure.
 	// Whitespace/'-' are ignored, and removed from decoded key.  No pad (-1) symbols allowed.
 	// 
 	//      0 0 0 G 4 - 0 Y Y Y U - X _ Q Y K - Y 1 2 0 G - T 8 P 8 4
@@ -175,20 +277,20 @@ int				rskey_decode(
 	// 
 	std::string		key( buf, buf + buflen );
 	std::vector<int>	erasures;
-	ezpwd::serialize::base32::decode( key, &erasures, 0, serialize::ws_ignored, serialize::pd_invalid );
+	SERIAL::decode( key, &erasures, 0, serialize::ws_ignored, serialize::pd_invalid );
 	if ( key.size() < rawsiz )
 	    throw std::runtime_error( 
-	        std::string( "too little base-32 data (" ) << buflen << " bytes) provided"
+		std::string( "too little base-" ) << N << " data (" << buflen << " bytes) provided"
 		<< "; need " << keysiz << " symbols for " << rawsiz << " bytes of decoded data" );
 
 	// 
-	// Re-encode supplied parity data back to base-32, if any (corrector expects all parity encoded)
+	// Re-encode supplied parity data back to base-N, if any (corrector expects all parity encoded)
 	// 
 	//     0000001004  001F1F1F1B  1E00181F13  1F01020010   1A08170804
 	// --> 0000001004  001F1F1F1B  1E00181F13  1F01020010   T 8 P 8 4
 	//                                                      ^^^^^^^^^^
 	if ( key.size() > keysiz )
-	    ezpwd::serialize::base32::encode( key.begin() + keysiz, key.end() );
+	    SERIAL::encode( key.begin() + keysiz, key.end() );
 
 	//
 	// Correct (or at least check) data payload using any available parity (min. DATSIZ data),
@@ -199,7 +301,7 @@ int				rskey_decode(
 	//     0000001004  001F1F1F1B  1E00181F13  1F01020010   T 8 P 8 4
 	//     0000001004  001F1F1F1B  1E1F181F13  1F01020010 w/80% confidence
 	//                               ^^
-	confidence			= ezpwd::corrector<PARITY,32>::decode( key, erasures, keysiz, keysiz );
+	confidence			= ezpwd::corrector<PARITY,N>::decode( key, erasures, keysiz, keysiz );
 	if ( confidence < 0 )
 	    throw std::runtime_error(
 	        std::string( "too many errors to recover original data; low confidence" ));
@@ -208,13 +310,13 @@ int				rskey_decode(
 	        std::string( "too many errors to recover original data; incorrect size" ));
 
 	// 
-	// Gather and recover the original 8-bit data, from the (corrected) base-32 symbols.
+	// Gather and recover the original 8-bit data, from the (corrected) base-N symbols.
 	// 
 	//     0000001004  001F1F1F1B  1E1F181F13  1F01020010 w/80% confidence
 	// --> 00010203FFFEFDFC ~7F0881
 	//
 	try {
-	    ezpwd::serialize::base32::gather( key.begin(), key.end(), buf );
+	    SERIAL::gather( key.begin(), key.end(), buf );
 	} catch ( std::exception &exc ) {
 	    throw std::logic_error( "Key recovery invalid: '" << std::vector<uint8_t>( key.begin(), key.end() )
 				    << "; " << exc.what() );
