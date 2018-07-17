@@ -98,7 +98,7 @@ namespace ezpwd {
 	virtual size_t		datum()		const = 0;	// a data element's bits
 	virtual size_t		symbol()	const = 0;	// a symbol's bits
 	virtual int		size()		const = 0;	// R-S block size (maximum total symbols)
-	virtual int		nroots()	const = 0;	// R-S roots (parity symbols)
+	virtual unsigned	nroots()	const = 0;	// R-S roots (parity symbols)
 	virtual	int		load()		const = 0;	// R-S net payload (data symbols)
 
 	virtual		       ~reed_solomon_base()
@@ -481,7 +481,7 @@ namespace ezpwd {
 	    alpha_to[A0]		= 0;	// alpha**-inf = 0
 	    PLY			poly;
 	    int			sr	= poly( 0 );
-	    for ( int i = 0; i < NN; i++ ) {
+	    for ( size_t i = 0; i < NN; i++ ) {
 		index_of[sr]		= i;
 		alpha_to[i]		= sr;
 		sr			= poly( sr );
@@ -604,7 +604,7 @@ namespace ezpwd {
 	    return SIZE;
 	}
 
-	virtual int		nroots() const
+	virtual unsigned	nroots() const
 	{
 	    return NROOTS;
 	}
@@ -711,7 +711,7 @@ namespace ezpwd {
 		encode( dataptr, len, pariptr );
 
 		// we copied/masked data; copy the parity symbols back (may be different sizes)
-		for ( int i = 0; i < NROOTS; ++i )
+		for ( unsigned i = 0; i < NROOTS; ++i )
 		    parity[i]			= pariptr[i];
 	    } else {
 		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches; use in-place.
@@ -895,7 +895,7 @@ namespace ezpwd {
 		    data[i]		       &= msk;
 		    data[i]		       |= tmp[LOAD - len + i];
 		}
-		for ( int i = 0; i < NROOTS; ++i ) {
+		for ( unsigned i = 0; i < NROOTS; ++i ) {
 		    parity[i]			= tmp[LOAD + i];
 		}
 	    }
@@ -953,7 +953,7 @@ namespace ezpwd {
 	    if ( pad < 0 || pad >= NN ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length incompatible with block size and error correction symbols", -1 );
 	    }
-	    for ( int i = 0; i < NROOTS; i++ )
+	    for ( unsigned i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
 	    for ( int i = 0; i < len; i++ ) {
 		TYP		feedback= index_of[data[i] ^ parity[0]];
@@ -988,16 +988,16 @@ namespace ezpwd {
 	    typedef std::array< TYP, NROOTS+1 >
 				typ_nroots_1;
 	    typedef std::array< int, NROOTS >
-				int_nroots;
+				uint_nroots;
 
 	    typ_nroots_1	lambda  { { 0 } };
 	    typ_nroots		syn;
 	    typ_nroots_1	b;
 	    typ_nroots_1	t;
 	    typ_nroots_1	omega;
-	    int_nroots		root;
+	    uint_nroots		root;
 	    typ_nroots_1	reg;
-	    int_nroots		loc;
+	    uint_nroots		loc;
 	    int			count	= 0;
 
 	    // Check length parameter and erasures for validity
@@ -1017,7 +1017,7 @@ namespace ezpwd {
 	    }
 
 	    // form the syndromes; i.e., evaluate data(x) at roots of g(x)
-	    for ( int i = 0; i < NROOTS; i++ )
+	    for ( unsigned i = 0; i < NROOTS; i++ )
 		syn[i]			= data[0];
 
 	    for ( int j = 1; j < len; j++ ) {
@@ -1031,7 +1031,7 @@ namespace ezpwd {
 		}
 	    }
 
-	    for ( int j = 0; j < NROOTS; j++ ) {
+	    for ( unsigned j = 0; j < NROOTS; j++ ) {
 		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
 			syn[i]		= parity[j];
@@ -1044,7 +1044,7 @@ namespace ezpwd {
 
 	    // Convert syndromes to index form, checking for nonzero condition
 	    TYP 		syn_error = 0;
-	    for ( int i = 0; i < NROOTS; i++ ) {
+	    for ( unsigned i = 0; i < NROOTS; i++ ) {
 		syn_error	       |= syn[i];
 		syn[i]			= index_of[syn[i]];
 	    }
@@ -1084,7 +1084,7 @@ namespace ezpwd {
 		reg[i]			= index_of[lambda[i]];
 
 	    count			= 0;
-	    for ( int i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
+	    for ( unsigned i = 1, k = iprim - 1; i <= NN; i++, k = modnn( k + iprim )) {
 		TYP		q	= 1;
 		for ( int j = 1; j <= no_eras; j++ ) {
 		    if ( reg[j] != A0 ) {
@@ -1110,7 +1110,7 @@ namespace ezpwd {
 	    if ( count ) {
 	        std::cout
 		    << "Erasure positions as determined by roots of Eras Loc Poly: ";
-		for ( int i = 0; i < count; i++ )
+		for ( unsigned i = 0; i < count; i++ )
 		    std::cout << loc[i] << ' ';
 		std::cout << std::endl;
 	        std::cout
@@ -1122,7 +1122,7 @@ namespace ezpwd {
 #endif
 #endif
 
-	    for ( int i = 0; i < NROOTS + 1; i++ )
+	    for ( unsigned i = 0; i < NROOTS + 1; i++ )
 		b[i]			= index_of[lambda[i]];
 
 	    //
@@ -1145,7 +1145,7 @@ namespace ezpwd {
 		} else {
 		    // 7 lines below: T(x) <-- lambda(x)-discr_r*x*b(x)
 		    t[0]		= lambda[0];
-		    for ( int i = 0; i < NROOTS; i++ ) {
+		    for ( unsigned i = 0; i < NROOTS; i++ ) {
 			if ( b[i] != A0 ) {
 			    t[i + 1]	= lambda[i + 1]
 				^ alpha_to[modnn(discr_r + b[i])];
@@ -1155,7 +1155,7 @@ namespace ezpwd {
 		    if ( 2 * el <= r + no_eras - 1 ) {
 			el		= r + no_eras - el;
 			// 2 lines below: B(x) <-- inv(discr_r) * lambda(x)
-			for ( int i = 0; i <= NROOTS; i++ ) {
+			for ( unsigned i = 0; i <= NROOTS; i++ ) {
 			    b[i]	= ((lambda[i] == 0)
 					   ? A0
 					   : modnn(index_of[lambda[i]] - discr_r + NN));
@@ -1290,11 +1290,11 @@ namespace ezpwd {
 	    std::cout << "parity    x" << std::setw( 3 ) << NROOTS << ": " << std::string(  len * 2, ' ' ) << std::vector<uint8_t>( parity, parity + NROOTS ) << std::endl;
 	    if ( count > 0 ) {
 		std::string errors( 2 * ( len + NROOTS ), ' ' );
-		for ( int i = 0; i < count; ++i ) {
+		for ( unsigned i = 0; i < count; ++i ) {
 		    errors[2*(loc[i]-pad)+0] = 'E';
 		    errors[2*(loc[i]-pad)+1] = 'E';
 		}
-		for ( int i = 0; i < no_eras; ++i ) {
+		for ( unsigned i = 0; i < no_eras; ++i ) {
 		    errors[2*(eras_pos[i])+0] = 'e';
 		    errors[2*(eras_pos[i])+1] = 'e';
 		}
