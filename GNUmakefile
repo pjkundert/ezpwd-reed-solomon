@@ -9,8 +9,8 @@ SHELL		= /bin/bash
 # clang  3.6+		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
-CC		= gcc-7  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-CXX		= g++-7 # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
 CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
