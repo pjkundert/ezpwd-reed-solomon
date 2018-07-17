@@ -978,8 +978,8 @@ namespace ezpwd {
 	    // convert NROOTS entries of tmppoly[] to genpoly[] in index form for quicker encoding,
 	    // in reverse order so genpoly[0] is last element initialized.
 	    for ( size_t i = NROOTS; i > 0; --i )
-		genpoly[i]		= index_of[genpoly[i]];
-	    genpoly[0]			= index_of[genpoly[0]];
+		genpoly[i]		= index_of[tmppoly[i]];
+	    genpoly[0]			= index_of[tmppoly[0]];
 	}
 
 	int			encode(
