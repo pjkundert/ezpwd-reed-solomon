@@ -756,6 +756,20 @@ namespace ezpwd {
 	    return decode_mask( data.first, data.second - data.first, (uint8_t *)0,
 				erasure, position );
 	}
+	virtual int		decode(
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, (uint8_t *)0,
+				erasure, position );
+	}
 
 	virtual int		decode(
 				    const std::pair<uint8_t *, uint8_t *>
@@ -765,6 +779,25 @@ namespace ezpwd {
 				    const std::vector<unsigned>
 						       &erasure	= std::vector<unsigned>(),
 				    std::vector<unsigned>*position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    if ( parity.second - parity.first != NROOTS ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
+	}
+	virtual int		decode(
+				    const std::pair<uint8_t *, uint8_t *>
+						       &data,
+				    const std::pair<uint8_t *, uint8_t *>
+						       &parity,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( data.second < data.first ) {
@@ -795,11 +828,46 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, (uint16_t *)0,
+				erasure, position );
+	}
+
+	virtual int		decode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data,
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
 				    const std::vector<unsigned>
 						       &erasure	= std::vector<unsigned>(),
 				    std::vector<unsigned>*position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    if ( parity.second - parity.first != NROOTS ) {
+		EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
+	}
+
+	virtual int		decode(
+				    const std::pair<uint16_t *, uint16_t *>
+						       &data,
+				    const std::pair<uint16_t *, uint16_t *>
+						       &parity,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( data.second < data.first ) {
@@ -830,11 +898,46 @@ namespace ezpwd {
 	virtual int		decode(
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, (uint32_t *)0,
+				erasure, position );
+	}
+
+	virtual int		decode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data,
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
 				    const std::vector<unsigned>
 						       &erasure	= std::vector<unsigned>(),
 				    std::vector<unsigned>*position= 0 )
+	    const
+	{
+	    if ( data.second < data.first ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
+	    }
+	    if ( parity.second - parity.first != NROOTS ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
+	    }
+	    return decode_mask( data.first, data.second - data.first, parity.first,
+				erasure, position );
+	}
+
+	virtual int		decode(
+				    const std::pair<uint32_t *, uint32_t *>
+						       &data,
+				    const std::pair<uint32_t *, uint32_t *>
+						       &parity,
+				    const std::vector<int>
+						       &erasure	= std::vector<int>(),
+				    std::vector<int>   *position= 0 )
 	    const
 	{
 	    if ( data.second < data.first ) {
@@ -855,14 +958,14 @@ namespace ezpwd {
 	/// 6 bits of an 8-bit data character.  This would allow us to correct common substitution
 	/// errors (such as '2' for '3', 'R' for 'T', 'n' for 'm').
 	/// 
-	template < typename INP >
+	template < typename INP, typename ERR > // ERR must be either int or unsigned
 	int			decode_mask(
 				    INP		       *data,
 				    unsigned		len,
 				    INP		       *parity	= 0,	// either 0, or pointer to all NROOTS parity symbols
-				    const std::vector<unsigned>
-						       &erasure	= std::vector<unsigned>(),
-				    std::vector<unsigned>*position= 0 )
+				    const std::vector<ERR>
+				    		       &erasure	= std::vector<ERR>(),
+				    std::vector<ERR>   *position= 0 )
 	    const
 	{
 	    if ( len < ( parity ? 0 : NROOTS ) + 1 ) {
@@ -914,12 +1017,15 @@ namespace ezpwd {
 		// erasure positions.  After number of corrections is known, resize the position
 		// vector.  Thus, we use any supplied erasure info, and optionally return any
 		// correction position info separately.
-		std::vector<unsigned>   _pos;
-		std::vector<unsigned>  &pos	= position ? *position : _pos;
+		std::vector<ERR>	_pos;
+		std::vector<ERR>       &pos	= position ? *position : _pos;
 		pos.resize( std::max( NROOTS, unsigned( erasure.size() )));
 		std::copy( erasure.begin(), erasure.end(), pos.begin() );
+		// Supply the error positions as unsigned, even if supplied as ints; -'ve values will
+		// be invalid (huge) unsigned values, beyond the payload size.
 		corrects			= decode( dataptr, len, pariptr,
-							  &pos.front(), erasure.size() );
+						      reinterpret_cast<typename std::make_unsigned<ERR>::type *>( &pos.front() ),
+							  erasure.size() );
 		if ( corrects > int( pos.size() )) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: FATAL: produced too many corrections; possible corruption!", -1 );
 		}

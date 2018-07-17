@@ -109,11 +109,11 @@ namespace ezpwd {
     // effective strength -- all symbols in the R-S complete codeword are equally effective in
     // recovering any other symbol in error/erasure.
     // 
-    template < size_t PARITY >
+    template < size_t PARITY, typename ERR = unsigned >
     int				strength(
 				    int			corrected,
-				    const std::vector<int>&erasures,	// original erasures positions
-				    const std::vector<int>&positions )	// all reported correction positions
+				    const std::vector<ERR>&erasures,	// original erasures positions
+				    const std::vector<ERR>&positions )	// all reported correction positions
     {
 	// -'ve indicates R-S failure; all parity consumed, but insufficient to correct the R-S
 	// codeword.  Missing an unknown number of additional required parity symbols, so just
