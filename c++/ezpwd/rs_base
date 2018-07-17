@@ -254,7 +254,7 @@ namespace ezpwd {
 	int			decode(
 				    std::string	       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -269,7 +269,7 @@ namespace ezpwd {
 				    std::string	       &data,
 				    std::string	       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -285,7 +285,7 @@ namespace ezpwd {
 	int			decode(
 				    std::vector<T>     &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -302,7 +302,7 @@ namespace ezpwd {
 				    std::vector<T>     &data,
 				    std::vector<T>     &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -320,7 +320,7 @@ namespace ezpwd {
 				    std::array<T,N>    &data,
 				    size_t		pad	= 0, // ignore 'pad' symbols at start of array
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -336,7 +336,7 @@ namespace ezpwd {
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -346,7 +346,7 @@ namespace ezpwd {
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -354,7 +354,7 @@ namespace ezpwd {
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -364,7 +364,7 @@ namespace ezpwd {
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -372,7 +372,7 @@ namespace ezpwd {
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -382,7 +382,7 @@ namespace ezpwd {
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	= 0;
@@ -466,19 +466,11 @@ namespace ezpwd {
 				reed_solomon_tabs()
 				    : reed_solomon_base()
 	{
-<<<<<<< HEAD
-	    // Do init if not already done.  We check one value which is initialized to -1; this is
+	    // Do init if not already done.  We check one value which is initialized to 0; this is
 	    // safe, 'cause the value will not be set 'til the initializing thread has completely
 	    // initialized the structure.  Worst case scenario: multiple threads will initialize
 	    // identically.  No mutex necessary.
-	    if ( iprim >= 0 )
-=======
-	    // lock, if guard/mutex provided, and do init if not already done.  We check one value
-	    // which changes several times; this is safe, 'cause the mutex will not be released (for
-	    // us to check) 'til the initializing thread has completely initialized it.
-	    GRD			guard( mutex ); (void)guard;
 	    if ( iprim > 0 )
->>>>>>> Trial to see if switching to unsigned yields any optimization
 		return;
 
 #if defined( DEBUG ) && DEBUG >= 1
@@ -754,7 +746,7 @@ namespace ezpwd {
 				    const std::pair<uint8_t *, uint8_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -771,7 +763,7 @@ namespace ezpwd {
 				    const std::pair<uint8_t *, uint8_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -789,7 +781,7 @@ namespace ezpwd {
 				    const std::pair<uint16_t *, uint16_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -806,7 +798,7 @@ namespace ezpwd {
 				    const std::pair<uint16_t *, uint16_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -824,7 +816,7 @@ namespace ezpwd {
 				    const std::pair<uint32_t *, uint32_t *>
 						       &data,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -841,7 +833,7 @@ namespace ezpwd {
 				    const std::pair<uint32_t *, uint32_t *>
 						       &parity,
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -869,7 +861,7 @@ namespace ezpwd {
 				    size_t		len,
 				    INP		       *parity	= 0,	// either 0, or pointer to all NROOTS parity symbols
 				    const std::vector<size_t>
-				    		       &erasure	= std::vector<size_t>(),
+						       &erasure	= std::vector<size_t>(),
 				    std::vector<size_t>*position= 0 )
 	    const
 	{
@@ -953,65 +945,41 @@ namespace ezpwd {
 				reed_solomon()
 				    : reed_solomon_tabs<TYP, SYM, PRM, PLY>()
 	{
-<<<<<<< HEAD
 	    // We check one element of the array; this is safe, 'cause the value will not be
 	    // initialized 'til the initializing thread has completely initialized the array.  Worst
 	    // case scenario: multiple threads will initialize identically.  No mutex necessary.
-=======
 	    if ( NROOTS == 0 || NROOTS >= SIZE ) {
 	        EZPWD_RAISE_OR_ABORT( std::runtime_error, "reed-solomon: Invalid number of parity symbols for codeword symbol capacity" );
 	    }
-	    // lock, if guard/mutex provided, and do init if not already done.  We check one element
-	    // of the array; this is safe, 'cause the mutex will not be released (for us to check)
-	    // 'til the initializing thread has completely initialized the array.
-	    GRD			guard( mutex ); (void)guard;
->>>>>>> Trial to see if switching to unsigned yields any optimization
 	    if ( genpoly[0] )
 		return;
 
 #if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << "RS(" << SIZE << "," << LOAD << "): Initialize for " << NROOTS << " roots." << std::endl;
 #endif
-<<<<<<< HEAD
 	    std::array<TYP, NROOTS + 1>
 				tmppoly; // uninitialized
 	    // Form RS code generator polynomial from its roots.  Only lower-index entries are
 	    // consulted, when computing subsequent entries; only index 0 needs initialization.
 	    tmppoly[0]			= 1;
-	    for ( int i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
+	    for ( size_t i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
 		tmppoly[i + 1]		= 1;
 		// Multiply tmppoly[] by  @**(root + x)
-		for ( int j = i; j > 0; j-- ) {
+		for ( size_t j = i; j > 0; j-- ) {
 		    if ( tmppoly[j] != 0 )
 			tmppoly[j]	= tmppoly[j - 1]
 			    ^ alpha_to[modnn(index_of[tmppoly[j]] + root)];
-=======
-	    // Form RS code generator polynomial from its roots
-	    genpoly[0]			= 1;
-	    for ( size_t i = 0, root = FCR * PRM; i < NROOTS; i++, root += PRM ) {
-		genpoly[i + 1]		= 1;
-		// Multiply genpoly[] by  @**(root + x)
-		for ( size_t j = i; j > 0; j-- ) {
-		    if ( genpoly[j] != 0 )
-			genpoly[j]	= genpoly[j - 1]
-			    ^ alpha_to[modnn(index_of[genpoly[j]] + root)];
->>>>>>> Trial to see if switching to unsigned yields any optimization
 		    else
 			tmppoly[j]	= tmppoly[j - 1];
 		}
 		// tmppoly[0] can never be zero
 		tmppoly[0]		= alpha_to[modnn(index_of[tmppoly[0]] + root)];
 	    }
-<<<<<<< HEAD
 	    // convert NROOTS entries of tmppoly[] to genpoly[] in index form for quicker encoding,
 	    // in reverse order so genpoly[0] is last element initialized.
-	    for ( int i = NROOTS; i >= 0; --i )
-		genpoly[i]		= index_of[tmppoly[i]];
-=======
-	    // convert genpoly[] to index form for quicker encoding
-	    for ( size_t i = 0; i <= NROOTS; i++ )
+	    for ( size_t i = NROOTS; i > 0; --i )
 		genpoly[i]		= index_of[genpoly[i]];
->>>>>>> Trial to see if switching to unsigned yields any optimization
+	    genpoly[0]			= index_of[genpoly[0]];
 	}
 
 	int			encode(
@@ -1402,7 +1370,7 @@ namespace ezpwd {
 #  warning "EZPWD_ARRAY_TEST: Erroneously defining alpha_to size!"
                                                                           ::NN     >
 #endif
-					reed_solomon_tabs< TYP, SYM, PRM, PLY, MTX, GRD >::alpha_to;
+					reed_solomon_tabs< TYP, SYM, PRM, PLY >::alpha_to;
 
     template < typename TYP, size_t SYM, size_t PRM, class PLY >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >::NN + 1 >

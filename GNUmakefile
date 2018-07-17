@@ -16,7 +16,7 @@ CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
 		    -Wsign-promo -Wswitch -Wreturn-type	
-CXXFLAGS       += -O2
+CXXFLAGS       += -O3
 
 # Debugging
 #
