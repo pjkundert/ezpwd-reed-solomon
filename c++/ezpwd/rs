@@ -87,8 +87,13 @@ namespace ezpwd {
     template < size_t PAYLOAD > struct RS<32767, PAYLOAD> : public __RS( RS, uint16_t, 32767, PAYLOAD,  0x8003,	 1,  1 );
     template < size_t PAYLOAD > struct RS<65535, PAYLOAD> : public __RS( RS, uint16_t, 65535, PAYLOAD, 0x1100b,	 1,  1 );
     
+    // CCSDS specifies a Berlekamp style R-S encoder, but this library is a
+    // conventional R-S encoder. To match CCSDS encoding, transformational
+    // lookup tables must be used before encoding on the data and then after on
+    // the parity. See CCSDS 131.0-B-3 Annex F for details.
     template < size_t SYMBOLS, size_t PAYLOAD > struct RS_CCSDS;
-    template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD> : public __RS( RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 112, 11 );
+    template < size_t PAYLOAD > struct RS_CCSDS<255, PAYLOAD> : public __RS( RS_CCSDS, uint8_t, 255, PAYLOAD, 0x187, 128-(255-PAYLOAD)/2, 11 );
+
 
 
     // 
