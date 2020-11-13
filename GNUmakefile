@@ -279,13 +279,18 @@ rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
-rscompare: CXXFLAGS += -I./phil-karn
+rscompare: CXXFLAGS += -I./phil-karn -L./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
 rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsvalidate_RS_255_250_64: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000 -std=c++17
+rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+rsvalidate_RS_255_250_64: rsvalidate_RS_255_250_64.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
