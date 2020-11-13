@@ -68,13 +68,6 @@ namespace std {
     %template(decoded) decoded<std::vector<unsigned char>>;
 };
 
-%extend ezpwd::BCH {
-    %template(encoded) encoded<std::string>;
-    %template(decoded) decoded<std::string>;
-    %template(encoded) encoded<std::vector<unsigned char>>;
-    %template(decoded) decoded<std::vector<unsigned char>>;
-};
-
 // Ship a few 8-bit bch/BCH<...> class template instantiations
 // 
 // BCH Codecs Available (in bits)
