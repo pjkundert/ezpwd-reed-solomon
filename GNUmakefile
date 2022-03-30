@@ -28,7 +28,7 @@ CXXFLAGS       += -O3
 # -DEZPWD_NO_MOD_TAB	-- Do not use table-based accelerated R-S module implementation.
 # 
 CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
-CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
@@ -171,30 +171,30 @@ testjs-%:	$(JSTEST)
 	done
 
 COPYRIGHT:	VERSION
-	echo "/*! v$$( cat $< ) | (c) 2014 Hard Consulting Corporation | https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/LICENSE */"\
+	echo "/*! v$$( cat $< ) | (c) 2014-2020 Dominion Research & Development Corp. | https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/LICENSE */"\
 		> $@
 
 # 
 # Production Javascript targets
 # 
 js/ezpwd/rspwd.js: rspwd.C rspwd.h COPYRIGHT rspwd_wrap.js			\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD)			\
 		--post-js rspwd_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js			\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY)			\
 		--post-js rskey_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod					\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD)			\
 		--post-js ezcod_wrap.js $< -o $@				\
@@ -208,12 +208,12 @@ clean:
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 # rsencode -- correct 8-bit symbols (default to 128 symbol chunks, each w/ 32 parity symbols)
-rsencode.o:	rsencode.C c++/ezpwd/rs
+rsencode.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 rsencode:	rsencode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcd" >/dev/null
@@ -223,7 +223,7 @@ rsencode:	rsencode.o
 # (remainder passed through unchanged).  So, 'a' (0b01100001) changed to 'b'
 # (0b01100010), and is thus corrected to 'c' (0b01100011).
 rsencode_9:	CXXFLAGS += -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128
-rsencode_9.o:	rsencode.C c++/ezpwd/rs
+rsencode_9.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_9:	rsencode_9.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -231,87 +231,87 @@ rsencode_9:	rsencode_9.o
 
 # rsencode_16 -- correct all bits of 16-bit symbols (serialized big-endian)
 rsencode_16:	CXXFLAGS += -DRSCODEWORD=65535 -DRSPARITY=32 -DRSCHUNK=128
-rsencode_16.o:	rsencode.C c++/ezpwd/rs
+rsencode_16.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_16:	rsencode_16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcde" >/dev/null
 
-rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexample.js:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector\
+rsexample.js:	rsexample.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rssimple.o:	rssimple.C c++/ezpwd/rs
+rssimple.o:	rssimple.C c++/ezpwd/rs c++/ezpwd/rs_base
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rssimple.js:	rssimple.C c++/ezpwd/rs						\
+rssimple.js:	rssimple.C c++/ezpwd/rs c++/ezpwd/rs_base						\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rsembedded_nexc: 	CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
-rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs
+rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsembedded_nexc:	rsembedded_nexc.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsembedded.o:	rsembedded.C c++/ezpwd/rs
+rsembedded.o:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base
 rsembedded:	rsembedded.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsembedded.js:	rsembedded.C c++/ezpwd/rs					\
+rsembedded.js:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base					\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs
+rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs c++/ezpwd/rs_base
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
+rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs c++/ezpwd/rs_base				\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
-rscompare_nexc.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
+rscompare_nexc.o:	rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h schifra
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rscompare_nexc: 	CXXFLAGS += -I./phil-karn
 rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
-rscompare: CXXFLAGS += -I./phil-karn -L./phil-karn
+rscompare.o:	rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h schifra
+rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+rsvalidate.o:	rsvalidate.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
 rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate_RS_255_250_64: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000 -std=c++17
-rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
 rsvalidate_RS_255_250_64: rsvalidate_RS_255_250_64.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rspwd_test:	rspwd_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
 ezcod_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_test.js: ezcod_test.C ezcod.C ezcod.h						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod	\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod	\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
-rskey_test.o:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rskey_test.o:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rskey_test:	rskey_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 

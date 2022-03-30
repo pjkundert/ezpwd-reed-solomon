@@ -84,7 +84,7 @@ int main()
     constexpr size_t		pay	= 239;		// max. net payload
     constexpr size_t		par	= sym - pay;
     constexpr size_t		cap	= 2;
-    constexpr size_t		paymin	= cap * 2;
+ // constexpr size_t		paymin	= cap * 2;
 
     // Due to there being no way (presently) to specify a number of payload bits
     // that is a fraction of the (bit-packed) container supplied, there is no way to

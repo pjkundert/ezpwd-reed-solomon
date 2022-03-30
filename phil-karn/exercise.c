@@ -23,7 +23,6 @@
 #define ENCODE_RS encode_rs_8
 #define DECODE_RS decode_rs_8
 #elif defined(CCSDS)
-/* #include "fixed.h" */
 #include "ccsds.h"
 #define EXERCISE exercise_ccsds
 #define ENCODE_RS encode_rs_ccsds
@@ -51,6 +50,10 @@
 #endif
 
 #include "rs-common.h"
+#include "fec.h"
+// Provided by previous version of Phil's Reed-Solomon library.
+void *pad_rs_char( void *p, int pad );
+void *pad_rs_int( void *p, int pad );
 
 /* Exercise the RS codec passed as an argument */
 int EXERCISE(

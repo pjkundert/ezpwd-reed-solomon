@@ -1,0 +1,16 @@
+Only in fec-3.0.1: fec-3.0.1
+diff -u fec-3.0.1/fec.h fec-3.0.2/fec.h
+--- fec-3.0.1/fec.h	2006-10-12 19:10:53.000000000 -0600
++++ fec-3.0.2/fec.h	2022-03-29 11:39:54.000000000 -0600
+@@ -235,8 +235,8 @@
+ void free_rs_char(void *rs);
+ 
+ /* General purpose RS codec, integer symbols */
+-void encode_rs_int(void *rs,int *data,int *parity);
+-int decode_rs_int(void *rs,int *data,int *eras_pos,int no_eras);
++void encode_rs_int(void *rs,unsigned int *data,unsigned int *parity);
++int decode_rs_int(void *rs,unsigned int *data,int *eras_pos,int no_eras);
+ void *init_rs_int(int symsize,int gfpoly,int fcr,
+ 		  int prim,int nroots,int pad);
+ void free_rs_int(void *rs);
+Only in fec-3.0.2: fec.h~

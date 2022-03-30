@@ -45,8 +45,12 @@ install:		all
 fec:			$(FEC)
 	ln -fs $^ $@
 
+# 
+# Apply any patches after unpacking the archive
+# 
 $(FEC):			$(FEC).tar.gz
 	gunzip < $^ | tar xf -
+	for p in $(FEC)*.patch; do ( cd $(FEC); patch -p1 ) < $$p; done
 	touch $@
 
 # 

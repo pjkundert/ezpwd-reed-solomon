@@ -18,8 +18,8 @@
 #include <ezpwd/timeofday>
 
 /* Exercise the RS codec passed as an argument */
-template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY >
-int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::gfpoly<SYM,POLY>> &rs, int trials=1 )
+template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY, bool DUAL >
+int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::gfpoly<SYM,POLY>, DUAL> &rs, int trials=1 )
 {
     const int NN = ( 1 << SYM ) - 1;
     data_t block[NN],tblock[NN];
