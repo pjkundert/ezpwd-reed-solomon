@@ -699,6 +699,12 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first or data.second - data.first <= NROOTS ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
+	    }
+	    if ( data.second - data.first > SIZE ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
+	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -720,6 +726,12 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first or data.second - data.first <= NROOTS ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
+	    }
+	    if ( data.second - data.first > SIZE ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
+	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -741,6 +753,12 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
+	    if ( data.second < data.first or data.second - data.first <= NROOTS ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
+	    }
+	    if ( data.second - data.first > SIZE ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
+	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
 	}
 
@@ -768,15 +786,9 @@ namespace ezpwd {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide space for all parity and at least one non-parity symbol", -1 );
 	    }
 
-	    const TYP       	       *dataptr;
-	    TYP			       *pariptr;
 	    const size_t		INPUT	= 8 * sizeof ( INP );
-	    if ( DUAL and INPUT != 8 ) {
-	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: dual-basis encoding not supported for non-8-bit symbols", -1 );
-	    }
-
 	    int				result;
-	    if ( DATUM != SYMBOL || DATUM != INPUT || DUAL ) {
+	    if ( DATUM != SYMBOL || DATUM != INPUT ) {
 		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size, or dual-basis
 		// encoding is supplied; Must mask and copy.  The INP data must fit at least the
@@ -786,32 +798,15 @@ namespace ezpwd {
 		}
 		std::array<TYP,SIZE>	tmp;
 		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
-		for ( int i = 0; i < len; ++i ) {
-		    INP			sym	= data[i] & ~msk;
-		    tmp[LOAD - len + i]		= ( DUAL // Convert data from dual basis to conventional
-						    ? reed_solomon_base::from_dual[sym]
-						    : sym );
-		}
-		dataptr				= &tmp[LOAD - len];
-		pariptr				= &tmp[LOAD];
-		    
-		result				= encode_conventional( dataptr, len, pariptr );
-
-		if ( result >= 0 ) {
-		    // We copied/masked data; copy the parity symbols back (may be to different size/dual-basis)
-		    for ( int i = 0; i < NROOTS; ++i ) {
-			INP		sym	= pariptr[i];
-			parity[i]		= ( DUAL // Convert parity from conventional to dual basis
-						    ? reed_solomon_base::into_dual[sym]
-						    : sym );
-		    }
-		}
+		for ( int i = 0; i < len; ++i )
+		    tmp[LOAD - len + i]		= data[i] & ~msk;
+		result				= encode_symbols( &tmp[LOAD - len], len, &tmp[LOAD] );
+		for ( int i = 0; i < NROOTS; ++i )
+		    parity[i]			= tmp[LOAD+i];
 	    } else {
 		// Our R-S SYMBOL size, DATUM size and INP type size exactly matches; use in-place.
-		dataptr				= reinterpret_cast<const TYP *>( data );
-		pariptr				= reinterpret_cast<TYP *>( parity );
-
-		result				= encode_conventional( dataptr, len, pariptr );
+		result				= encode_symbols( reinterpret_cast<const TYP *>( data ), len,
+								  reinterpret_cast<TYP *>( parity ));
 	    }
 	    return result;
 	}
@@ -905,14 +900,12 @@ namespace ezpwd {
 	}
 
 	// 
-	// decode_mask	-- mask INP data into valid SYMBOL data
+	// decode	-- mask INP data into valid SYMBOL data
 	// 
 	///     Incoming data may be in a variety of sizes, and may contain information beyond the
 	/// R-S symbol capacity.  For example, we might use a 6-bit R-S symbol to correct the lower
 	/// 6 bits of an 8-bit data character.  This would allow us to correct common substitution
 	/// errors (such as '2' for '3', 'R' for 'T', 'n' for 'm').
-	/// 
-	///     For 8-bit INP types, Berleskamp dual-basis en/decoding is supported.
 	/// 
 	template < typename INP >
 	int			decode(
@@ -975,7 +968,7 @@ namespace ezpwd {
 	    int			corrects;
 	    if ( ! erasure.size() && ! position ) {
 		// No erasures, and error position info not wanted.
-		corrects			= decode_conventional( dataptr, len, pariptr );
+		corrects			= decode_symbols( dataptr, len, pariptr );
 	    } else {
 		// Either erasure location info specified, or resultant error position info wanted;
 		// Prepare pos (a temporary, if no position vector provided), and copy any provided
@@ -986,8 +979,8 @@ namespace ezpwd {
 		std::vector<int>       &pos	= position ? *position : _pos;
 		pos.resize( std::max( size_t( NROOTS ), erasure.size() ));
 		std::copy( erasure.begin(), erasure.end(), pos.begin() );
-		corrects			= decode_conventional( dataptr, len, pariptr,
-								       &pos.front(), erasure.size() );
+		corrects			= decode_symbols( dataptr, len, pariptr,
+								  &pos.front(), erasure.size() );
 		if ( corrects > int( pos.size() )) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: FATAL: produced too many corrections; possible corruption!", -1 );
 		}
@@ -1054,11 +1047,13 @@ namespace ezpwd {
 	}
 
 	// 
-	// Phil Karn's traditional interfaces
+	// Phil Karn's traditional interfaces, but w/ optional DUAL-basis {en,de}coding
 	// 
-	// WARNING: Does not implement Berleskamp dual-basis encoding, data type clipping, etc.
+	// WARNING: Does not implement data type clipping/masking, etc -- use the higher-level
+	// interfaces for that.  Thus, this lower-level interface is "hidden" behind the name
+	// encode_symbols.
 	// 
-	int			encode_conventional(
+	int			encode_symbols(
 				    const TYP	       *data,
 				    int			len,
 				    TYP		       *parity ) // at least nroots
@@ -1072,7 +1067,8 @@ namespace ezpwd {
 	    for ( int i = 0; i < NROOTS; i++ )
 		parity[i]		= 0;
 	    for ( int i = 0; i < len; i++ ) {
-		TYP		feedback= index_of[data[i] ^ parity[0]];
+		TYP		sym	= DUAL ?  reed_solomon_base::from_dual[data[i]] : data[i];
+		TYP		feedback= index_of[sym ^ parity[0]];
 		if ( feedback != A0 )
 		    for ( int j = 1; j < NROOTS; j++ )
 			parity[j]      ^= alpha_to[modnn(feedback + genpoly[NROOTS - j])];
@@ -1083,6 +1079,9 @@ namespace ezpwd {
 		else
 		    parity[NROOTS - 1]	= 0;
 	    }
+	    if ( DUAL )
+		for ( int i = 0; i < NROOTS; ++i )
+		    parity[i]		=  reed_solomon_base::into_dual[parity[i]];
 #if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << " encode " << std::vector<TYP>( data, data + len )
 		      << " --> " << std::vector<TYP>( parity, parity + NROOTS ) << std::endl;
@@ -1090,7 +1089,7 @@ namespace ezpwd {
 	    return NROOTS;
 	}
 
-	int			decode_conventional(
+	int			decode_symbols(
 				    TYP		       *data,
 				    int			len,
 				    TYP		       *parity,		// Requires: at least NROOTS
