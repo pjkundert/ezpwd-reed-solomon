@@ -12,11 +12,15 @@ SHELL		= /bin/bash
 CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
 CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
-CXXFLAGS       += -I./c++ -std=c++11								\
-		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
-		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
-		    -Wsign-promo -Wswitch -Wreturn-type	
-CXXFLAGS       += -O3
+# C compiler/flags for sub-projects (phil-karn)
+# Default to system cc; define CC to use a specific C compiler
+
+CFLAGS         += -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings
+CFLAGS         += -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual
+CFLAGS         += -Wsign-promo -Wswitch -Wreturn-type
+CFLAGS         += -Ofast
+CFLAGS         += -ffast-math -funsafe-math-optimizations
+
 
 # Debugging
 #
@@ -27,12 +31,20 @@ CXXFLAGS       += -O3
 # -DEZPWD_ARRAY_TEST	-- Intentional ERRONEOUS declarations of some R-S array extents.
 # -DEZPWD_NO_MOD_TAB	-- Do not use table-based accelerated R-S module implementation.
 # 
+CFLAGS         += -DNDEBUG
+
+CXXFLAGS       += $(CFLAGS)
+
 CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
 CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
-# C compiler/flags for sub-projects (phil-karn)
-# Default to system cc; define CC to use a specific C compiler
-CFLAGS		= # -O3 already defined
+
+CXXFLAGS       += -std=c++11 -I./c++
+
+export CFLAGS
+export CXXFLAGS
+
+
 
 # Emscripten
 #   - At -O2 and above, code is minified
@@ -366,7 +378,7 @@ boost_test:	qi_test_1 qi_test_2
 # 
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
-	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
+	CC=$(CC) make -C phil-karn all
 
 # 
 # Schifra R-S implementation.  Used by some tests.

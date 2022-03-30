@@ -906,69 +906,26 @@ namespace ezpwd {
 	/// R-S symbol capacity.  For example, we might use a 6-bit R-S symbol to correct the lower
 	/// 6 bits of an 8-bit data character.  This would allow us to correct common substitution
 	/// errors (such as '2' for '3', 'R' for 'T', 'n' for 'm').
+	///
+
+	/// 
+	/// A shim to convert STL container interface into lower-level basic type interface; parity
+	/// is optional, and is assumed to be at the end of data if not supplied.
 	/// 
 	template < typename INP >
 	int			decode(
 				    INP		       *data,
 				    int			len,
-				    INP		       *parity	= 0,	// either 0, or pointer to all parity symbols
+				    INP		       *parity,		// either 0, or pointer to all parity symbols
 				    const std::vector<int>
-				    		       &erasure	= std::vector<int>(),
+				    		       &erasure,
 				    std::vector<int>   *position= 0 )
 	    const
 	{
-	    if ( len < ( parity ? 0 : NROOTS ) + 1 ) {
-	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide all parity and at least one non-parity symbol", -1 );
-	    }
-	    if ( ! parity ) {
-		len			       -= NROOTS;
-		parity				= data + len;
-	    }
-
-	    TYP		       	       *dataptr;
-	    TYP			       *pariptr;
-	    const size_t		INPUT	= 8 * sizeof ( INP );
-	    if ( DUAL and INPUT != 8 ) {
-	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: dual-basis decoding not supported for non-8-bit symbols", -1 );
-	    }
-
-	    std::array<TYP,SIZE>	tmp;
-	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
-	    const bool			cpy	= DATUM != SYMBOL || DATUM != INPUT || DUAL;
-	    if ( cpy ) {
-		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
-		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size, or dual-basis
-		// encoding is supplied; Must copy.  The INP data must fit at least the SYMBOL size!
-		if ( SYMBOL > INPUT ) {
-		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data type too small to contain symbols", -1 );
-		}
-		for ( int i = 0; i < len; ++i ) {
-		    INP			sym	= data[i] & ~msk;
-		    tmp[LOAD - len + i]		= ( DUAL // Convert data from dual basis to conventional
-						    ? reed_solomon_base::from_dual[sym]
-						    : sym );
-		}
-		dataptr				= &tmp[LOAD - len];
-		for ( int i = 0; i < NROOTS; ++i ) {
-		    if ( TYP( parity[i] ) & msk ) {
-		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity data contains information beyond R-S symbol size", -1 );
-		    }
-		    INP			sym	= parity[i];
-		    tmp[LOAD + i]		= ( DUAL // Convert data from dual basis to conventional
-						    ? reed_solomon_base::from_dual[sym]
-						    : sym );
-		}
-		pariptr				= &tmp[LOAD];
-	    } else {
-		// Our R-S SYMBOL size, DATUM size and INPUT type sizes exactly matches
-		dataptr				= reinterpret_cast<TYP *>( data );
-		pariptr				= reinterpret_cast<TYP *>( parity );
-	    }
-
 	    int			corrects;
 	    if ( ! erasure.size() && ! position ) {
 		// No erasures, and error position info not wanted.
-		corrects			= decode_symbols( dataptr, len, pariptr );
+		corrects			= decode( data, len, parity );
 	    } else {
 		// Either erasure location info specified, or resultant error position info wanted;
 		// Prepare pos (a temporary, if no position vector provided), and copy any provided
@@ -979,30 +936,97 @@ namespace ezpwd {
 		std::vector<int>       &pos	= position ? *position : _pos;
 		pos.resize( std::max( size_t( NROOTS ), erasure.size() ));
 		std::copy( erasure.begin(), erasure.end(), pos.begin() );
-		corrects			= decode_symbols( dataptr, len, pariptr,
-								  &pos.front(), erasure.size() );
+		corrects			= decode( data, len, parity, &pos.front(), erasure.size() );
 		if ( corrects > int( pos.size() )) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: FATAL: produced too many corrections; possible corruption!", -1 );
 		}
 		pos.resize( std::max( 0, corrects ));
 	    }
+	    return corrects;
+	}
 
-	    if ( cpy && corrects > 0 ) {
-		for ( int i = 0; i < len; ++i ) {
-		    // More general than necessary; only exactly 8-bit symbols can be DUAL.
-		    INP			sym	= tmp[LOAD - len + i];
-		    data[i]		       &= msk;
-		    data[i]		       |= ( DUAL // Convert from conventional to dual basis
-						    ? reed_solomon_base::into_dual[sym]
-						    : sym );
-		}
-		for ( int i = 0; i < NROOTS; ++i ) {
-		    INP			sym	= tmp[LOAD + i];
-		    parity[i]			= ( DUAL // Convert from conventional to dual basis
-						    ? reed_solomon_base::into_dual[sym]
-						    : sym );
-		}
+	
+	/// 
+	/// Lowest-level interface to underlying Phil Karn's R-S decoder.  Implements data type mapping, dual-basis {en,de}coding.
+	/// 
+	template < typename INP >
+	int			decode(
+				    INP		       *data,
+				    int			len,
+				    INP		       *parity	= 0,	// either 0, or pointer to all NROOTS parity symbols
+				    int		       *eras_pos= 0,	// Capacity: at least NROOTS
+				    int			no_eras	= 0,	// Maximum:  at most  NROOTS
+				    TYP		       *corr	= 0 )	// Capacity: at least NROOTS
+	    const
+	{
+	    if ( len < ( parity ? 0 : NROOTS ) + 1 ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: must provide all parity and at least one non-parity symbol", -1 );
 	    }
+	    if ( ! parity ) {
+		len			       -= NROOTS;
+		parity				= data + len;
+	    }
+
+	    const size_t		INPUT	= 8 * sizeof ( INP );
+	    if ( DUAL and INPUT != 8 ) {
+	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: dual-basis decoding not supported for non-8-bit symbols", -1 );
+	    }
+
+	    std::array<TYP,SIZE>	tmp;
+	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
+	    int				corrects;
+	    if ( DATUM != SYMBOL || DATUM != INPUT || DUAL ) {
+		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
+		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size, or dual-basis
+		// encoding is supplied; Must copy.  The INP data must fit at least the SYMBOL size!
+		// 
+		// If both symbol masking and dual-basis encoding is occurring, then what happens
+		// here is subtle.  The masked subset of the data supplied (and the corrected data
+		// returned) is assumed to be in dual-basis encoded form; this means it *must* be
+		// exactly 8-bit data.  These are masked off (of potentially larger datum), decoded
+		// from dual-basis to conventional, R-S decoded, and then (if corrections occurred)
+		// restored from conventional to dual-basis.  Any corrections are then masked back
+		// into the original data.
+		if ( SYMBOL > INPUT ) {
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data type too small to contain symbols", -1 );
+		}
+		if ( DUAL and SYMBOL != 8 ) {
+		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data symbols must be exactly 8 bits for dual-basis encoding", -1 );
+		}
+		for ( int i = 0; i < len; ++i ) {
+		    TYP			sym	= data[i] & ~msk;
+		    tmp[LOAD - len + i]		= DUAL ? reed_solomon_base::from_dual[sym] : sym;
+		}
+		TYP		       *dataptr	= &tmp[LOAD - len];
+		for ( int i = 0; i < NROOTS; ++i ) {
+		    if ( TYP( parity[i] ) & msk ) {
+		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity data contains information beyond R-S symbol size", -1 );
+		    }
+		    TYP			sym	= parity[i];
+		    tmp[LOAD + i]		= DUAL ? reed_solomon_base::from_dual[sym] : sym;
+		}
+		TYP		       *pariptr	= &tmp[LOAD];
+		corrects			= decode_symbols( dataptr, len, pariptr, eras_pos, no_eras, corr );
+		if ( corrects > 0 ) {
+		    // Some corrections occurred; copy everything back (we may not know, so don't check what was corrected)
+		    for ( int i = 0; i < len; ++i ) {
+			// More general than necessary; only exactly 8-bit symbols can be DUAL.
+			INP		sym	= tmp[LOAD - len + i];
+			data[i]		       &= msk;
+			data[i]		       |= DUAL ? reed_solomon_base::into_dual[sym] : sym;
+		    }
+		    for ( int i = 0; i < NROOTS; ++i ) {
+			INP		sym	= tmp[LOAD + i];
+			parity[i]		= DUAL ? reed_solomon_base::into_dual[sym] : sym;
+		    }
+		}
+	    } else {
+		// Our R-S SYMBOL size, DATUM size and INPUT type sizes exactly matches, isn't DUAL-basis encoded
+		TYP		       *dataptr	= reinterpret_cast<TYP *>( data );
+		TYP		       *pariptr	= reinterpret_cast<TYP *>( parity );
+		corrects			= decode_symbols( dataptr, len, pariptr, eras_pos, no_eras, corr );
+	    }
+
 	    return corrects;
 	}
 
