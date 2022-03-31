@@ -155,7 +155,7 @@ help:
 
 all:		$(JSPROD)
 
-test:		testex testjs
+test:		testex # testjs
 
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
