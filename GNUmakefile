@@ -127,6 +127,7 @@ JSTEST =	$(JSCOMP)
 EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsexample					\
 		rssimple					\
+		rsspeed						\
 		rsembedded					\
 		rsembedded_nexc					\
 		rsexercise					\
@@ -292,6 +293,11 @@ rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 rscompare.o:	rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h schifra
 rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsspeed.o:	rsspeed.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
+rsspeed:	CXXFLAGS += -I./phil-karn
+rsspeed:	rsspeed.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate.o:	rsvalidate.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
