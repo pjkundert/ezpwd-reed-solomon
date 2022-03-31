@@ -158,10 +158,24 @@ namespace ezpwd {
 					std::ostream       &lhs )
 	    const
 	{
-	    return lhs
-		<< "RS" << ( this->dual() ? "_CCSDS(" : "(" )
+	    std::ios_base::fmtflags
+				flg	= lhs.flags();
+	    lhs
+		<< "RS"
+		<< ( this->poly() == 0x187
+		     ? ( this->dual()
+			 ? "_CCSDS("
+			 : "_CCSDS_CONV(" )
+		     : "(" )
 		<< this->size() << "," << this->load()
-		<< ")";
+		<< ")"
+#if defined( DEBUG )
+		<< ", poly. 0x" << std::hex << this->poly()
+		<< ( this->dual() ? " w/ dual-basis encoding" : "" )
+#endif
+		;
+	    lhs.flags( flg );
+	    return lhs;
 	}
 
 	// 
