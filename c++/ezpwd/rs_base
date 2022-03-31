@@ -960,7 +960,7 @@ namespace ezpwd {
 
 	
 	/// 
-	/// Lowest-level interface to underlying Phil Karn's R-S decoder.  Implements data type mapping, dual-basis {en,de}coding.
+	/// Lowest-level interface to underlying Phil Karn's R-S decoder.  Implements data type mapping.
 	/// 
 	template < typename INP >
 	int			decode(
@@ -985,10 +985,8 @@ namespace ezpwd {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: dual-basis decoding not supported for non-8-bit symbols", -1 );
 	    }
 
-	    std::array<TYP,SIZE>	tmp;
-	    TYP				msk	= static_cast<TYP>( ~0UL << SYMBOL );
 	    int				corrects;
-	    if ( DATUM != SYMBOL || DATUM != INPUT || DUAL ) {
+	    if ( DATUM != SYMBOL || DATUM != INPUT ) {
 		// Our DATUM (TYP) size (eg. uint8_t ==> 8, uint16_t ==> 16, uint32_t ==> 32)
 		// doesn't exactly match our R-S SYMBOL size (eg. 6), or our INP size, or dual-basis
 		// encoding is supplied; Must copy.  The INP data must fit at least the SYMBOL size!
@@ -1006,39 +1004,38 @@ namespace ezpwd {
 		if ( DUAL and SYMBOL != 8 ) {
 		    EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data symbols must be exactly 8 bits for dual-basis encoding", -1 );
 		}
+		std::array<TYP,SIZE>	tmp;
+		TYP			msk	= static_cast<TYP>( ~0UL << SYMBOL );
 		for ( int i = 0; i < len; ++i ) {
-		    TYP			sym	= data[i] & ~msk;
-		    tmp[LOAD - len + i]		= DUAL ? reed_solomon_base::from_dual[sym] : sym;
+		    tmp[LOAD - len + i]		= data[i] & ~msk;
 		}
 		TYP		       *dataptr	= &tmp[LOAD - len];
 		for ( int i = 0; i < NROOTS; ++i ) {
 		    if ( TYP( parity[i] ) & msk ) {
 		        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity data contains information beyond R-S symbol size", -1 );
 		    }
-		    TYP			sym	= parity[i];
-		    tmp[LOAD + i]		= DUAL ? reed_solomon_base::from_dual[sym] : sym;
+		    tmp[LOAD + i]		= parity[i];
 		}
 		TYP		       *pariptr	= &tmp[LOAD];
 		corrects			= decode_symbols( dataptr, len, pariptr, eras_pos, no_eras, corr );
 		if ( corrects > 0 ) {
-		    // Some corrections occurred; copy everything back (we may not know, so don't check what was corrected)
+		    // Some corrections occurred; copy everything back (we may not know what was corrected)
 		    for ( int i = 0; i < len; ++i ) {
 			// More general than necessary; only exactly 8-bit symbols can be DUAL.
-			INP		sym	= tmp[LOAD - len + i];
 			data[i]		       &= msk;
-			data[i]		       |= DUAL ? reed_solomon_base::into_dual[sym] : sym;
+			data[i]		       |= tmp[LOAD - len + i];
 		    }
 		    for ( int i = 0; i < NROOTS; ++i ) {
-			INP		sym	= tmp[LOAD + i];
-			parity[i]		= DUAL ? reed_solomon_base::into_dual[sym] : sym;
+			parity[i]		= tmp[LOAD + i];
 		    }
 		}
-	    } else {
-		// Our R-S SYMBOL size, DATUM size and INPUT type sizes exactly matches, isn't DUAL-basis encoded
-		TYP		       *dataptr	= reinterpret_cast<TYP *>( data );
-		TYP		       *pariptr	= reinterpret_cast<TYP *>( parity );
-		corrects			= decode_symbols( dataptr, len, pariptr, eras_pos, no_eras, corr );
+		return corrects;
 	    }
+
+	    // Our R-S SYMBOL size, DATUM size and INPUT type sizes exactly matches, isn't DUAL-basis encoded
+	    TYP		       *dataptr	= reinterpret_cast<TYP *>( data );
+	    TYP		       *pariptr	= reinterpret_cast<TYP *>( parity );
+	    corrects			= decode_symbols( dataptr, len, pariptr, eras_pos, no_eras, corr );
 
 	    return corrects;
 	}
@@ -1090,6 +1087,7 @@ namespace ezpwd {
 	// interfaces for that.  Thus, this lower-level interface is "hidden" behind the name
 	// encode_symbols.
 	// 
+	inline
 	int			encode_symbols(
 				    const TYP	       *data,
 				    int			len,
@@ -1126,6 +1124,7 @@ namespace ezpwd {
 	    return NROOTS;
 	}
 
+	inline
 	int			decode_symbols(
 				    TYP		       *data,
 				    int			len,
@@ -1170,14 +1169,14 @@ namespace ezpwd {
 
 	    // form the syndromes; i.e., evaluate data(x) at roots of g(x)
 	    for ( int i = 0; i < NROOTS; i++ )
-		syn[i]			= data[0];
+		syn[i]			= ( DUAL ? reed_solomon_base::from_dual[data[0]] : data[0] );
 
 	    for ( int j = 1; j < len; j++ ) {
 		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
-			syn[i]		= data[j];
+			syn[i]		= ( DUAL ? reed_solomon_base::from_dual[data[j]] : data[j] );
 		    } else {
-			syn[i]		= data[j]
+			syn[i]		= ( DUAL ? reed_solomon_base::from_dual[data[j]] : data[j] )
 			    ^ alpha_to[modnn(index_of[syn[i]] + ( FCR + i ) * PRM)];
 		    }
 		}
@@ -1186,9 +1185,9 @@ namespace ezpwd {
 	    for ( int j = 0; j < NROOTS; j++ ) {
 		for ( int i = 0; i < NROOTS; i++ ) {
 		    if ( syn[i] == 0 ) {
-			syn[i]		= parity[j];
+			syn[i]		= ( DUAL ? reed_solomon_base::from_dual[parity[j]] : parity[j] );
 		    } else {
-			syn[i] 		= parity[j]
+			syn[i] 		= ( DUAL ? reed_solomon_base::from_dual[parity[j]] : parity[j] )
 			    ^ alpha_to[modnn(index_of[syn[i]] + ( FCR + i ) * PRM)];
 		    }
 		}
@@ -1413,18 +1412,41 @@ namespace ezpwd {
 		    TYP		cor	= alpha_to[modnn(index_of[num1]
 							 + index_of[num2]
 							 + NN - index_of[den])];
-		    // Store the error correction pattern, if a correction buffer is available
+		    // Store the error correction pattern, if a correction buffer is available.
+		    // This must be the error correction in the basis of the data/parity buffers,
+		    // which might be dual-basis encoded.  If so -- convert to conventional, and
+		    // compute the difference between the erroneous conventional symbol and the
+		    // corrected conventional.
 		    if ( corr )
 			corr[j] 	= cor;
 		    // If a data/parity buffer is given and the error is inside the message or
-		    // parity data, correct it
+		    // parity data, correct it, converting from and back into dual-basis, if
+		    // necessary.  The correction will not be in the pad (eliminated, above).
 		    if ( loc[j] < ( NN - NROOTS )) {
-			if ( data ) {
-			    data[loc[j] - pad] ^= cor;
+			int	di	= loc[j] - pad;
+			if ( DUAL ) {
+			    TYP	err_dua	= data[di];
+			    TYP	err_cnv	= reed_solomon_base::from_dual[err_dua];
+			    TYP	fix_cnv	= err_cnv ^ cor;
+			    TYP	fix_dua	= reed_solomon_base::into_dual[fix_cnv];
+			    data[di]	= fix_dua;
+			    if ( corr )
+				corr[j]	= fix_dua ^ err_dua;
+			} else {
+			    data[di]   ^= cor;
 			}
 		    } else if ( loc[j] < NN ) {
-		        if ( parity )
-		            parity[loc[j] - ( NN - NROOTS )] ^= cor;
+			int	pi	= loc[j] - ( NN - NROOTS );
+			if ( DUAL ) {
+			    TYP	err_cnv	= reed_solomon_base::from_dual[parity[pi]];
+			    TYP	fix_cnv	= err_cnv ^ cor;
+			    TYP	fix_dua	= reed_solomon_base::into_dual[fix_cnv];
+			    parity[pi]	= fix_dua;
+			    if ( corr )
+				corr[j]	= fix_cnv ^ err_cnv;
+			} else {
+			    parity[pi] ^= cor;
+			}
 		    }
 		}
 	    }
