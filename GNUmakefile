@@ -138,10 +138,8 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rskey_test					\
 		bchsimple					\
 		bchclassic					\
-		bch_test
-
-# Don't include bch_itron: too dependent on recent boost, etc.
-#		bch_itron
+		bch_test					\
+		bch_itron
 
 
 EXTEST =	$(EXCOMP)
@@ -349,15 +347,16 @@ bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 
-bch_itron.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
+bch_itron.o:	CXXFLAGS += -std=c++17 -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
 bch_itron.o:	bch_itron.C djelic/include
-bch_itron: 	CXXFLAGS += -L /usr/local/lib # boost
+bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
 bch_itron:	bch_itron.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
 
 .PHONY: itron_test
 itron_test:	bch_itron
-	./bch_itron			&& exit 0 || exit 1 # expect success
+	./bch_itron bch_itron.txt		&& exit 0 || exit 1 # expect success
+	./bch_itron bch_itron.kelowna.txt	&& exit 0 || exit 1 # expect success
 
 qi_test_1.o:	qi_test_1.C
 qi_test_1:	qi_test_1.o
