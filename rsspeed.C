@@ -140,7 +140,7 @@ double 				compare(
     int				ncorrs	= 0;
     double			ntps	= 0;
     {
-	std::vector<int>	neras( 1 );
+	std::vector<unsigned>	neras( 1 );
 	std::array<uint8_t,TOTAL> ndata( orig );
 	timeval			beg	= ezpwd::timeofday();
 	timeval			end	= beg;
@@ -153,11 +153,8 @@ double 				compare(
 		uint8_t		err	= (final - count) % 255; // may xor with a zero value
 		neras[0]		= count % ndata.size();
 		ndata[neras[0]]	       ^= err;
-		int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
-		ncorrs			= nrs.decode( ndata.data(), nrs.LOAD,
-						      ndata.data() + nrs.LOAD,
-						      neras.data(), numeras, 0 );
-
+		unsigned	numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
+		ncorrs			= nrs.decode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD, neras.data(), numeras );
 		if ( assert.ISEQUAL( ! ncorrs, ! err ))
 		    std::cout
 			<< assert << " corrections doesn't match error load!"
@@ -193,9 +190,7 @@ int main()
     avg				       += compare<255,128>( assert );	++cnt;
     avg				       += compare<255, 99>( assert );	++cnt;
     avg				       += compare<255, 64>( assert );	++cnt;
-
     avg				       += compare<255, 32>( assert );	++cnt;
-
     avg				       += compare<255, 16>( assert );	++cnt;
     avg				       += compare<255, 13>( assert );	++cnt;
     avg				       += compare<255,  8>( assert );	++cnt;

@@ -90,10 +90,8 @@ double 				compare(
     {
 	encode_rs_char( grs, payload, parity );
     };
-
     init<TOTAL,ROOTS>( orig, karn_encoder );
-    dump<TOTAL,ROOTS>( "Phil Karn's Generic", orig );
-
+    dump<TOTAL,ROOTS>( "Phil Karn's Conventional", orig );
 
     std::array<uint8_t,TOTAL>	gdata( orig );
 
@@ -104,18 +102,14 @@ double 				compare(
 	std::cout
 	    << assert << " " << nrs << ".encode didn't return NROOTS"
 	    << std::endl;
-#if defined( DEBUG )
-    std::cout
-        << "EZPWD   " << nrs
-	<< "     parity: " << std::vector<uint8_t>( ndata.data() + PAYLOAD, ndata.data() + PAYLOAD + ROOTS ) 
-        << std::endl;
-#endif
+    dump<TOTAL,ROOTS>( "EZPWD Conventional", orig );
+
     if ( assert.ISTRUE( ndata == gdata )) {
 	std::cout
 	    << assert << "EZPWD and Karn R-S decoders produced different parity"
 	    << std::endl;
 	dump<TOTAL,ROOTS>( "Phil Karn's", gdata );
-	dump<TOTAL,ROOTS>( "EZPWD", ndata ) ;
+	dump<TOTAL,ROOTS>( "EZPWD", ndata );
     }
 
     // The Schifra R-S codec
@@ -177,6 +171,7 @@ double 				compare(
     // polynomial root indices...  Copy the computed data and parity back to sdata from block.
     for ( size_t i = 0; i < sdata.size(); ++i )
 	sdata[i]			= block[i];
+    dump<TOTAL,ROOTS>( "Schifra Conventional", sdata );
 
     // Get a baseline TPS rate for a simple R-S decode with an error, from Phil's general-purpose
     // decoder.  Specify half of the tests as erasures, half as errors.  Only symbols that actually
@@ -211,10 +206,13 @@ double 				compare(
 	<< " at "			<< gtps/1000
 	<< " kTPS"
         << std::endl;
-    if ( assert.ISTRUE( gdata == orig ))
+    if ( assert.ISTRUE( gdata == orig )) {
 	std::cout
-	    << assert << " Phil's Generic R-S decoder produced different results"
+	    << assert << " Phil Karn's Conventional R-S decoder produced different results"
 	    << std::endl;
+	dump<TOTAL,ROOTS>( "Phil Karn's", gdata );
+	dump<TOTAL,ROOTS>( "Original", orig ) ;
+    }
 
     // Test Phil's Fast (8-bit symbol) CCSDS RS(255,223) conventional (not dual-basis) decoder.
     // Remember, it implements the CCSDS polynomial, so produces parity symbols different than the
@@ -375,10 +373,13 @@ double 				compare(
 	    << "% "			<< ( ctps > gtps ? "faster" : "slower" )
 	    << ")"
 	    << std::endl;
-	if ( assert.ISTRUE( cdata == corig ))
+	if ( assert.ISTRUE( cdata == corig )) {
 	    std::cout
 		<< assert << " Phil's CCSDS R-S decoder produced different results"
 		<< std::endl;
+	    dump<TOTAL,ROOTS>( "Phil's CCSDS corrected", gdata );
+	    dump<TOTAL,ROOTS>( "Phil's CCSDS original", orig ) ;
+	}
     }
 
     // We'll cheat a bit with the Schifra R-S decoder to give it a fighting chance.  Instead of
@@ -435,15 +436,16 @@ double 				compare(
 	<< "% "				<< ( stps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
-    if ( assert.ISTRUE( std::vector<uint8_t>( sdata.begin(), sdata.begin() + TOTAL-ROOTS)
-		     == std::vector<uint8_t>( orig.begin(), orig.begin() + TOTAL-ROOTS )))
+    if ( assert.ISTRUE( std::vector<uint8_t>( sdata.begin(), sdata.begin() + TOTAL-ROOTS )
+		     == std::vector<uint8_t>(  orig.begin(),  orig.begin() + TOTAL-ROOTS ))) {
 	std::cout
 	    << assert << " Schifra and Phil-Karn R-S decoder produced different results"
 	    << std::endl;
+	dump<TOTAL,ROOTS>( "Phil's original   (data only!)", orig );
+	dump<TOTAL,ROOTS>( "Schifra corrected (data only!)", sdata );
+    }
 
-    // Finally, test the Ezpwd RS decoder.  Should use the same default polynomial as Phil Karn's
-    // generic codec.
-    std::vector<int>		neras( 1 );
+    unsigned			neras[nrs.NROOTS];
     int				ncorrs	= 0;
     double			ntps	= 0;
     {
@@ -459,14 +461,7 @@ double 				compare(
 		neras[0]		= count % gdata.size();
 		ndata[neras[0]]	       ^= err;
 		int		numeras	= (ROOTS > 1 ? err&1 : 1 ); // 1 parity? erasure only
-		if ( numeras ) {
-		    ncorrs		= nrs.decode( ndata.data(), nrs.LOAD,
-						      ndata.data() + nrs.LOAD,
-						      neras );
-		} else {
-		    ncorrs		= nrs.decode( ndata.data(), nrs.LOAD,
-						      ndata.data() + nrs.LOAD );
-		}
+		ncorrs			= nrs.decode( ndata.data(), nrs.LOAD, ndata.data() + nrs.LOAD, neras, numeras );
 		if ( assert.ISEQUAL( ! ncorrs, ! err ))
 		    std::cout
 			<< assert << " corrections doesn't match error load!"
@@ -483,10 +478,13 @@ double 				compare(
 	<< "% "				<< ( ntps > gtps ? "faster" : "slower" )
 	<< ")"
         << std::endl;
-    if ( assert.ISTRUE( ndata == orig ))
+    if ( assert.ISTRUE( ndata == orig )) {
 	std::cout
-	    << assert << " EZPWD R-S decoder produced different results"
+	    << assert << " EZPWD " << nrs << " and Phil's R-S decoder produced different results"
 	    << std::endl;
+	dump<TOTAL,ROOTS>( "EZPWD corrected", ndata );
+	dump<TOTAL,ROOTS>( "Phil's original", orig ) ;
+    }
 
     free_rs_char( grs );
     return ( ntps - gtps ) / gtps * 100;
@@ -501,9 +499,7 @@ int main()
     avg				       += compare<255,128>( assert );	++cnt;
     avg				       += compare<255, 99>( assert );	++cnt;
     avg				       += compare<255, 64>( assert );	++cnt;
-
     avg				       += compare<255, 32>( assert );	++cnt;
-
     avg				       += compare<255, 16>( assert );	++cnt;
     avg				       += compare<255, 13>( assert );	++cnt;
     avg				       += compare<255,  8>( assert );	++cnt;
