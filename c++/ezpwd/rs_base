@@ -1426,6 +1426,9 @@ namespace ezpwd {
 	    unsigned		el	= no_eras;
 	    if ( ! syn_error ) {
 		// if syndrome is zero, data[] is a codeword and there are no errors to correct.
+#if defined( DEBUG ) && DEBUG >= 2
+		std::cout << "SUCCESS: ! syn_error; codeword valid" << std::endl;
+#endif
 		count			= 0;
 		goto finish;
 	    }
@@ -1446,7 +1449,7 @@ namespace ezpwd {
 		}
 	    }
 
-#if DEBUG >= 1
+#if defined( DEBUG ) && DEBUG >= 1
 	    // Test code that verifies the erasure locator polynomial just constructed
 	    // Needed only for decoder debugging.
     
@@ -1473,10 +1476,13 @@ namespace ezpwd {
 		count++;
 	    }
 	    if ( count != int( no_eras )) {
+		std::cout << "ERROR: count = " << count << ", no_eras = " << no_eras
+			  << "lambda(x) is WRONG"
+			  << std::endl;
 		count			= -1;
 		goto finish;
 	    }
-#if DEBUG >= 2
+#if defined( DEBUG ) && DEBUG >= 2
 	    if ( count ) {
 	        std::cout
 		    << "Erasure positions as determined by roots of Eras Loc Poly: ";
@@ -1559,7 +1565,7 @@ namespace ezpwd {
 		if ( q != 0 )
 		    continue; // Not a root
 		// store root (index-form) and error location number
-#if DEBUG >= 2
+#if defined( DEBUG ) && DEBUG >= 2
 		std::cout << "count " << count << " root " << i << " loc " << k << std::endl;
 #endif
 		root[count]		= i;
@@ -1570,6 +1576,9 @@ namespace ezpwd {
 	    }
 	    if ( int( deg_lambda ) != count ) {
 		// deg(lambda) unequal to number of roots => uncorrectable error detected
+#if defined( DEBUG ) && DEBUG >= 1
+		std::cout << "FAILURE: deg_lambda != count; uncorrectable error" << std::endl;
+#endif
 		count			= -1;
 		goto finish;
 	    }
@@ -1577,13 +1586,13 @@ namespace ezpwd {
 	    // Compute err+eras evaluator poly omega(x) = s(x)*lambda(x) (modulo x**NROOTS). in
 	    // index form. Also find deg(omega).
 	    //
-#if defined( DEBUG ) && DEBUG >= 1
 	    if ( deg_lambda == 0 ) {
+#if defined( DEBUG ) && DEBUG >= 1
 		std::cout << "ERROR: deg_lambda == 0" << std::endl;
+#endif
 		count		= -1;
 		goto finish;
 	    }
-#endif
 	    deg_omega 			= deg_lambda - 1;
 	    for ( unsigned i = 0; i <= deg_omega; i++ ) {
 		TYP		tmp	= 0;
@@ -1613,20 +1622,20 @@ namespace ezpwd {
 			den	       ^= alpha_to[modnn(lambda[i + 1] + i * root[j])];
 		    }
 		}
-#if defined( DEBUG ) && DEBUG >= 1
 		if ( den == 0 ) {
-		    std::cout << "ERROR: denominator == 0" << std::endl;
+#if defined( DEBUG ) && DEBUG >= 1
+		    std::cout << "ERROR: denominator = 0" << std::endl;
+#endif
 		    count		= -1;
 		    goto finish;
 		}
-#endif
 		// Apply error to data.  Padding ('pad' unused symbols) begin at index 0.
 		if ( num1 != 0 ) {
 		    if ( loc[j] < pad ) {
 			// If the computed error position is in the 'pad' (the unused portion of the
 			// R-S data capacity), then our solution has failed -- we've computed a
 			// correction location outside of the data and parity we've been provided!
-#if DEBUG >= 2
+#if defined( DEBUG ) && DEBUG >= 2
 			std::cout
 			    << "ERROR: RS(" << SIZE <<"," << LOAD
 			    << ") computed error location: " << loc[j]
