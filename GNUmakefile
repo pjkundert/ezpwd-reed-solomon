@@ -16,7 +16,8 @@ CXXFLAGS       += -I./c++ -std=c++11								\
 		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
 		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
 		    -Wsign-promo -Wswitch -Wreturn-type	
-CXXFLAGS       += -O3
+CFLAGS         += -Ofast -ffast-math -funsafe-math-optimizations -DNDEBUG
+CXXFLAGS       += -Ofast -ffast-math -funsafe-math-optimizations -DNDEBUG
 
 # Debugging
 #
@@ -281,6 +282,11 @@ rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
 rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsspeed.o:	rsspeed.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+rsspeed: CXXFLAGS += -I./phil-karn
+rsspeed:	rsspeed.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
