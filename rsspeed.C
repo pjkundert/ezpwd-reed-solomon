@@ -158,7 +158,7 @@ double 				compare(
 		    ncorrs		= nrs.decode( ndata, int( 0 ), neras );
 		else
 		    ncorrs		= nrs.decode( ndata, int( 0 ) );
-		if ( assert.ISEQUAL( ncorrs, err ? 1 : 0 ) or assert.ISTRUE( ndata == orig ))
+		if ( assert.ISEQUAL( ncorrs, err ? 1 : 0 ))
 		    std::cout
 			<< assert << " corrections doesn't match error load after " << count + 1 << " rounds"
 			<< std::endl;
