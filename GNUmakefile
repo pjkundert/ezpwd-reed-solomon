@@ -33,7 +33,9 @@ CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
-CFLAGS		= # -O3 already defined
+
+export CFLAGS
+export CXXFLAGS
 
 # Emscripten
 #   - At -O2 and above, code is minified
@@ -367,7 +369,7 @@ boost_test:	qi_test_1 qi_test_2
 # 
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
-	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
+	CC=$(CC) make -C phil-karn all
 
 # 
 # Schifra R-S implementation.  Used by some tests.
