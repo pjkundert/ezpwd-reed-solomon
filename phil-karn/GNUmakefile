@@ -8,7 +8,7 @@
 SHELL		= /bin/bash
 
 FEC		= fec-3.0.1
-CFLAGS	       += -O3 -I. -I$(FEC)
+CFLAGS	       += -I. -I$(FEC)
 
 # 
 # Main targets
