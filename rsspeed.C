@@ -10,7 +10,7 @@
 #include <ezpwd/timeofday>
 #include <ezpwd/asserter>
 
-#include <ezpwd/rs_definitions>	// must be included in one C++ compilation unit
+//#include <ezpwd/rs_definitions>	// must be included in one C++ compilation unit
 
 
 // Phil Karn's implementation
