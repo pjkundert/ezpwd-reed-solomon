@@ -16,7 +16,8 @@ CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 # Default to system cc; define CC to use a specific C compiler
 
 CFLAGS         += -Wall -pedantic -Wno-missing-braces -Wwrite-strings
-CFLAGS         += -Wpointer-arith -Wswitch -Wreturn-type
+CFLAGS         += -Wpointer-arith -Wswitch -Wreturn-type -Wno-overflow
+CFLAGS         += -Wno-overflow # Avoid triggering unnecessary warnings on Phil Karn's code
 
 CXXFLAGS       += -Wextra -Wsign-promo -Wnon-virtual-dtor -Woverloaded-virtual
 
