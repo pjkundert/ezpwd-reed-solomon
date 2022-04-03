@@ -21,7 +21,7 @@ CFLAGS         += -Wno-overflow # Avoid triggering unnecessary warnings on Phil 
 
 CXXFLAGS       += -Wextra -Wsign-promo -Wnon-virtual-dtor -Woverloaded-virtual
 
-CFLAGS         += -Ofast -ffast-math -funsafe-math-optimizations
+CFLAGS         += -O3 -ffast-math -funsafe-math-optimizations
 
 
 # Debugging
@@ -49,23 +49,28 @@ export CXXFLAGS
 
 
 # Emscripten
-#   - At -O2 and above, code is minified
 # 
-#     Instead of 'latest', choose a specific version known to work.  To see
-# what's available, use:
+#     The Git submodule https://github.com/emscripten-core/emsdk.git has been
+# added at ./emsdk/.  Checkout the ezpwd-reed-solomon project using:
 # 
-#         $ cd emscripten/emsdk-portable   
-#         $ ./emsdk list
+#     git clone --recurse-submodules git@github.com:pjkundert/ezpwd-reed-solomon.git
 # 
-#     At time of writing, 1.35.0 is "latest", but doesn't work (1.34.1 did, I believe).  The current
-# master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
+# if you want to generate Javascript via Emscripten.
 # 
-EMSDK		= ./emscripten/emsdk-portable
-EMSDK_VERSION	= latest # sdk-master-64bit # latest
-EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
+#     If you've already checked it out, use:
+#
+#    git submodule update --init
+# 
+# 
+EMSDK_PYTHON	= /usr/local/bin/python3
+export EMSDK_PYTHON
 
-EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=`pwd`/emscripten:$${PATH} && em++
-DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
+EMSDK		= $(EMSDK_PYTHON) $(PWD)/emsdk/emsdk.py
+EMSDK_VERSION	= latest
+EMSDK_ACTIVATE	= git submodule update --init && $(EMSDK) install $(EMSDK_VERSION) && $(EMSDK) activate $(EMSDK_VERSION)
+
+EMSDK_ENV	= source ./emsdk/emsdk_env.sh
+EMSDK_EMXX 	= $(EMSDK_ENV) && em++
 CHEERP_EMXX	= /opt/cheerp/bin/clang++
 
 EMXX		= $(EMSDK_EMXX)
@@ -155,7 +160,7 @@ help:
 	@echo  "  testjs		-- Javascript (Node.JS) tests"
 	@echo  "  swig-python-install	-- Build and install Python bindings ezpwd_reed_solomon.* (via Swig)"
 
-all:		$(JSPROD)
+all:		test
 
 test:		testex # testjs
 
@@ -180,7 +185,7 @@ testjs:		testjs-node
 testjs-%:	$(JSTEST)
 	@for t in $^; do 					\
 	    echo "$* ./$$t...";					\
-	    $* ./$$t </dev/null;				\
+	    $(EMSDK_ENV) && $* ./$$t </dev/null;			\
 	done
 
 COPYRIGHT:	VERSION
@@ -391,7 +396,9 @@ phil-karn/librs.a:
 # Schifra R-S implementation.  Used by some tests.
 # 
 schifra:
-	git clone https://github.com/ArashPartow/schifra.git
+	echo "  Missing Schifra Reed-Solomon for some tests; run:"
+	echo "      git submodule update --init"
+	false
 
 # 
 # Djelic BCH implementation.  Foundation for EZPWD BCH implementation
@@ -413,7 +420,9 @@ schifra:
 # djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
 djelic:
-	git clone https://github.com/pjkundert/bch.git $@
+	echo "  Missing Djelic BCH implementation; run:"
+	echo "      git submodule update --init"
+	false
 
 c++/ezpwd/bch \
 djelic/include \
@@ -435,27 +444,14 @@ djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
 # Install and build emscripten SDK, if necessary, and then activate it.
 # 
 #    Presently only works on OS-X as far as I know. Should use a Docker instance.
-# 
-emscripten:	emscripten/python2 				\
-		emscripten/emsdk-portable/emscripten		\
-		FORCE
+#
+$(EMSDK):
+	echo "  Missing Emscripten C++ to Javascript Complier; run:"
+	echo "      git submodule update --init"
+	false
+
+emscripten:	$(EMSDK) FORCE
 	$(EMXX_ACTIVATE)
 
-emscripten/python2:
-	mkdir -p emscripten
-	ln -fs $$( which python2.7 ) emscripten/python2
-
-emscripten/emsdk-portable/emscripten: emscripten/emsdk-portable
-	cd $< && ./emsdk update && ./emsdk install latest
-	touch $@
-
-emscripten/emsdk-portable: emscripten/emsdk-portable.tar.gz
-	mkdir -p emscripten
-	tar -C emscripten -xzf $<
-	touch $@
-
-emscripten/emsdk-portable.tar.gz:
-	mkdir -p emscripten
-	wget -O $@ $(EMSDK_URL)
 
 FORCE:
