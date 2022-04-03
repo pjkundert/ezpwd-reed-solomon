@@ -15,10 +15,10 @@ CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
 
-CFLAGS         += -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings
+CFLAGS         += -Wall -pedantic -Wno-missing-braces -Wwrite-strings
 CFLAGS         += -Wpointer-arith -Wswitch -Wreturn-type
 
-CXXFLAGS       += -Wsign-promo -Wnon-virtual-dtor -Woverloaded-virtual
+CXXFLAGS       += -Wextra -Wsign-promo -Wnon-virtual-dtor -Woverloaded-virtual
 
 CFLAGS         += -Ofast -ffast-math -funsafe-math-optimizations
 
