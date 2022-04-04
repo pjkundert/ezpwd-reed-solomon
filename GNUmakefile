@@ -62,12 +62,14 @@ export CXXFLAGS
 #    git submodule update --init
 # 
 # 
-EMSDK_PYTHON	= /usr/local/bin/python3
-export EMSDK_PYTHON
 
-EMSDK		= $(EMSDK_PYTHON) $(PWD)/emsdk/emsdk.py
+# Strangely, only python works for installing Emscripten, but only python3 works for activating emscripten
+#EMSDK_PYTHON	= python # /usr/local/bin/python3
+#export EMSDK_PYTHON
+
+EMSDK		= $(PWD)/emsdk/emsdk.py
 EMSDK_VERSION	= latest
-EMSDK_ACTIVATE	= $(EMSDK) install $(EMSDK_VERSION) && $(EMSDK) activate $(EMSDK_VERSION)
+EMSDK_ACTIVATE	= python $(EMSDK) install $(EMSDK_VERSION) && python3 $(EMSDK) activate $(EMSDK_VERSION)
 
 EMSDK_ENV	= source ./emsdk/emsdk_env.sh
 EMSDK_EMXX 	= $(EMSDK_ENV) && em++
@@ -221,8 +223,7 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 clean:
-	rm -rf	$(SUBMOD)							\
-		$(EXCOMP) $(EXCOMP:=.o)						\
+	rm -rf	$(EXCOMP) $(EXCOMP:=.o)						\
 		$(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
 		$(JSPROD) $(JSPROD:.js=.wasm)					\
 		ezcod.o djelic_bch*.o
