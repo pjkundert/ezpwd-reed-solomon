@@ -18,13 +18,6 @@ extern "C" {
 #include <rs.h>
 }
 
-// Schifra implementation
-#include "schifra/schifra_galois_field.hpp"
-#include "schifra/schifra_sequential_root_generator_polynomial_creator.hpp"
-#include "schifra/schifra_reed_solomon_encoder.hpp"
-#include "schifra/schifra_reed_solomon_decoder.hpp"
-
-
 template <size_t TOTAL, size_t ROOTS, size_t PAYLOAD=TOTAL-ROOTS>
 void				init(
 				     std::array<uint8_t,TOTAL> &data,

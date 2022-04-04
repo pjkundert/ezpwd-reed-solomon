@@ -91,8 +91,9 @@ double 				compare(
 	encode_rs_char( grs, payload, parity );
     };
     init<TOTAL,ROOTS>( orig, karn_encoder );
+#if defined( DEBUG )
     dump<TOTAL,ROOTS>( "Phil Karn's Conventional", orig );
-
+#endif
     std::array<uint8_t,TOTAL>	gdata( orig );
 
 
@@ -102,7 +103,9 @@ double 				compare(
 	std::cout
 	    << assert << " " << nrs << ".encode didn't return NROOTS"
 	    << std::endl;
+#if defined( DEBUG )
     dump<TOTAL,ROOTS>( "EZPWD Conventional", orig );
+#endif
 
     if ( assert.ISTRUE( ndata == gdata )) {
 	std::cout
@@ -171,8 +174,9 @@ double 				compare(
     // polynomial root indices...  Copy the computed data and parity back to sdata from block.
     for ( size_t i = 0; i < sdata.size(); ++i )
 	sdata[i]			= block[i];
+#if defined( DEBUG )
     dump<TOTAL,ROOTS>( "Schifra Conventional", sdata );
-
+#endif
     // Get a baseline TPS rate for a simple R-S decode with an error, from Phil's general-purpose
     // decoder.  Specify half of the tests as erasures, half as errors.  Only symbols that actually
     // differ from the computed codeword symbol will be reported as corrected errors/erasures.
@@ -232,8 +236,9 @@ double 				compare(
 
 	std::array<uint8_t,TOTAL>	fdata;
 	init<TOTAL,ROOTS>( fdata, karn_ccsds_conv );
+#if defined( DEBUG )
 	dump<TOTAL,ROOTS>( "Phil's Conv. CCSDS", fdata );
-
+#endif
 	// Ensure EZPWD's RS_CCSDS_CONV conventional encoder produces identical results
 	static const ezpwd::RS_CCSDS_CONV<TOTAL,TOTAL-ROOTS>
 				ccrs;
@@ -249,8 +254,9 @@ double 				compare(
 
 	std::array<uint8_t,TOTAL> cezpwd;
 	init<TOTAL,ROOTS>( cezpwd, ezpwd_ccsds_conv );
+#if defined( DEBUG )
 	dump<TOTAL,ROOTS>( "EZPWD  Conv. CCSDS", cezpwd );
-
+#endif
 	if ( assert.ISTRUE( cezpwd == fdata )) {
 	    std::cout
 		<< assert << " EZPWD and Karn R-S CCSDS conventional encoders produced different parity"
@@ -297,7 +303,6 @@ double 				compare(
     // Phil's CCSDS {en,de}code_rs_ccsds codec uses CCSDS polynomial, and implements dual-basic
     // {en/de}coding, only on RS(255,223), and uses {en,de}code_rs_8 fixed-size codec internally.
     if ( ROOTS == 32 ) {
-
 	// Test CCSDS (255,223) w/ Berleskamp dual-basis encoding.
 	auto karn_ccsds		= [](
 					     uint8_t	       *payload,
@@ -311,8 +316,9 @@ double 				compare(
 
 	std::array<uint8_t,TOTAL>cdata;
 	init<TOTAL,ROOTS>( cdata, karn_ccsds );
+#if defined( DEBUG )
 	dump<TOTAL,ROOTS>( "Phil's CCSDS", cdata );
-
+#endif
 	// Ensure EZPWD's RS_CCSDS dual-basis encoder produces identical results
 	static const ezpwd::RS_CCSDS<TOTAL,TOTAL-ROOTS>
 				crs;
@@ -328,8 +334,9 @@ double 				compare(
 
 	std::array<uint8_t,TOTAL> cezpwd;
 	init<TOTAL,ROOTS>( cezpwd, ezpwd_ccsds );
+#if defined( DEBUG )
 	dump<TOTAL,ROOTS>( "EZPWD       CCSDS", cezpwd );
-
+#endif
 	if ( assert.ISTRUE( cezpwd == cdata )) {
 	    std::cout
 		<< assert << " EZPWD and Karn R-S CCSDS encoders produced different parity"

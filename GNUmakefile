@@ -116,6 +116,9 @@ EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-por
 # EMXX_EXPORTS_RSPWD=
 # EMXX_EXPORTS_EZCOD=
 
+
+SUBMOD =	emsdk schifra djelic
+
 JSPROD =	js/ezpwd/ezcod.js				\
 		js/ezpwd/rspwd.js				\
 		js/ezpwd/rskey.js
@@ -211,6 +214,7 @@ js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js			\
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod					\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
+
 js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector		\
 		emscripten
@@ -219,10 +223,11 @@ js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 clean:
-	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
-	      $(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
-	      $(JSPROD) $(JSPROD:.js=.wasm)					\
-	      ezcod.o djelic_bch*.o
+	rm -rf	$(SUBMOD)							\
+		$(EXCOMP) $(EXCOMP:=.o)						\
+		$(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
+		$(JSPROD) $(JSPROD:.js=.wasm)					\
+		ezcod.o djelic_bch*.o
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
@@ -301,7 +306,7 @@ rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsspeed.o:	rsspeed.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
+rsspeed.o:	rsspeed.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h schifra
 rsspeed:	CXXFLAGS += -I./phil-karn
 rsspeed:	rsspeed.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -344,23 +349,23 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/e
 # 
 
 bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bchsimple.o:	bchsimple.C c++/ezpwd/bch
+bchsimple.o:	bchsimple.C c++/ezpwd/bch djelic
 bchsimple:	bchsimple.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bchclassic.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bchclassic.o:	bchclassic.C c++/ezpwd/bch
+bchclassic.o:	bchclassic.C c++/ezpwd/bch djelic
 bchclassic:	bchclassic.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-bch_test.o:	bch_test.C c++/ezpwd/bch
+bch_test.o:	bch_test.C c++/ezpwd/bch djelic
 bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 
 bch_itron.o:	CXXFLAGS += -std=c++17 -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
-bch_itron.o:	bch_itron.C djelic/include
+bch_itron.o:	bch_itron.C djelic/include djelic
 bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
 bch_itron:	bch_itron.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
@@ -396,9 +401,8 @@ phil-karn/librs.a:
 # Schifra R-S implementation.  Used by some tests.
 # 
 schifra:
-	echo "  Missing Schifra Reed-Solomon for some tests; run:"
-	echo "      git submodule update --init"
-	false
+	@echo "  Missing Schifra Reed-Solomon for some tests; cloning git submodule"
+	git submodule update --init $@
 
 # 
 # Djelic BCH implementation.  Foundation for EZPWD BCH implementation
@@ -420,9 +424,8 @@ schifra:
 # djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
 djelic:
-	echo "  Missing Djelic BCH implementation; run:"
-	echo "      git submodule update --init"
-	false
+	@echo "  Missing Djelic BCH implementation; cloning git submodule"
+	git submodule update --init $@
 
 c++/ezpwd/bch \
 djelic/include \
@@ -446,9 +449,8 @@ djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
 #    Presently only works on OS-X as far as I know. Should use a Docker instance.
 #
 $(EMSDK):
-	echo "  Missing Emscripten C++ to Javascript Complier; run:"
-	echo "      git submodule update --init"
-	false
+	echo "  Missing Emscripten C++ to Javascript Complier; cloning git submodule"
+	git submodule update --init $@
 
 emscripten:	$(EMSDK) FORCE
 	$(EMXX_ACTIVATE)
