@@ -1,0 +1,9 @@
+[submodule "emsdk"]
+	path = emsdk
+	url = https://github.com/emscripten-core/emsdk.git
+[submodule "schifra"]
+	path = schifra
+	url = https://github.com/ArashPartow/schifra.git
+[submodule "djelic"]
+	path = djelic
+	url = https://github.com/pjkundert/bch.git

@@ -18,7 +18,7 @@
 #include <boost/spirit/include/classic_position_iterator.hpp>
 #include <boost/spirit/include/support_multi_pass.hpp>
 
-#include <boost/spirit/include/phoenix.hpp>
+#include <boost/phoenix.hpp>
 #include <boost/spirit/include/qi.hpp>
 #include <boost/spirit/include/qi_char_class.hpp>
 #include <boost/spirit/include/qi_list.hpp>
@@ -47,7 +47,7 @@ typedef ezpwd::BCH<255, 239, 2>	BCH_ITRON;
 namespace itron {
 
     typedef std::map<std::string, std::string>
-    			container_t;
+    				container_t;
 
     // 
     // Parse a sequence of test query records into a container_t:
@@ -134,6 +134,8 @@ itron::container_t		parse(
 	throw std::runtime_error( msg.str() );
     }
 
+    std::cout << "Parsed " << output.size() << " Itron test records" << std::endl;
+
     // return result
     return output;
 }
@@ -158,7 +160,7 @@ std::pair<int,std::string>	correct_SCM(
 	      ; b > 0
 	      ; b -= 8 ) {
 	std::bitset<8>		byte( recvd.substr( b < 8 ? 0 : b - 8,
-						      b < 8 ? b : 8 ));
+						    b < 8 ? b : 8 ));
 	msg.insert( msg.begin(), uint8_t( byte.to_ulong() ));
     }
 
@@ -173,6 +175,7 @@ std::pair<int,std::string>	correct_SCM(
 					      0,	// XOR of computed/delivered parity
 					      0,	// syndrome results
 					      errloc);	// resultant error locations
+#if defined( DEBUG ) && DEBUG > 1
     if ( corr < 0 )
 	std::cout << " ; BCH decode failed" << std::endl;
     else if ( corr == 0 ) 
@@ -183,6 +186,7 @@ std::pair<int,std::string>	correct_SCM(
 	std::cout << " ; BCH decode corrects " << corr << " bits at capacity (no confidence)" << std::endl;
     else if ( corr > 0 && unsigned( corr ) > bch_itron.T )
 	std::cout << " ; BCH decode corrects " << corr << " bits over capacity (probably incorrect)" << std::endl;
+#endif
     std::string			fixed( recvd );
     if ( corr > 0 ) {
 	// Some corrections; maybe even beyond capacity?
@@ -196,14 +200,15 @@ std::pair<int,std::string>	correct_SCM(
 	    unsigned int	byte_i	= errloc[ei] / 8;
 	    unsigned int	bit_i	= errloc[ei] % 8;
 	    unsigned int	i	= ( 2 + byte_i ) * 8 + ( 7 - bit_i );
-	    fixed[i]			= fixed[i] == '0' ? '1' : '0';
+	    fixed[i]			= fixed[i] == '0' ? '1' : '0';  // correct the indicated bit!
 	    loctn[i]			= '^';
 	}
+#if defined( DEBUG )
 	std::cout << fixed << std::endl
 		  << loctn << " (fixed " << corr << " bits)"
 		  << std::endl;
+#endif
     }
-
     // Return validity (-'ve if invalid, otherwise # of bits corrected), and the (possibly fixed)
     // string of bits (may be different than recvd)
     return std::pair<int,std::string>( corr, fixed );
@@ -228,83 +233,154 @@ int main( int argc, const char **argv )
 
     // Iterate over a bunch of SCM messages with various errors, seeing if they can be corrected.
     // Parse records of type "11111001....0101 : <result>\n" from the file in the first command-line
-    // arg (or bch_itron.txt, by default)
+    // arg (or bch_itron.txt, by default).  What we expect to see are a sequence of corroberated
+    // error-free readings from various ERT IDs, with occasional recovered (BCH corrected) readings
+    // from the same ERT IDs with consistent Consumption values; if we never see any, then something
+    // is probably wrong with our decoding...
     std::string			filename( argc >= 2 ? argv[1] : "bch_itron.txt" );
     std::ifstream		ifs( filename, std::ifstream::in );
     itron::container_t		tests( parse( ifs, filename ));
+
+    // See how many different readings we see for each ERT (ID,type) and consumption:
+    // 
+    //    (ID,type): consumption: ["{Time:... SCM:...", "SCM:"]
+    //
+    // Normally, we would expect only one; but if other stuff changes (eg. tamper bits), we could
+    // see more.
+    typedef std::map<
+	std::pair<int,int>,		// (ID,type)
+	std::map<
+    	    int,			// -> Consumption
+ 	    std::map<
+	        std::string,		//   -> Reading
+	        std::map<
+	          int,                  //      -> bits corrected
+	          int                   //        -> Times seen
+	        >
+	    >
+	>
+     >
+    			        readings_t;
+    readings_t			readings;
+
     for ( auto &&t : tests ) {
-	std::cout << t.first << t.second << std::endl;
+#if defined( DEBUG )
+	std::cout << "Test: " << t.first << " == " << t.second << std::endl;
+#endif
 	const std::string      &recvd	= t.first;
 	auto			valid	= correct_SCM( assert, bch_itron, recvd );
 	int			corr	= valid.first;
 	if ( corr >= 0 ) {
-	    // We think this is probalby a valid SCM message; BCH either verified as-is, or
+	    // We think this is probably a valid SCM message; BCH either verified as-is, or
 	    // corrected errors w/in capacity.
 	    std::string	       &fixed	= valid.second;
 	    assert.ISEQUAL( corr > 0, fixed != recvd, "Changes detected don't match corrections indicated" );
-	    if ( fixed != recvd ) {
-	        // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
-	        auto		reval	= correct_SCM( assert, bch_itron, fixed );
-	        if ( assert.ISTRUE( reval.first >= 0, "re-validated fixed record not longer valid!" )
-		     || assert.ISEQUAL( fixed, reval.second, "re-validated fixed record was changed!" ))
-		    std::cout << " ; BCH revalidation failed"  << std::endl
-			      << fixed << " != " << std::endl
-			      << reval.second
-			      << std::endl;
 
-		// Lets decode the SCM message.  ID (26 bits) and Consumption (24 bits)
-		unsigned long	ertid	= std::bitset<26>(
-	            fixed.substr( 21, 2 ) + fixed.substr( 56, 24 )).to_ulong();
-		unsigned long	erttype	= std::bitset<4>(
-	            fixed.substr( 26, 4 )).to_ulong();
-		unsigned long	tampphy	= std::bitset<2>(
-	            fixed.substr( 24, 2 )).to_ulong();
-		unsigned long	tampenc	= std::bitset<2>(
-	            fixed.substr( 30, 2 )).to_ulong();
-		unsigned long	consump	= std::bitset<24>(
-		    fixed.substr( 32, 24 )).to_ulong();
-		unsigned long	checksum= std::bitset<16>(
-		    fixed.substr( 80, 16 )).to_ulong();
-		// Lets produce a message similar to this:
-		// SCM:{ID:35489984 Type:12 Tamper:{Phy:01 Enc:00} Consumption:  343152 CRC:0xDD2A}}
-		std::ostringstream decoss;
-		decoss
-		    << "SCM:{ID:"	<< ertid
-		    << " Type:"		<< std::setw( 2 ) << erttype
-		    << " Tamper:{Phy:"	<< std::setw( 2 ) << std::setfill( '0' ) << tampphy
-		    << " Enc:"		<< std::setw( 2 ) << std::setfill( '0' ) << tampenc
-		    << "} Consumption:"	<< std::setw( 8 ) << std::setfill( ' ' ) << std::dec << consump
-		    << " CRC:0x"	<< std::setw( 4 ) << std::setfill( '0' ) << std::hex << std::uppercase << checksum
-		    << "}}";
-		std::string	decode( decoss.str() );
+	    // As a base-case test, the (now) valid, fixed record should test as valid (again) without getting fixed.
+	    auto		reval	= correct_SCM( assert, bch_itron, fixed );
+	    if ( assert.ISTRUE( reval.first >= 0, "re-validated fixed record not longer valid!" )
+	         || assert.ISEQUAL( fixed, reval.second, "re-validated fixed record was changed!" ))
+	        std::cout << " ; BCH revalidation failed"  << std::endl
+	    	      << fixed << " != " << std::endl
+	    	      << reval.second
+	    	      << std::endl;
 
-	        // Lets see if the valid/fixed record is in the set of tests; if it is, it better be a valid SCM message!
-		bool		found = tests.find( fixed ) != tests.end();
-		if ( corr > 0 && found )
-		    std::cout << fixed << ": (corroberated, corrected)    " << decode << std::endl;
-		else if ( corr == 0 && found )
-		    std::cout << fixed << ": (corroberated)               " << decode << std::endl;
-		else if ( corr > 0 ) 
-		    std::cout << fixed << ": (              corrected)    " << decode << std::endl;
-		else
-		    std::cout << fixed << ": (not found, but decoded)     " << decode << std::endl;
+	    // Lets decode the SCM message.  ID (26 bits) and Consumption (24 bits)
+	    unsigned long	ertid	= std::bitset<26>(
+	        fixed.substr( 21, 2 ) + fixed.substr( 56, 24 )).to_ulong();
+	    unsigned long	erttype	= std::bitset<4>(
+	        fixed.substr( 26, 4 )).to_ulong();
+	    unsigned long	tampphy	= std::bitset<2>(
+	        fixed.substr( 24, 2 )).to_ulong();
+	    unsigned long	tampenc	= std::bitset<2>(
+	        fixed.substr( 30, 2 )).to_ulong();
+	    unsigned long	consump	= std::bitset<24>(
+	        fixed.substr( 32, 24 )).to_ulong();
+	    unsigned long	checksum= std::bitset<16>(
+	        fixed.substr( 80, 16 )).to_ulong();
 
-	        if ( found ) {
-		    std::string &result	= tests[fixed];
-		    std::cout << " ; BCH correction corroberated by independently received message: "  << std::endl
-			      << fixed << result
-			      << std::endl;
-		    if ( assert.ISTRUE( result.find( decode ) != std::string::npos )) { // matching decoded "SCM..." in result
-			std::cout
-			    << assert << " ;  expected valid SCM in corrected message, not " << result
-			    << std::endl;
-		    }
+	    // Lets produce a message similar to this:
+	    // SCM:{ID:35489984 Type:12 Tamper:{Phy:01 Enc:00} Consumption:  343152 CRC:0xDD2A}}
+	    std::ostringstream decoss;
+	    decoss
+	        << "SCM:{ID:"		<< std::setw( 8 ) << ertid
+	        << " Type:"		<< std::setw( 2 ) << erttype
+	        << " Tamper:{Phy:"	<< std::setw( 2 ) << std::setfill( '0' ) << tampphy
+	        << " Enc:"		<< std::setw( 2 ) << std::setfill( '0' ) << tampenc
+	        << "} Consumption:"	<< std::setw( 8 ) << std::setfill( ' ' ) << std::dec << consump
+	        << " CRC:0x"		<< std::setw( 4 ) << std::setfill( '0' ) << std::hex << std::uppercase << checksum
+	        << "}}";
+	    std::string		decode( decoss.str() );
+
+	    // Lets see if the valid confirmed/fixed record is in the set of tests; if it is, it better be a valid SCM message!
+	    bool		found	= tests.find( fixed ) != tests.end();
+	    if ( corr > 0 && found )
+	        std::cout << fixed << ": (corroberated, corrected)    " << decode << std::endl;
+	    else if ( corr == 0 && found )
+	        std::cout << fixed << ": (corroberated)               " << decode << std::endl;
+	    else if ( corr > 0 ) 
+	        std::cout << fixed << ": (              corrected)    " << decode << std::endl;
+	    else
+	        std::cout << fixed << ": (not found, but decoded)     " << decode << std::endl;
+
+	    if ( found ) {
+		// If we've recovered a message via BCH correction, and it's in the file, our
+		// decoded message had better be right.  This doesn't test the BCH correction, just
+		// the decoding.
+	        std::string    &result	= tests[fixed];
+	        if ( assert.ISTRUE( result.find( decode ) != std::string::npos )) { // matching decoded "SCM..." in result
+		    std::cout
+			<< assert << " ;  expected valid SCM in corrected message, not " << result
+			<< std::endl;
+	        }
+		readings[{ertid,erttype}][consump][result][corr]++;
+	    } else {
+		//readings[{ertid,erttype}][consump].insert( decode );
+		readings[{ertid,erttype}][consump][decode][corr]++;
+	    }
+	}
+    }
+
+    // Show the interesting ones we've found.  Fail unless we get at least one!
+    std::cout
+	<< "Observed readings from " << readings.size() << " distinct ERT ID/type:"
+	<< std::endl;
+    int				interesting( 0 );
+    for ( auto &&r : readings ) {
+	if ( r.second.size() < 2						// only 1 consumption reading from the ERT,
+	     && r.second.begin()->second.size() < 2 				// and it was seen only once
+	     && r.second.begin()->second.begin()->second.size() < 2		// and only one BCH correction (eg. 0/1/2)
+	     && r.second.begin()->second.begin()->second.begin()->second < 2 ) {// and it wasn't seen more than once
+#if ! defined( DEBUG )  // Unless DEBUG, ignore ERTs w/ 1 consumption, unless multiple signals received
+	    continue;
+#endif
+	} else
+	    ++interesting;
+	std::cout
+	    << "  ERT/ID:  " << std::setw( 8 ) << r.first.first << "/" << std::setw( 2 ) << r.first.second
+	    << std::endl;
+	for ( auto &&c : r.second ) {
+	    std::cout
+		<< "    Consumption: " << std::setw( 6 ) << c.first
+		<< std::endl;
+	    for ( auto &&d : c.second ) {
+		std::cout
+		    << "      == " << d.first
+		    << std::endl;
+		for ( auto &&corr : d.second ) {
+		    std::cout
+			<< "         w/ " << corr.first << " corrections:  " << std::setw( 2 ) << corr.second << " x"
+			<< std::endl;
 		}
 	    }
 	}
     }
-    
-    return assert.failures ? 1 : 0;
+
+    std::cout
+	<< "Detected " << assert.failures << " failures"
+	<< ", " << interesting << " interesting ERT readings"
+	<< std::endl;
+    return ( assert.failures || ! interesting )? 1 : 0;
 }
 
 #else

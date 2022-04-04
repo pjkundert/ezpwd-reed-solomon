@@ -12,11 +12,17 @@ SHELL		= /bin/bash
 CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
 CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
-CXXFLAGS       += -I./c++ -std=c++11								\
-		    -Wall -Wextra -pedantic -Wno-missing-braces -Wwrite-strings			\
-		    -Wpointer-arith -Wnon-virtual-dtor -Woverloaded-virtual			\
-		    -Wsign-promo -Wswitch -Wreturn-type	
-CXXFLAGS       += -O3
+# C compiler/flags for sub-projects (phil-karn)
+# Default to system cc; define CC to use a specific C compiler
+
+CFLAGS         += -Wall -pedantic -Wno-missing-braces -Wwrite-strings
+CFLAGS         += -Wpointer-arith -Wswitch -Wreturn-type -Wno-overflow
+CFLAGS         += -Wno-overflow # Avoid triggering unnecessary warnings on Phil Karn's code
+
+CXXFLAGS       += -Wextra -Wsign-promo -Wnon-virtual-dtor -Woverloaded-virtual
+
+CFLAGS         += -O3 -ffast-math -funsafe-math-optimizations
+
 
 # Debugging
 #
@@ -27,31 +33,46 @@ CXXFLAGS       += -O3
 # -DEZPWD_ARRAY_TEST	-- Intentional ERRONEOUS declarations of some R-S array extents.
 # -DEZPWD_NO_MOD_TAB	-- Do not use table-based accelerated R-S module implementation.
 # 
-CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
-CXXFLAGS       +=#-DDEBUG=2 #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+CFLAGS         += -DNDEBUG
 
-# C compiler/flags for sub-projects (phil-karn)
-# Default to system cc; define CC to use a specific C compiler
-CFLAGS		= # -O3 already defined
+CXXFLAGS       += $(CFLAGS)
+
+CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
+CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
+
+
+CXXFLAGS       += -std=c++11 -I./c++
+
+export CFLAGS
+export CXXFLAGS
+
+
 
 # Emscripten
-#   - At -O2 and above, code is minified
 # 
-#     Instead of 'latest', choose a specific version known to work.  To see
-# what's available, use:
+#     The Git submodule https://github.com/emscripten-core/emsdk.git has been
+# added at ./emsdk/.  Checkout the ezpwd-reed-solomon project using:
 # 
-#         $ cd emscripten/emsdk-portable   
-#         $ ./emsdk list
+#     git clone --recurse-submodules git@github.com:pjkundert/ezpwd-reed-solomon.git
 # 
-#     At time of writing, 1.35.0 is "latest", but doesn't work (1.34.1 did, I believe).  The current
-# master is 1.36.0, which does appear to work (passes all unit tests, works on ezcod.com).
+# if you want to generate Javascript via Emscripten.
 # 
-EMSDK		= ./emscripten/emsdk-portable
-EMSDK_VERSION	= latest # sdk-master-64bit # latest
-EMSDK_ACTIVATE	= ( cd $(EMSDK); ./emsdk update && ./emsdk install $(EMSDK_VERSION) && ./emsdk activate $(EMSDK_VERSION) )
+#     If you've already checked it out, use:
+#
+#    git submodule update --init
+# 
+# 
 
-EMSDK_EMXX 	= pushd $(EMSDK) && source ./emsdk_env.sh && popd && PATH=`pwd`/emscripten:$${PATH} && em++
-DOCKER_EMXX	= docker run -v \$( shell pwd ):/mnt/test cmfatih/emscripten /srv/var/emscripten/em++ -I/mnt/test
+# Strangely, only python works for installing Emscripten, but only python3 works for activating emscripten
+#EMSDK_PYTHON	= python # /usr/local/bin/python3
+#export EMSDK_PYTHON
+
+EMSDK		= $(PWD)/emsdk/emsdk.py
+EMSDK_VERSION	= latest
+EMSDK_ACTIVATE	= python $(EMSDK) install $(EMSDK_VERSION) && python3 $(EMSDK) activate $(EMSDK_VERSION)
+
+EMSDK_ENV	= source ./emsdk/emsdk_env.sh
+EMSDK_EMXX 	= $(EMSDK_ENV) && em++
 CHEERP_EMXX	= /opt/cheerp/bin/clang++
 
 EMXX		= $(EMSDK_EMXX)
@@ -86,8 +107,6 @@ EMXX_EXPORTS_RSKEY = -s EXPORTED_FUNCTIONS='[			\
 			_rskey_5_decode ]'
 EMXX_EXPORTS_MAIN  = -s EXPORTED_FUNCTIONS='[ _main ]'
 
-EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-portable.tar.gz
-
 
 # # Cheerp
 # EMXX		= $(CHEERP_EMXX)
@@ -96,6 +115,9 @@ EMSDK_URL	= https://s3.amazonaws.com/mozilla-games/emscripten/releases/emsdk-por
 # EMXX_EXPORTS_MAIN=
 # EMXX_EXPORTS_RSPWD=
 # EMXX_EXPORTS_EZCOD=
+
+
+SUBMOD =	emsdk schifra djelic
 
 JSPROD =	js/ezpwd/ezcod.js				\
 		js/ezpwd/rspwd.js				\
@@ -114,6 +136,7 @@ JSTEST =	$(JSCOMP)
 EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rsexample					\
 		rssimple					\
+		rsspeed						\
 		rsembedded					\
 		rsembedded_nexc					\
 		rsexercise					\
@@ -125,10 +148,8 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		rskey_test					\
 		bchsimple					\
 		bchclassic					\
-		bch_test
-
-# Don't include bch_itron: too dependent on recent boost, etc.
-#		bch_itron
+		bch_test					\
+		bch_itron
 
 
 EXTEST =	$(EXCOMP)
@@ -142,9 +163,9 @@ help:
 	@echo  "  testjs		-- Javascript (Node.JS) tests"
 	@echo  "  swig-python-install	-- Build and install Python bindings ezpwd_reed_solomon.* (via Swig)"
 
-all:		$(JSPROD)
+all:		test
 
-test:		testex testjs
+test:		testex # testjs
 
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
@@ -167,53 +188,54 @@ testjs:		testjs-node
 testjs-%:	$(JSTEST)
 	@for t in $^; do 					\
 	    echo "$* ./$$t...";					\
-	    $* ./$$t </dev/null;				\
+	    $(EMSDK_ENV) && $* ./$$t </dev/null;		\
 	done
 
 COPYRIGHT:	VERSION
-	echo "/*! v$$( cat $< ) | (c) 2014 Hard Consulting Corporation | https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/LICENSE */"\
+	echo "/*! v$$( cat $< ) | (c) 2014-2020 Dominion Research & Development Corp. | https://github.com/pjkundert/ezpwd-reed-solomon/blob/master/LICENSE */"\
 		> $@
 
 # 
 # Production Javascript targets
 # 
 js/ezpwd/rspwd.js: rspwd.C rspwd.h COPYRIGHT rspwd_wrap.js			\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSPWD)			\
 		--post-js rspwd_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js			\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_RSKEY)			\
 		--post-js rskey_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod					\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
+
 js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_EZCOD)			\
 		--post-js ezcod_wrap.js $< -o $@				\
 	  && cat COPYRIGHT $@ > $@.tmp && mv $@.tmp $@
 
 clean:
-	rm -f $(EXCOMP) $(EXCOMP:=.o)						\
-	      $(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
-	      $(JSPROD) $(JSPROD:.js=.wasm)					\
-	      ezcod.o djelic_bch*.o
+	rm -rf	$(EXCOMP) $(EXCOMP:=.o)						\
+		$(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
+		$(JSPROD) $(JSPROD:.js=.wasm)					\
+		ezcod.o djelic_bch*.o
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector		\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 # rsencode -- correct 8-bit symbols (default to 128 symbol chunks, each w/ 32 parity symbols)
-rsencode.o:	rsencode.C c++/ezpwd/rs
+rsencode.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 rsencode:	rsencode.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	echo "abcd" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcd" >/dev/null
@@ -223,7 +245,7 @@ rsencode:	rsencode.o
 # (remainder passed through unchanged).  So, 'a' (0b01100001) changed to 'b'
 # (0b01100010), and is thus corrected to 'c' (0b01100011).
 rsencode_9:	CXXFLAGS += -DRSCODEWORD=511 -DRSPARITY=32 -DRSCHUNK=128
-rsencode_9.o:	rsencode.C c++/ezpwd/rs
+rsencode_9.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_9:	rsencode_9.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -231,82 +253,95 @@ rsencode_9:	rsencode_9.o
 
 # rsencode_16 -- correct all bits of 16-bit symbols (serialized big-endian)
 rsencode_16:	CXXFLAGS += -DRSCODEWORD=65535 -DRSPARITY=32 -DRSCHUNK=128
-rsencode_16.o:	rsencode.C c++/ezpwd/rs
+rsencode_16.o:	rsencode.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsencode_16:	rsencode_16.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 	echo "abcde" | ./$@ | perl -pe "s|a|b|" | ./$@ --decode | grep -q "abcde" >/dev/null
 
-rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rsexample.o:	rsexample.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rsexample:	rsexample.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexample.js:	rsexample.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector\
+rsexample.js:	rsexample.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rssimple.o:	rssimple.C c++/ezpwd/rs
+rssimple.o:	rssimple.C c++/ezpwd/rs c++/ezpwd/rs_base
 rssimple:	rssimple.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rssimple.js:	rssimple.C c++/ezpwd/rs						\
+rssimple.js:	rssimple.C c++/ezpwd/rs c++/ezpwd/rs_base			\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rsembedded_nexc: 	CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
-rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs
+rsembedded_nexc.o:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rsembedded_nexc:	rsembedded_nexc.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsembedded.o:	rsembedded.C c++/ezpwd/rs
+rsembedded.o:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base
 rsembedded:	rsembedded.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsembedded.js:	rsembedded.C c++/ezpwd/rs					\
+rsembedded.js:	rsembedded.C c++/ezpwd/rs c++/ezpwd/rs_base			\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
-rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs
+rsexercise.o:	rsexercise.C exercise.H c++/ezpwd/rs c++/ezpwd/rs_base
 rsexercise:	rsexercise.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs				\
+rsexercise.js:	rsexercise.C exercise.H c++/ezpwd/rs c++/ezpwd/rs_base		\
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
 rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
-rscompare_nexc.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
+rscompare_nexc.o: rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
+		schifra/schifra_reed_solomon_encoder.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
 rscompare_nexc: 	CXXFLAGS += -I./phil-karn
 rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rscompare.o:	rscompare.C c++/ezpwd/rs phil-karn/fec/rs-common.h schifra
+rscompare.o:	rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
+		schifra/schifra_reed_solomon_encoder.hpp
 rscompare: CXXFLAGS += -I./phil-karn
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsvalidate.o:	rsvalidate.C c++/ezpwd/rs phil-karn/fec/rs-common.h
+rsspeed.o:	rsspeed.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
+		schifra/schifra_reed_solomon_encoder.hpp
+rsspeed:	CXXFLAGS += -I./phil-karn
+rsspeed:	rsspeed.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rsvalidate.o:	rsvalidate.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
 rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rsvalidate_RS_255_250_64: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000 -std=c++17
+rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
+rsvalidate_RS_255_250_64: rsvalidate_RS_255_250_64.o phil-karn/librs.a
+	$(CXX) $(CXXFLAGS) -o $@ $^
+
+rspwd_test.o:	rspwd_test.C rspwd.C c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rspwd_test:	rspwd_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
+ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h					\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
 ezcod_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
-ezcod_test.js: ezcod_test.C ezcod.C ezcod.h						\
-		c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod	\
+ezcod_test.js: ezcod_test.C ezcod.C ezcod.h					\
+		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< ezcod.C -o $@
 
-rskey_test.o:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector
+rskey_test.o:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
 rskey_test:	rskey_test.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
-rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/serialize c++/ezpwd/corrector \
+rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten
 	$(EMXX) $(CXXFLAGS) $(EMXXFLAGS) $(EMXX_EXPORTS_MAIN) $< -o $@ 
 
@@ -331,15 +366,16 @@ bch_test:	bch_test.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 
-bch_itron.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
-bch_itron.o:	bch_itron.C djelic/include
-bch_itron: 	CXXFLAGS += -L /usr/local/lib # boost
+bch_itron.o:	CXXFLAGS += -std=c++17 -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
+bch_itron.o:	bch_itron.C djelic/include djelic
+bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
 bch_itron:	bch_itron.o djelic_bch.o
 	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
 
 .PHONY: itron_test
 itron_test:	bch_itron
-	./bch_itron			&& exit 0 || exit 1 # expect success
+	./bch_itron bch_itron.txt		&& exit 0 || exit 1 # expect success
+	./bch_itron bch_itron.kelowna.txt	&& exit 0 || exit 1 # expect success
 
 qi_test_1.o:	qi_test_1.C
 qi_test_1:	qi_test_1.o
@@ -361,13 +397,14 @@ boost_test:	qi_test_1 qi_test_2
 # 
 phil-karn/fec/rs-common.h \
 phil-karn/librs.a:
-	CFLAGS=$(CFLAGS) CC=$(CC) make -C phil-karn all
+	CC=$(CC) make -C phil-karn all
 
 # 
 # Schifra R-S implementation.  Used by some tests.
-# 
-schifra:
-	git clone https://github.com/ArashPartow/schifra.git
+#
+schifra/schifra_reed_solomon_encoder.hpp:
+	@echo "  Missing Schifra Reed-Solomon for some tests; cloning git submodule"
+	git submodule update --init schifra
 
 # 
 # Djelic BCH implementation.  Foundation for EZPWD BCH implementation
@@ -388,12 +425,13 @@ schifra:
 # 
 # djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
-djelic:
-	git clone https://github.com/pjkundert/bch.git $@
+djelic/include:
+	@echo "  Missing Djelic BCH implementation; cloning git submodule"
+	git submodule update --init djelic
 
 c++/ezpwd/bch \
 djelic/include \
-djelic/lib/bch.c: djelic
+djelic/lib/bch.c: djelic/include
 
 .PHONY: djelictest
 djelictest:	djelic/Documentation/bch/nat_tu_tool
@@ -411,27 +449,13 @@ djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
 # Install and build emscripten SDK, if necessary, and then activate it.
 # 
 #    Presently only works on OS-X as far as I know. Should use a Docker instance.
-# 
-emscripten:	emscripten/python2 				\
-		emscripten/emsdk-portable/emscripten		\
-		FORCE
+#
+emsdk/emsdk.py:
+	echo "  Missing Emscripten C++ to Javascript Complier; cloning git submodule"
+	git submodule update --init emsdk
+
+emscripten:	emsdk/emsdk.py FORCE
 	$(EMXX_ACTIVATE)
 
-emscripten/python2:
-	mkdir -p emscripten
-	ln -fs $$( which python2.7 ) emscripten/python2
-
-emscripten/emsdk-portable/emscripten: emscripten/emsdk-portable
-	cd $< && ./emsdk update && ./emsdk install latest
-	touch $@
-
-emscripten/emsdk-portable: emscripten/emsdk-portable.tar.gz
-	mkdir -p emscripten
-	tar -C emscripten -xzf $<
-	touch $@
-
-emscripten/emsdk-portable.tar.gz:
-	mkdir -p emscripten
-	wget -O $@ $(EMSDK_URL)
 
 FORCE:

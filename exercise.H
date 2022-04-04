@@ -18,21 +18,21 @@
 #include <ezpwd/timeofday>
 
 /* Exercise the RS codec passed as an argument */
-template < typename data_t, int SYM, int NROOTS, int FCS, int PRIM, int POLY >
-int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::gfpoly<SYM,POLY>> &rs, int trials=1 )
+template < typename data_t, unsigned SYM, unsigned NROOTS, unsigned FCS, unsigned PRIM, unsigned POLY, bool DUAL >
+int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::gfpoly<SYM,POLY>, DUAL> &rs, int trials=1 )
 {
-    const int NN = ( 1 << SYM ) - 1;
+    const unsigned NN = ( 1 << SYM ) - 1;
     data_t block[NN],tblock[NN];
-    int i;
+    unsigned i;
     int errors;
 
-    std::array<int,NN> 		errlocs;  // int errlocs[NN];
-    std::array<int,NROOTS>	derrlocs; // int derrlocs[NROOTS];
+    std::array<unsigned,NN> 	errlocs;
+    std::array<unsigned,NROOTS>	derrlocs;
     data_t corrvals[NROOTS];
     int derrors;
-    int errval,errloc;
-    int erasures;
-    int tee;
+    unsigned errval,errloc;
+    unsigned erasures;
+    unsigned tee;
     int decoder_errors = 0;
 
     struct timeval start;
@@ -40,7 +40,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 
     //std::default_random_engine	rnd_gen( (unsigned int)time( 0 ));
     std::minstd_rand		rnd_gen( (unsigned int)time( 0 ));
-#define random_between( first, last ) std::uniform_int_distribution<int>(( first ), ( last ))
+#define random_between( first, last ) std::uniform_int_distribution<unsigned>(( first ), ( last ))
     auto			random_bool	= random_between( 0, 1 );
     auto			random_NROOTS_1	= random_between( 0, NROOTS - 1 );
     auto			random_NN	= random_between( 0, NN - 1 );
@@ -197,9 +197,9 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		derrors = rs.decode( tblock+pad, NN-NROOTS-pad, tblock+NN-NROOTS,
 				     &derrlocs[0], erasures, corrvals );
 #if defined( DEBUG ) && DEBUG >= 2
-		for ( int i = 0; i < derrors; ++i )
-		    if ( derrlocs[i] >= 0 && derrlocs[i] < NN-pad )
-			errident[derrlocs[i]] = corrvals[i];
+		for ( int e = 0; e < derrors; ++e )
+		    if ( derrlocs[e] >= 0 && derrlocs[e] < NN-pad )
+			errident[derrlocs[e]] = corrvals[e];
 		std::cout
 		    << "Corrects: " << derrors << std::endl
 		    << errident << std::endl;
@@ -209,7 +209,7 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 		avgerror[padknd][errknd] += errors;
 		avgerasu[padknd][errknd] += erasures;
 
-		if(derrors != errors + erasures){
+		if(derrors != int( errors + erasures )){
 		    std::cout 
 			<< rs << " decoder says " << derrors 
 			<< " errors, true number is " << errors + erasures
@@ -217,11 +217,11 @@ int exercise( const ezpwd::reed_solomon<data_t, SYM, NROOTS, FCS, PRIM, ezpwd::g
 			<< std::endl;
 		    decoder_errors++;
 		}
-		for(i=0;i<derrors;i++){
-		    if(errlocs[derrlocs[i]] == 0){
+		for(int e=0; e < derrors; e++){
+		    if(errlocs[derrlocs[e]] == 0){
 			std::cout 
 			    << rs << " decoder indicates error in location "
-			    << derrlocs[i] << " without error"
+			    << derrlocs[e] << " without error"
 			    << std::endl;
 			decoder_errors++;
 		    }

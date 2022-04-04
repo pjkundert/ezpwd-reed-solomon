@@ -9,6 +9,8 @@
 
 #include <ezpwd/definitions>	// must be included in one C++ compilation unit
 
+#pragma GCC diagnostic ignored "-Wstringop-truncation" // We know about the truncation of 'password'
+
 // 
 // rspwd_test -- test instances of ezpwd::corrector<N>, as used by "C" rspwd_decode_N API
 // 
