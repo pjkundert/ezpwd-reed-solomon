@@ -384,28 +384,24 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/e
 
 bchsimple.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchsimple.o:	bchsimple.C c++/ezpwd/bch
-bchsimple:	CXXFLAGS += -L .
 bchsimple:	bchsimple.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
+	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
 
 bchclassic.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchclassic.o:	bchclassic.C c++/ezpwd/bch
-bchclassic:	CXXFLAGS += -L .
 bchclassic:	bchclassic.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
+	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
 
 bch_test.o:	CXXFLAGS += $(INCLUDE_BCH)
 bch_test.o:	bch_test.C c++/ezpwd/bch
-bch_test:	CXXFLAGS += -L .
 bch_test:	bch_test.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
-
+	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
 
 bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH) -I /usr/local/include
 bch_itron.o:	bch_itron.C djelic/include
-bch_itron: 	CXXFLAGS += -std=c++17 -L . -L /usr/local/lib # boost
+bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
 bch_itron:	bch_itron.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch -lboost_filesystem
+	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a -lboost_filesystem
 
 .PHONY: itron_test
 itron_test:	bch_itron
