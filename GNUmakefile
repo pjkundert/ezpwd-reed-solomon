@@ -49,10 +49,19 @@ CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 # whereever <linux/errno.h> is not available, also add '-I ./c++/ezpwd/bch_errnums' to define the
 # necessary error numbers used by the BCH codec.
 # 
+UNAME		= $(shell uname)
+
 INCLUDE		= -I ./c++
+INCLUDE_KARN	= -I ./phil-karn
 INCLUDE_BCH	= -I ./c++/ezpwd/bch_include
 ERRNUMS_BCH	= -I ./c++/ezpwd/bch_errnums
-INCLUDE_KARN	= -I ./phil-karn
+ifeq ($(UNAME),Darwin)
+    INCLUDE_BCH += $(ERRNUMS_BCH)
+    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.dylib
+else
+    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.so
+endif
+LIBRARIES	= $(LIBS_BCH)
 
 # Enable  baseline C++ build-time include of <ezpwd/...> targets
 CXXFLAGS       += -std=c++11 $(INCLUDE)
@@ -189,14 +198,6 @@ ARFLAGS		= rsv
 OBJBCH		= djelic_bch.o
 OBJEZCOD	= ezcod.o
 OBJECTS		= $(OBJBCH)
-
-UNAME		= $(shell uname)
-ifeq ($(UNAME),Darwin)
-    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.dylib
-else
-    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.so
-endif
-LIBRARIES	= $(LIBS_BCH)
 
 libraries:	$(LIBRARIES)
 javascript:	$(JSTEST) $(JSPROD)
