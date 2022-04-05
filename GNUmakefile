@@ -1,5 +1,5 @@
 
-SHELL		= /bin/bash
+SHELL		= bash
 
 # Compilers
 # 
@@ -15,7 +15,7 @@ CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
 
-CFLAGS         += -Wall -pedantic -Wno-missing-braces -Wwrite-strings
+CFLAGS         += -Wall -Wno-missing-braces -Wwrite-strings
 CFLAGS         += -Wpointer-arith -Wswitch -Wreturn-type -Wno-overflow
 CFLAGS         += -Wno-overflow # Avoid triggering unnecessary warnings on Phil Karn's code
 
@@ -40,8 +40,23 @@ CXXFLAGS       += $(CFLAGS)
 CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
 CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 
+# 
+# Using (and compiling) various EZPWD components 
+# 
+#     For most features, adding '-I ./c++' to the C/C++ compilation arguments is sufficient.  The
+# <ezpwd/bch> classes use the Linux Kernel BCH implementation, so a set of "standalone" shims is
+# required; '-I ./c++/ezpwd/bch_include' is necessary.  If compiling on a non-Linux system or
+# whereever <linux/errno.h> is not available, also add '-I ./c++/ezpwd/bch_errnums' to define the
+# necessary error numbers used by the BCH codec.
+# 
+INCLUDE		= -I ./c++
+INCLUDE_BCH	= -I ./c++/ezpwd/bch_include
+ERRNUMS_BCH	= -I ./c++/ezpwd/bch_errnums
+INCLUDE_KARN	= -I ./phil-karn
 
-CXXFLAGS       += -std=c++11 -I./c++
+# Enable  baseline C++ build-time include of <ezpwd/...> targets
+CXXFLAGS       += -std=c++11 $(INCLUDE)
+
 
 export CFLAGS
 export CXXFLAGS
@@ -154,6 +169,8 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 
 EXTEST =	$(EXCOMP)
 
+all:		test libraries
+
 help:
 	@echo  "EZPWD Reed-Solomon GNU 'make' targets"
 	@echo  "  all			-- Javascript production targets: js/ezpwd/*.js"
@@ -163,10 +180,25 @@ help:
 	@echo  "  testjs		-- Javascript (Node.JS) tests"
 	@echo  "  swig-python-install	-- Build and install Python bindings ezpwd_reed_solomon.* (via Swig)"
 
-all:		test
-
 test:		testex # testjs
 
+AR		= ar
+ARFLAGS		= rsv
+
+
+OBJBCH		= djelic_bch.o
+OBJEZCOD	= ezcod.o
+OBJECTS		= $(OBJBCH)
+
+UNAME		= $(shell uname)
+ifeq ($(UNAME),Darwin)
+    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.dylib
+else
+    LIBS_BCH	= libezpwd-bch.a libezpwd-bch.so
+endif
+LIBRARIES	= $(LIBS_BCH)
+
+libraries:	$(LIBRARIES)
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
 
@@ -226,7 +258,7 @@ clean:
 	rm -rf	$(EXCOMP) $(EXCOMP:=.o)						\
 		$(JSCOMP) $(JSCOMP:=.mem) $(JSCOMP:=.map) $(JSCOMP:.js=.wasm)	\
 		$(JSPROD) $(JSPROD:.js=.wasm)					\
-		ezcod.o djelic_bch*.o
+		$(LIBRARIES) $(OBJECTS)
 	make -C phil-karn clean
 
 rspwd_test.js:	rspwd_test.C rspwd.C						\
@@ -297,28 +329,28 @@ rscompare_nexc:		CXXFLAGS += -DEZPWD_NO_EXCEPTS -fno-exceptions
 rscompare_nexc.o: rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
 		schifra/schifra_reed_solomon_encoder.hpp
 	$(CXX) $(CXXFLAGS) -c -o $@ $<
-rscompare_nexc: 	CXXFLAGS += -I./phil-karn
+rscompare_nexc: 	CXXFLAGS += $(INCLUDE_KARN)
 rscompare_nexc:	rscompare_nexc.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rscompare.o:	rscompare.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
 		schifra/schifra_reed_solomon_encoder.hpp
-rscompare: CXXFLAGS += -I./phil-karn
+rscompare: CXXFLAGS += $(INCLUDE_KARN)
 rscompare:	rscompare.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsspeed.o:	rsspeed.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h \
 		schifra/schifra_reed_solomon_encoder.hpp
-rsspeed:	CXXFLAGS += -I./phil-karn
+rsspeed:	CXXFLAGS += $(INCLUDE_KARN)
 rsspeed:	rsspeed.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
 rsvalidate.o:	rsvalidate.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
-rsvalidate: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000
+rsvalidate: CXXFLAGS += $(INCLUDE_KARN) -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsvalidate_RS_255_250_64: CXXFLAGS += -I./phil-karn -ftemplate-depth=1000 -std=c++17
+rsvalidate_RS_255_250_64: CXXFLAGS += $(INCLUDE_KARN) -ftemplate-depth=1000 -std=c++17
 rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
 rsvalidate_RS_255_250_64: rsvalidate_RS_255_250_64.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -329,10 +361,10 @@ rspwd_test:	rspwd_test.o
 
 ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h					\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
-ezcod_test.o: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_test.o: CXXFLAGS += $(INCLUDE_KARN)	# if DEBUG set, include phil-karn/
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
-ezcod_test.js: CXXFLAGS += -I./phil-karn           # if DEBUG set, include phil-karn/
+ezcod_test.js: CXXFLAGS += $(INCLUDE_KARN)	# if DEBUG set, include phil-karn/
 ezcod_test.js: ezcod_test.C ezcod.C ezcod.h					\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod \
 		emscripten
@@ -350,27 +382,30 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/e
 # BCH tests.
 # 
 
-bchsimple.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchsimple.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchsimple.o:	bchsimple.C c++/ezpwd/bch
-bchsimple:	bchsimple.o djelic_bch.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+bchsimple:	CXXFLAGS += -L .
+bchsimple:	bchsimple.o $(LIBS_BCH)
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
 
-bchclassic.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bchclassic.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchclassic.o:	bchclassic.C c++/ezpwd/bch
-bchclassic:	bchclassic.o djelic_bch.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+bchclassic:	CXXFLAGS += -L .
+bchclassic:	bchclassic.o $(LIBS_BCH)
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
 
-bch_test.o:	CXXFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
+bch_test.o:	CXXFLAGS += $(INCLUDE_BCH)
 bch_test.o:	bch_test.C c++/ezpwd/bch
-bch_test:	bch_test.o djelic_bch.o
-	$(CXX) $(CXXFLAGS) -o $@ $^
+bch_test:	CXXFLAGS += -L .
+bch_test:	bch_test.o $(LIBS_BCH)
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch
 
 
-bch_itron.o:	CXXFLAGS += -std=c++17 -I standalone -I djelic/Documentation/bch/standalone -I djelic/include -I /usr/local/include
-bch_itron.o:	bch_itron.C djelic/include djelic
-bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
-bch_itron:	bch_itron.o djelic_bch.o
-	$(CXX) $(CXXFLAGS) -o $@ $^ -lboost_filesystem
+bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH) -I /usr/local/include
+bch_itron.o:	bch_itron.C djelic/include
+bch_itron: 	CXXFLAGS += -std=c++17 -L . -L /usr/local/lib # boost
+bch_itron:	bch_itron.o $(LIBS_BCH)
+	$(CXX) $(CXXFLAGS) -o $@ $^ -lezpwd-bch -lboost_filesystem
 
 .PHONY: itron_test
 itron_test:	bch_itron
@@ -409,12 +444,20 @@ schifra/schifra_reed_solomon_encoder.hpp:
 # 
 # Djelic BCH implementation.  Foundation for EZPWD BCH implementation
 # 
-#     We provide the original Djelic "BCH" Linux Kernel API implementation, from source.
-# This means that we require you to git checkout the Djelic source code, in order to either
-# build the djelic_bch.o target (for use in C/C++ projects), or to simply build your "C"
-# target directly using the djleic_bch.c source.
-#   - Requires Djelic "standalone" shims for building Kernel code in user space
-#   - Also requires the additional "standalone" linux/errno.h shim for non-Linux builds
+#     We provide the original Djelic "BCH" Linux Kernel API implementation, from source.  This means
+# that we require you to git checkout the Djelic source code, in order to either build the
+# djelic_bch.o target (for use in C/C++ projects), or to simply build your "C" target directly using
+# the djleic_bch.c source.
+#
+#     Compiled static/shared libraries libezpwd-bch.{a,so,dylib} are provided.
+# 
+#     Building requires Djelic "standalone" shims for building Kernel code in user space.  To include
+# <ezpwd/bch> in your C++ build, or <djelic_bch> to your C build, use:
+# 
+#         C[XX]FLAGS   += -I c++/ezpwd/bch_include
+# 
+#     The following symbolic links into Djelic's BCH implementation submodule are provided for C
+# compilation of the basic kernel API:
 # 
 #     djelic_bch.h	 	-- API declarations
 #     djelic_bch.c		-- API definitions
@@ -423,15 +466,23 @@ schifra/schifra_reed_solomon_encoder.hpp:
 # djelic_bch.c file directly into your "C" application (to avoid needing to pre-compile the object
 # files to satisfy your build).
 # 
-# djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
 # 
-djelic/include:
+# 
+# djelictest: 	build and run Djelic BCH tests once.  Upstream: https://github.com/Parrot-Developers/bch.git
+#
+djelic \
+djelic_bch.c \
+djelic_bch.h \
+c++/ezpwd/bch \
+djelic/lib \
+djelic/lib/bch.c \
+djelic/include \
+djelic/include/linux/bch.h \
+djelic/Documentation/bch/standalone/linux/bch.h \
+c++/ezpwd/bch_include:  # This is a symlink to the .../standalone directory in the 'djelic' BCH submodule
 	@echo "  Missing Djelic BCH implementation; cloning git submodule"
 	git submodule update --init djelic
 
-c++/ezpwd/bch \
-djelic/include \
-djelic/lib/bch.c: djelic/include
 
 .PHONY: djelictest
 djelictest:	djelic/Documentation/bch/nat_tu_tool
@@ -439,11 +490,29 @@ djelictest:	djelic/Documentation/bch/nat_tu_tool
 djelic/Documentation/bch/nat_tu_tool: djelic
 	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
 
-djelic_bch.c:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-djelic_bch.o:	CFLAGS += -I standalone -I djelic/Documentation/bch/standalone -I djelic/include
-djelic_bch.o:	djelic_bch.c		djelic/lib/bch.c
+djelic_bch.c:	CFLAGS += $(INCLUDE_BCH)
+djelic_bch.o:	CFLAGS += $(INCLUDE_BCH)
+djelic_bch.o:	djelic_bch.c
 	$(CC) $(CFLAGS) -c -o $@ $<
 
+# 
+# A (somewhat dated) guide to building libraries on various targets:
+# 
+#     http://www.fortran-2000.com/ArnaudRecipes/sharedlib.html
+# 
+libezpwd-bch.a:	djelic_bch.o
+	rm -f $@
+	$(AR) $(ARFLAGS) $@ $^
+
+libezpwd-bch.so: CFLAGS += $(INCLUDE_BCH)
+libezpwd-bch.so: CFLAGS += -fPIC -shared
+libezpwd-bch.so: djelic_bch.c
+	$(CC) $(CFLAGS) -o $@ $^
+
+libezpwd-bch.dylib: CFLAGS += $(INCLUDE_BCH)
+libezpwd-bch.dylib: CFLAGS += -fPIC -dynamiclib
+libezpwd-bch.dylib: djelic_bch.c
+	$(CC) $(CFLAGS) -o $@ $^
 
 # 
 # Install and build emscripten SDK, if necessary, and then activate it.

@@ -1,1 +1,1 @@
-#include "djelic/lib/bch.c"
+djelic/lib/bch.c
