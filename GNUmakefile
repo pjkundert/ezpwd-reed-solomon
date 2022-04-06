@@ -55,8 +55,10 @@ INCLUDE		= -I ./c++
 INCLUDE_KARN	= -I ./phil-karn
 INCLUDE_BCH	= -I ./c++/ezpwd/bch_include
 ERRNUMS_BCH	= -I ./c++/ezpwd/bch_errnums
-ifeq ($(UNAME),Darwin)
+ifneq ($(UNAME),Linux)
     INCLUDE_BCH += $(ERRNUMS_BCH)
+endif
+ifeq ($(UNAME),Darwin)
     LIBS_BCH	= libezpwd-bch.a libezpwd-bch.dylib
 else
     LIBS_BCH	= libezpwd-bch.a libezpwd-bch.so
