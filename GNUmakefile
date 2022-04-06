@@ -203,8 +203,8 @@ libraries:	$(LIBRARIES)
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
 
-swig-python:	swig-python-install
-swig-python-install: c++/ezpwd/ezcod
+swig-python:	swig-python-test swig-python-install
+swig-python-install: c++/ezpwd/ezcod c++/ezpwd/bch
 swig-python-%:	 djelic_bch.o
 	make -C swig/python $*
 

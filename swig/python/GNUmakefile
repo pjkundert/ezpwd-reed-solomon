@@ -1,10 +1,11 @@
-SHELL		= /bin/bash
+SHELL		= bash
 BINDINGS	= ezcod		\
 		  BCH
 
 all:
 	@echo "Python Bindings: $(BINDINGS)"
 	@echo "  install	-- install ezpwd_reed_solomon w/ all bindings"
+	@echo "  test		-- test ezpwd_reed_solomon w/ all bindings"
 	@echo "  binding-	-- Run on all bindings..."
 	@echo "    clean	-- "
 	@echo "    pristine	-- Force rebuild of binding"
@@ -20,6 +21,8 @@ clean:			binding-clean
 	rm -rf build dist
 
 pristine:		clean binding-pristine
+
+test:			clean binding-test
 
 install:		version.py FORCE
 	python setup.py install
