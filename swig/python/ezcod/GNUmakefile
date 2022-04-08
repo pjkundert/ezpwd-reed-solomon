@@ -25,7 +25,7 @@ include $(ROOT)/GNUmakefile
 PYTHON_INC	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] )' )
 PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-1]+["config"] )' )
 
-PYTHON_COMP	= -I$(PYTHON_INC) -fPIC -I$(ROOT)/c++
+PYTHON_COMP	= -I$(PYTHON_INC) -fPIC $(INCLUDE)
 PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -shared
 
 python-ezcod:		_ezcod.so
@@ -40,8 +40,8 @@ python-ezcod-clean:
 python-ezcod-pristine: python-ezcod-clean
 	rm -f ezcod_wrap.cpp ezcod.py
 
-ezcod_wrap.cpp:		ezcod.i $(ROOT)/c++/ezpwd/ezcod
-	swig -verbose -c++ -I$(ROOT)/c++ -python -o $@ $<
+ezcod_wrap.cpp:		ezcod.i
+	swig -verbose -c++ $(INCLUDE) -python -o $@ $<
 
 ezcod_wrap.o:		ezcod_wrap.cpp
 	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) -c $<

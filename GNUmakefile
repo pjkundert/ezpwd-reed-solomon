@@ -9,8 +9,11 @@ SHELL		= bash
 # clang  3.6+		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
-CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+CC		= gcc-11 # cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= g++-11 # c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+
+export CC
+export CXX
 
 # C compiler/flags for sub-projects (phil-karn)
 # Default to system cc; define CC to use a specific C compiler
@@ -51,10 +54,14 @@ CXXFLAGS       +=#-DDEBUG #-DEZPWD_ARRAY_TEST -DEZPWD_NO_MOD_TAB
 # 
 UNAME		= $(shell uname)
 
-INCLUDE		= -I ./c++
-INCLUDE_KARN	= -I ./phil-karn
-INCLUDE_BCH	= -I ./c++/ezpwd/bch_include
-ERRNUMS_BCH	= -I ./c++/ezpwd/bch_errnums
+MAKEFILE_PATH  := $(abspath $(lastword $(MAKEFILE_LIST)))
+MAKEFILE_DIR   := $(dir $(MAKEFILE_PATH))
+
+# Provide variables containing full-path includes directives, useful for GNUmakefiles that include this one
+INCLUDE		= -I$(MAKEFILE_DIR)/c++
+INCLUDE_KARN	= -I$(MAKEFILE_DIR)/phil-karn
+INCLUDE_BCH	= -I$(MAKEFILE_DIR)/c++/ezpwd/bch_include # Needed when <ezpwd/bch> included
+ERRNUMS_BCH	= -I$(MAKEFILE_DIR)/c++/ezpwd/bch_errnums # Needed for building djelic_bch.o
 ifneq ($(UNAME),Linux)
     INCLUDE_BCH += $(ERRNUMS_BCH)
 endif
@@ -65,13 +72,15 @@ else
 endif
 LIBRARIES	= $(LIBS_BCH)
 
+export INCLUDE
+export INCLUDE_BCH
+
+
 # Enable  baseline C++ build-time include of <ezpwd/...> targets
 CXXFLAGS       += -std=c++11 $(INCLUDE)
 
-
 export CFLAGS
 export CXXFLAGS
-
 
 
 # Emscripten
@@ -205,6 +214,27 @@ libraries:	$(LIBRARIES)
 javascript:	$(JSTEST) $(JSPROD)
 executable:	$(EXTEST)
 
+
+#
+# Swig 4.0.2
+# 
+# WARNING: On macOS, swig is built (incorrectly) to target a specific version of Xcode; you may need
+# to provide a symbolic link from its hard-wired Xcode SDK version assumption, to the current Xcode
+# SDK version, in:
+# 
+#     /Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs
+# 
+# to successfully build the python modules.  If the swig build fails with errors mentioning
+# SDK version 10.15, go to the above directory, discover the current Xcode SDK version:
+#
+#     $ xcrun --sdk macosx --show-sdk-version
+#     12.3
+# 
+# and set up the appropriate symbolic link from the expected SDK version to the current one:
+# 
+#     $ sudo ln -fs MacOSX12.3.sdk MacOSX10.15.sdk
+# 
+# 
 swig-python:	swig-python-test swig-python-install
 swig-python-install: c++/ezpwd/ezcod c++/ezpwd/bch
 swig-python-%:	 djelic_bch.o
