@@ -22,16 +22,18 @@ include $(ROOT)/GNUmakefile
 #   $ python -e "import os; print os.__file__"
 #   /usr/lib/python2.7/os.pyc
 # 
-PYTHON_INC	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] )' )
-PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-1]+["config"] )' )
+PYTHON_INC	= $(shell python3 -c 'import os; segs=os.__file__.split( os.path.sep ); print( os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] ))' )
+PYTHON_LIB	= $(shell python3 -c 'import os, glob; segs=os.__file__.split( os.path.sep ); print( glob.glob( os.path.sep.join( segs[:-1]+["config*/"] ))[0] )' )
+#PYTHON_INC	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] )' )
+#PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-1]+["config"] )' )
 
 PYTHON_COMP	= -I$(PYTHON_INC) -fPIC $(INCLUDE)
-PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -shared
+PYTHON_LINK	= -L$(PYTHON_LIB) -lpython3.10 -shared
 
 python-ezcod:		_ezcod.so
 
 python-ezcod-test:	runme.py python-ezcod
-	python $<
+	python3 $<
 
 python-ezcod-clean:
 	rm -f *.cpp *.o *.so *.pyc
@@ -41,7 +43,7 @@ python-ezcod-pristine: python-ezcod-clean
 	rm -f ezcod_wrap.cpp ezcod.py
 
 ezcod_wrap.cpp:		ezcod.i
-	swig -verbose -c++ $(INCLUDE) -python -o $@ $<
+	swig -verbose -c++ $(INCLUDE) -python -py3 -o $@ $<
 
 ezcod_wrap.o:		ezcod_wrap.cpp
 	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) -c $<

@@ -52,7 +52,6 @@ setup(
     url				= "https://github.com/pjkundert/ezpwd_reed_solomon",
     description			= """Python bindings for ezpwd_reed_solomon ezcod, BCH""",
     ext_modules			= [ ezcod_module, bch_module ],
-    zip_safe			= False,
     packages			= [
         "ezpwd_reed_solomon",
         "ezpwd_reed_solomon/ezcod",

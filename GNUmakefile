@@ -9,8 +9,8 @@ SHELL		= bash
 # clang  3.6+		-- Recommended
 # icc			-- Not recommended; much slower than g++ for ezpwd::rs
 # 
-CC		= gcc-11 # cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
-CXX		= g++-11 # c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
+CC		= cc  # clang   # gcc-4.8   # gcc # gcc-5 gcc-4.9 gcc-4.8 clang
+CXX		= c++ # clang++ # g++-4.8   # g++ # g++-5 g++-4.9 g++-4.8 clang++
 
 export CC
 export CXX
@@ -74,6 +74,7 @@ LIBRARIES	= $(LIBS_BCH)
 
 export INCLUDE
 export INCLUDE_BCH
+export ERRNUMS_BCH
 
 
 # Enable  baseline C++ build-time include of <ezpwd/...> targets
@@ -418,23 +419,23 @@ rskey_test.js:	rskey_test.C rskey.C rskey.h c++/ezpwd/rs c++/ezpwd/rs_base c++/e
 bchsimple.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchsimple.o:	bchsimple.C c++/ezpwd/bch
 bchsimple:	bchsimple.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
+	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a
 
 bchclassic.o:	CXXFLAGS += $(INCLUDE_BCH)
 bchclassic.o:	bchclassic.C c++/ezpwd/bch
 bchclassic:	bchclassic.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
+	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a
 
 bch_test.o:	CXXFLAGS += $(INCLUDE_BCH)
 bch_test.o:	bch_test.C c++/ezpwd/bch
 bch_test:	bch_test.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a
+	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a
 
 bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH) -I /usr/local/include
 bch_itron.o:	bch_itron.C djelic/include
 bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
 bch_itron:	bch_itron.o $(LIBS_BCH)
-	$(CXX) $(CXXFLAGS) -o $@ $^ libezpwd-bch.a -lboost_filesystem
+	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a -lboost_filesystem
 
 .PHONY: itron_test
 itron_test:	bch_itron
@@ -519,10 +520,20 @@ djelictest:	djelic/Documentation/bch/nat_tu_tool
 djelic/Documentation/bch/nat_tu_tool: djelic
 	cd djelic/Documentation/bch && make && ./nat_tu_short.sh
 
+#
+# djelic_bch.o
+# 
+#     When building for Darwin (macOS), target all supported architectures
+# 
+ifeq ($(UNAME),Darwin)
+    ARCHFLAGS = -arch arm64 -arch x86_64
+else
+    ARCHFLAGS =
+endif
 djelic_bch.c:	CFLAGS += $(INCLUDE_BCH)
 djelic_bch.o:	CFLAGS += $(INCLUDE_BCH)
 djelic_bch.o:	djelic_bch.c
-	$(CC) $(CFLAGS) -c -o $@ $<
+	$(CC) $(CFLAGS) $(ARCHFLAGS) -c -o $@ $<
 
 # 
 # A (somewhat dated) guide to building libraries on various targets:

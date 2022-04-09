@@ -25,7 +25,7 @@ pristine:		clean binding-pristine
 test:			clean binding-test
 
 install:		version.py FORCE
-	python setup.py install
+	python3 setup.py install
 
 version.py:		../../VERSION
 	@python -c 'print "__version_info__\t\t= (%s)" % ", ".join( open( "'$<'", "r" ).read().strip().split( "." ))' > $@
