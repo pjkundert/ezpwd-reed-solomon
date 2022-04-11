@@ -1,4 +1,5 @@
-import (fetchTarball {
-  url = "https://github.com/Holo-Host/holo-nixpkgs/archive/22d612870a0c6e1d2fc040d88639aede73f84cf2.tar.gz"; # w/ feature-create-timestamp, 2021-05-13
-  sha256 = "05xzr03qj7kqj1jf7h139pcjk0i5shy6n3c5kiny59c51ys1fz5y";
+import (fetchGit {
+  url = "ssh://git@github.com/pjkundert/cleargrid-nixpkgs.git";
+  rev = "b9efff2afaae4bca4306bae463872b7c7047baf5";
+  ref = "master";
 })

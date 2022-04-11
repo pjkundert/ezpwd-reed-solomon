@@ -38,6 +38,15 @@ CFLAGS         += -O3 -ffast-math -funsafe-math-optimizations
 # 
 CFLAGS         += -DNDEBUG
 
+# 
+# Default to local ad-hoc environment in /usr/local/... if no NIX_CFLAGS_COMPILE.
+# 
+NIX_CFLAGS_COMPILE	?= -I /usr/local/include
+CFLAGS		+= $(NIX_CFLAGS_COMPILE)
+NIX_LDFLAGS		?= -L /usr/local/lib
+LDFLAGS		+= $(NIX_LDFLAGS)
+
+
 CXXFLAGS       += $(CFLAGS)
 
 CXXFLAGS       +=#-D_GLIBCXX_DEBUG # -fsanitize=undefined # -g
@@ -190,7 +199,19 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 
 EXTEST =	$(EXCOMP)
 
-all:		test libraries
+all:		env test libraries
+
+# 
+# Target to allow the printing of 'make' variables, eg:
+# 
+#     make print-CXXFLAGS
+# 
+print-%:
+	@echo $* = $($*) 
+	@echo $*\'s origin is $(origin $*)
+
+env:		print-CFLAGS print-CXXFLAGS print-LDFLAGS
+#	export
 
 help:
 	@echo  "EZPWD Reed-Solomon GNU 'make' targets"
@@ -431,9 +452,9 @@ bch_test.o:	bch_test.C c++/ezpwd/bch
 bch_test:	bch_test.o $(LIBS_BCH)
 	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a
 
-bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH) -I /usr/local/include
+bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH)
 bch_itron.o:	bch_itron.C djelic/include
-bch_itron: 	CXXFLAGS += -std=c++17 -L /usr/local/lib # boost
+bch_itron: 	CXXFLAGS += -std=c++17
 bch_itron:	bch_itron.o $(LIBS_BCH)
 	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a -lboost_filesystem
 
@@ -523,13 +544,14 @@ djelic/Documentation/bch/nat_tu_tool: djelic
 #
 # djelic_bch.o
 # 
-#     When building for Darwin (macOS), target all supported architectures
-# 
-ifeq ($(UNAME),Darwin)
-    ARCHFLAGS = -arch arm64 -arch x86_64
-else
-    ARCHFLAGS =
-endif
+#     When building for Darwin (macOS), target all supported architectures.
+# This only works on recent SDKs / clang versions
+ARCHFLAGS	=
+# ifeq ($(UNAME),Darwin)
+#     ARCHFLAGS = -arch arm64 -arch x86_64
+# else
+#     ARCHFLAGS =
+# endif
 djelic_bch.c:	CFLAGS += $(INCLUDE_BCH)
 djelic_bch.o:	CFLAGS += $(INCLUDE_BCH)
 djelic_bch.o:	djelic_bch.c

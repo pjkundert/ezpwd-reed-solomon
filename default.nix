@@ -30,10 +30,10 @@ in
     '';
 
     installPhase = ''
-      mkdir -p		$out/include
-      cp -RL c++/*	$out/include
-      mkdir -p		$out/lib
-      mv libezpwd-*	$out/lib
+      mkdir -p          $out/include
+      cp -RL c++/*      $out/include
+      mkdir -p          $out/lib
+      mv libezpwd-*     $out/lib
     '';
   };
 }
