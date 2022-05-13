@@ -46,3 +46,5 @@ swig/python/ezcod/ezcod_wrap.cpp
 swig/python/BCH/BCH.py
 swig/python/BCH/BCH_wrap.cpp
 c++/ezpwd/ezpwd
+libezpwd-*
+/result

@@ -74,7 +74,7 @@ int main()
 		}
 		codeword_t		corrected( corrupted );
 #if defined( EZPWD_BCH_CLASSIC )
-		int corrections			= correct_bch( &bch_codec, &corrected[0], 8, &corrected[8] );
+		int corrections			= ezpwd::correct_bch( &bch_codec, &corrected[0], 8, &corrected[8] );
 #else
 		int corrections			= bch_codec.decode( corrected );
 #endif

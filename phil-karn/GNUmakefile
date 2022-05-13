@@ -5,7 +5,7 @@
 #     Uses Phil Karn's LGPL Reed-Solomon implementation unchanged (except for
 # the build procedure).  See README.
 # 
-SHELL		= /bin/bash
+SHELL		= bash
 
 FEC		= fec-3.0.1
 CFLAGS	       += -I. -I$(FEC)

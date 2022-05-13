@@ -1,8 +1,18 @@
 # -*- coding: utf-8 -*-
-#+TITLE: EZPWD Reed-Solomon Version 1.8.0
+#+TITLE: EZPWD Reed-Solomon
+#+EXPORT_FILE_NAME: README.pdf
 #+STARTUP: org-startup-with-inline-images inlineimages
+
 #+OPTIONS: ^:nil # Disable sub/superscripting with bare _; _{...} still works
+#+OPTIONS: toc:nil
+
 #+LATEX_HEADER: \usepackage[margin=1.0in]{geometry}
+
+#+BEGIN_ABSTRACT
+Implements C++ classes for compile-time optimized Reed-Solomon and BCH codecs.
+#+END_ABSTRACT
+
+#+TOC: headlines 3
 
 * Reed-Solomon Loss/Error Correction
 
@@ -19,11 +29,12 @@
 
 ** Installing
 
-   EZPWD Reed-Solomon depends on:
+   EZPWD Reed-Solomon has no compile-time dependencies, other than the basic C library.
 
-  | Package        | For? | Description                      |
-  |----------------+------+----------------------------------|
-  | linux-libc-dev | BCH  | System linux/errno.h file        |
+*** Nix Support
+
+    Installation via Nix is supported via:
+    : nix-build -A ezpwd-reed-solomon
 
 ** Performance
 
@@ -38,10 +49,10 @@
    code for all internal table lookups, sometimes dramatically improving
    performance.
 
-*** 25-75% Faster Than Competing R-S Codecs
+*** 25-40% Faster Than Competing R-S Codecs
 
     EZPWD Reed-Solomon performs R-S correction operations (using g++ on an Intel
-    i7) about 75% faster faster than Phil Karn's general case code, and about
+    i7) about 40% faster faster than Phil Karn's general case code, and about
     25% faster than Phil's optimized code for 8-bit/CCSDS symbols.  It also
     tests at about 25% faster than the Shifra C++ Reed-Solomon library.  It
     appears that, for certain applications at least, EZPWD Reed-Solomon may be
@@ -59,10 +70,26 @@
 
 *** C++ Build Requires Header Source Only
 
-    Carefully implemented as C++11 standard inline code, to require no C++
-    object-code or library build procedure.  As a result, integration into
-    existing C++ code-bases and build systems is extremely simple.
+    Carefully implemented as C++11 standard inline code, to require no C++ object-code or library
+    build procedure.  As a result, integration into existing C++ code-bases and build systems is
+    extremely simple.
 
+    Checkout =https://github.com/pjkundert/ezpwd-reed-solomon.git=, and add the following to your
+    C++ build to gain access to the various =#include <ezpwd/...>= include files in your C++ code:
+    : CXXFLAGS += -I ezpwd-reed-solomon/c++
+
+    If you plan to =#include <ezpwd/bch>=, also add:
+    : CXXFLAGS += -I ezpwd-reed-solomon/c++/ezpwd/bch_include
+    and for non-Linux systems where linux/errno.h is unavailable, also add:
+    : CXXFLAGS += -I ezpwd-reed-solomon/c++/ezpwd/bch_errnums
+
+    | Module       | Include       | Description                | Requires                        |
+    |--------------+---------------+----------------------------+---------------------------------|
+    | Reed-Solomon | <ezpwd/rs>    | Reed-Solomon codec         | -I c++                          |
+    | BCH          | <ezpwd/bch>   | Using BCH codec            | -I c++ -I c++/ezpwd/bch_include |
+    |              |               | on non-Linux systems, add: | -I c++/ezpwd/bch_errnums        |
+    | EZCOD        | <ezpwd/ezcod> | EZCOD geolocation codec    | -I c++                          |
+    
 *** Javascript Hosted by MaxCDN
 
     Production minified Javascript is served by MaxCDN, using a URL like:
@@ -349,6 +376,18 @@
 
   Implements the Linux Kernel API for BCH error correction encoding and decoding.  Thanks to Ivan
   Djelic for [[https://github.com/Parrot-Developers/bch][making this available]] under GPLv2+!
+
+** Build Dependencies
+
+   To support building on non-Linux platforms, [[https://github.com/pjkudert/bch.git][we have added a linux/errno.h]] file to Djelic's
+   original version.
+
+   To use =ezpwd/bch= in your C++ code, you must add the following to your C++ compilation
+   (=CXXFLAGS=):
+   : -I c++/ezpwd/bch_include
+
+   This includes all of the "shim" include files required to compile Djelic's Linux kernel BCH
+   implementation in a non-Kernel environment.
 
 ** ezpwd::...bch: C++ BCH API
    

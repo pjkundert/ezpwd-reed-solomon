@@ -22,16 +22,16 @@ include $(ROOT)/GNUmakefile
 #   $ python -e "import os; print os.__file__"
 #   /usr/lib/python2.7/os.pyc
 # 
-PYTHON_INC	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] )' )
-PYTHON_LIB	= $(shell python -c 'import os; segs=os.__file__.split( os.path.sep ); print os.path.sep.join( segs[:-1]+["config"] )' )
+PYTHON_INC	= $(shell python3 -c 'import os; segs=os.__file__.split( os.path.sep ); print( os.path.sep.join( segs[:-3]+["include"]+segs[-2:-1] ))' )
+PYTHON_LIB	= $(shell python3 -c 'import os, glob; segs=os.__file__.split( os.path.sep ); print( glob.glob( os.path.sep.join( segs[:-1]+["config*/"] ))[0] )' )
 
-PYTHON_COMP	= -I$(PYTHON_INC) -I$(ROOT)/c++ -fPIC -I $(ROOT)/standalone -I $(ROOT)/djelic/Documentation/bch/standalone -I $(ROOT)/djelic/include
-PYTHON_LINK	= -L$(PYTHON_LIB) -lpython2.7 -shared $(ROOT)/djelic_bch.o
+PYTHON_COMP	= -I$(PYTHON_INC) -fPIC $(INCLUDE_BCH)
+PYTHON_LINK	= -L$(PYTHON_LIB) -lpython3.10 -shared $(ROOT)/djelic_bch.o
 
 python-BCH:		_BCH.so
 
 python-BCH-test:	runme.py python-BCH
-	python $<
+	python3 $<
 
 python-BCH-clean:
 	rm -f *.cpp *.o *.so *.pyc
@@ -41,10 +41,10 @@ python-BCH-pristine: python-BCH-clean
 	rm -f BCH_wrap.cpp BCH.py
 
 BCH_wrap.cpp:		BCH.i
-	swig -verbose -c++ -I$(ROOT)/c++ -python -o $@ $<
+	swig -verbose -c++ $(INCLUDE) $(INCLUDE_BCH) -python -py3 -o $@ $<
 
 BCH_wrap.o:		BCH_wrap.cpp
-	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) -c $<
+	$(CXX) $(CXXFLAGS) $(PYTHON_COMP) $(INCLUDE_BCH) -c $<
 
 _BCH.so:		BCH_wrap.o $(ROOT)/djelic_bch.o
 	$(CXX) $(CXXFLAGS) $(PYTHON_LINK) -o $@ $<

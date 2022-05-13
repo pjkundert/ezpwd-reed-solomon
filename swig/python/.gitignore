@@ -4,3 +4,4 @@ ezcod_python
 *.egg-info
 build/
 dist/
+.cache
