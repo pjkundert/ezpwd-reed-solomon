@@ -11,8 +11,8 @@
 #include <thread>
 
 #include <ezpwd/asserter>
-
 #include <ezpwd/pid>
+#include <ezpwd/units>
 
 #include <curses.h>
 
@@ -26,13 +26,16 @@ template <typename T, typename PRECISION=std::chrono::milliseconds, typename CLO
 class rocket {
 
 public:
-    T				mass;				// kg
-    T				g	{ -9810 };		// mm/s^2
-    T				a0	{ };			// mm/s^2
-    T				v0	{ };			// mm/s
-    T				y0;				// mm
+    typedef units::type<T>	units_t;
+
+
+    //units_t::Mass		mass;				// kg
+    typename units_t::Mass	mass;
+    typename units_t::Acceleration a0	{ 0 };			// mm/s^2
+    typename units_t::Velocity	v0	{ 0 };			// mm/s
+    typename units_t::Length	y0;				// mm
     T				goal;				// mm
-    T				thrust;         		// mN (kg.mm/s^2)
+    typename units_t::Force	thrust;         		// mN (kg.mm/s^2)
     std::optional<T>		thrust_max;         		// mN (kg.mm/s^2)
 
     T				scale;				// fixed-point scale any physics computations (default 1,000x)
@@ -42,6 +45,8 @@ public:
     typedef ezpwd::pid<T,PRECISION,CLOCK>
     				autopilot_t;
     autopilot_t			autopilot;
+
+    units_t			constant;			// g, mm, ms
 
 				rocket(
 				    T		mass_	= 1,	// kg
@@ -60,16 +65,15 @@ public:
 				    , thrust( thrust_ )
 				    , thrust_max( thrust_max_ )
 				    , scale( scale_.value_or( T( 1'000 ))) // default scale distances to mm.
+				    , constant( 1, scale, 1)
     {
-	g		       *= scale;
-	g		       /= 1'000; // Supplied above as 1,000x fixed-point constant
 	y0		       *= scale;
 	goal		       *= scale;
 	thrust		       *= scale;
 	if ( thrust_max )
 	    *thrust_max	       *= scale;
 	autopilot		= autopilot_t( typename autopilot_t::pid_gains_t(  2500, 100, 10000, 0, 1000 ),
-					       y0, y0, thrust, 0.0, thrust_max, now_ );
+					       y0.scalar(), y0.scalar(), thrust.scalar(), 0.0, thrust_max, now_ );
     }
 
 
@@ -93,13 +97,13 @@ public:
         // a=f/m, including g, for the last time period's elapsed dt.
 	if ( ! now_.has_value() )
 	    now_			= CLOCK::now();
-	auto			dt	= std::chrono::duration_cast<PRECISION>( now_.value() - autopilot.now ).count();
+	typename units_t::Time	dt( std::chrono::duration_cast<PRECISION>( now_.value() - autopilot.now ).count() );
 
-	if ( dt <= 0 )
+	if ( dt.scalar() <= 0 )
 	    return 0;
 
-        auto			a	= g + thrust / mass;
-	auto			dv	= a * dt / PRECISION( 1s ).count();
+	auto			a	= thrust / mass - constant.Gravity;
+	auto			dv	= a * dt / PRECISION( 1s ).count(); 
 
         // Compute ending velocity v = v0 + at (delta-v)
         auto			v	= v0 + dv;
@@ -107,9 +111,9 @@ public:
 
 	// Clamp y to launch pad, and eliminate -'ve velocity at pad
         auto			dy 	= v_ave * dt / PRECISION( 1s ).count();
-	auto			y	= std::max( y0 + dy, T( 0 ));
-	if ( v < 0 and y <= 0 )
-            v                   	= 0;
+	auto			y	= std::max( y0 + dy, typename units_t::Length( 0 ));
+	if ( v < typename units_t::Velocity( 0 ) and y <= typename units_t::Length( 0 ))
+            v                   	= typename units_t::Velocity( 0 );
 
         // and compute actual displacement and hence actual net acceleration for period dt
 	//auto			v_ave_act = ( y - y0 ) / dt / PRECISION( 1s ).count();
@@ -123,7 +127,7 @@ public:
 	v0			= v;
 	y0			= y;	    
 
-	thrust			= autopilot( goal, y0, now_ );
+	thrust			= typename units_t::Force( autopilot( goal, y0.scalar(), now_ ));
 	
 	std::ostringstream	oss;
 	oss << "rocket now:" << now_.value()
@@ -141,7 +145,7 @@ public:
     T				altitude()
 	const
     {
-	return y0 / scale;
+	return y0.scalar() / scale;
     }
 
     std::ostream	       &print(
@@ -150,10 +154,10 @@ public:
 	
 	lhs << "rocket altitude: "	<< std::setw( 10 ) << std::setprecision( 6 ) << altitude()
 	    << "m, ("			<< std::setw( 10 ) << std::setprecision( 6 ) << y0
-	    << ") thrust: "		<< std::setw( 10 ) << std::setprecision( 6 ) << thrust	//	/ scale
-	    << "kg.m/s^2, acc: "	<< std::setw( 10 ) << std::setprecision( 6 ) << a0	//	/ scale
-	    << "m/s^2, v: "		<< std::setw( 10 ) << std::setprecision( 6 ) << v0	//	/ scale
-	    << "m/s, "			<< autopilot;
+	    << ") thrust: "		<< std::setw( 10 ) << std::setprecision( 6 ) << thrust	// 	/ scale
+	    << " accel: "		<< std::setw( 10 ) << std::setprecision( 6 ) << a0	//	/ scale
+	    << " velocity: "		<< std::setw( 10 ) << std::setprecision( 6 ) << v0	//	/ scale
+	    << " "			<< autopilot;
 	return lhs;
     };
 };

@@ -122,7 +122,7 @@ namespace units {
     // 
     ///     Dimensional value with non-zero exponents have all valid operators defined, but no
     /// implicit conversion to T.  There is no default units::value<...,T> constructor, but explicit
-    /// constuction from a scalar is allowed.
+    /// construction from a scalar is allowed.
     /// 
     template< int Mass,
 	      int Leng,
@@ -161,7 +161,7 @@ namespace units {
 				    : _scalar( t )
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << " (scalar)" << std::endl;
 #endif
 	}
@@ -184,7 +184,7 @@ namespace units {
 	    			    : _scalar( T( v.scalar() ))
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   (copy) from: " << std::setw( 13 ) << v.scalar() << std::endl;
 #endif
 	}
@@ -195,7 +195,7 @@ namespace units {
 				   			&v )
 	{
 	    this->_scalar		= T( v.scalar() );
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << " (assign) from: " << std::setw( 13 ) << v.scalar() << std::endl;
 #endif
 	    return *this;
@@ -452,7 +452,7 @@ namespace units {
 				    		      &rhs )
 	    const
 	{
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   *      " << rhs << std::endl;
 #endif
 	    return value< Mass + A,
@@ -483,7 +483,7 @@ namespace units {
 				    		       &rhs )
 	    const
 	{
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   /      " << rhs << std::endl;
 #endif
 	    return value< Mass - A,
@@ -564,7 +564,7 @@ namespace units {
 				    : _scalar( 1 )
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "(default)" << std::endl;
 #endif
 	}
@@ -574,7 +574,7 @@ namespace units {
 				    : _scalar( t.scalar() )
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   (copy) from: " << std::setw( 13 ) << t << std::endl;
 #endif
 	}
@@ -584,7 +584,7 @@ namespace units {
 				    : _scalar( T( v.scalar() ))
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   (copy) from: " << std::setw( 13 ) << v << std::endl;
 #endif
 	}
@@ -602,7 +602,7 @@ namespace units {
 				    : _scalar( T( v ))			// Scalar, any type
 	{
 	    ;
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << " (scalar) from: " << std::setw( 13 ) << v << std::endl;
 #endif
 	}
@@ -621,7 +621,7 @@ namespace units {
 				    		       &rhs )
 	    const
 	{
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   *      " << rhs << std::endl;
 #endif
 	    return value< A, B, C, D, E, F, G, T >( scalar() * rhs.scalar() );
@@ -640,7 +640,7 @@ namespace units {
 				    		       &rhs )
 	    const
 	{
-#if defined( DEBUG )
+#if defined( DEBUG ) && DEBUG >= 2
 	    std::cout << *this << "   /      " << rhs << std::endl;
 #endif
 	    return value<-A,-B,-C,-D,-E,-F,-G, T>( scalar() / rhs.scalar() );
@@ -763,7 +763,7 @@ namespace units {
 	// 
 	//     By default, all units in these dimensions are measured in terms of multiples of a
 	// single (1) unit in that dimension.  However, any scalar multiple may be provided to the
-	// units::type<T> constructor, for each dimension.  This is useful is an integer type is
+	// units::type<T> constructor, for each dimension.  This is useful if an integer type is
 	// provided for a unit; if precision to the decagram, centimeter, and millisecond (for
 	// example) is desired (1 unit per Ampere, Kelvin, and Mole, etc.):
 	// 
@@ -921,21 +921,21 @@ namespace units {
 
 	    			imperial(
 				    const type<T>      &base )
-				    : Mile( 	base.Meter 	* 5280 * 0.3047999989 )
+				    : Mile( 	base.Meter 	* 1609.343994192 ) // * 5280 * 0.3047999989 )
 				    , Yard( 	Mile 		/ 1760 )
 				    , Feet( 	Yard		/ 3 )
 				    , Inch( 	Feet	        / 12 )
-				    , Pound( 	base.Newton	 * 4.44822161526 )
+				    , Pound( 	base.Newton	 * 4448.22161526 / 1000 )
 				    , OZ( 	Pound		/ 16 )
 				    , Gallon( 	base.Meter * base.Meter * base.Meter
-								* 4546090 / 1000000 / 1000 )
+								* 4546.09 / 1000000 )
 				    , Quart( 	Gallon		/ 4 )
 				    , Pint( 	Quart		/ 2 )
 				    , Ounce( 	Pint		/ 20 )
 				    , Miles_Hour( Mile		/ base.Hour )
 				    , FootPound( Feet 		* Pound )
 				    , BTU( 	base.Kilo * base.Joule
-								* 1.05505585262 )
+								* 1055.05585262 / 1000 )
 				    , MPG( Gallon / Volume( 1 ) > T( 0 )
 					   ? Mile / Gallon
 					   : Mileage( 0 ))
@@ -1054,6 +1054,7 @@ std::ostream	       	       &operator<<(
 				    const units::value< A, B, C, D, E, F, G, T >
 				    			       &t )
 {
+#if defined( DEBUG ) && DEBUG >= 1
     if ( A || B || C || D || E || F || G ) {
 	out << '<' 		<< std::setw(  2 ) << A
 	    << ',' 		<< std::setw(  2 ) << B
@@ -1066,7 +1067,26 @@ std::ostream	       	       &operator<<(
     } else {
 	out << "<                    , T>";
     }
-    return out << std::setw( 13 ) << t.scalar();
+#endif
+    out << std::setw( 13 ) << t.scalar();
+
+    if ( A > 0 ) { out << "kg"; if (A > 1) out << "^" << A; }
+    if ( B > 0 ) { out <<  "m"; if (B > 1) out << "^" << B; }
+    if ( C > 0 ) { out <<  "s"; if (C > 1) out << "^" << C; }
+    if ( D > 0 ) { out <<  "A"; if (D > 1) out << "^" << D; }
+    if ( E > 0 ) { out <<  "°"; if (E > 1) out << "^" << E; }
+    if ( F > 0 ) { out << "mol";if (F > 1) out << "^" << F; }
+    if ( G > 0 ) { out << "lm"; if (G > 1) out << "^" << G; }
+    if ( A < 0 || B < 0 || C < 0 || D < 0 || E < 0 || F < 0 || G < 0 ) out << "/";
+    if ( A < 0 ) { out << "kg"; if (A <-1) out << "^" <<-A; }
+    if ( B < 0 ) { out <<  "m"; if (B <-1) out << "^" <<-B; }
+    if ( C < 0 ) { out <<  "s"; if (C <-1) out << "^" <<-C; }
+    if ( D < 0 ) { out <<  "A"; if (D <-1) out << "^" <<-D; }
+    if ( E < 0 ) { out <<  "°"; if (E <-1) out << "^" <<-E; }
+    if ( F < 0 ) { out << "mol";if (F <-1) out << "^" << F; }
+    if ( G < 0 ) { out << "lm"; if (G <-1) out << "^" <<-G; }
+
+    return out;
 }
 
 

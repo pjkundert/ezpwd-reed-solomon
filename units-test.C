@@ -86,7 +86,7 @@ namespace cut {
     ud_t::us			usad( ud );
     ud_t::binary		bind( ud );
 
-    typedef units::type<int>	ui_t;
+    typedef units::type<int> ui_t;
 //  ui_t			ui( 1 );		// kg, m, s, etc.
     ui_t			ui( 100, 1000, 10 );	// decagrams, mm, s, (remaining dimensions are 1 per unit) etc.
     ui_t::imperial		impi( ui );
@@ -218,6 +218,11 @@ namespace cut {
         assert.ISEQUALDELTA( double( mpg ),     12.0095, 0.001 );
     }
 #endif
+
+    CUT( Units_tests,	Units_Integer,		"Units w/ integer type" ) {
+	//
+
+    }
 }
 
 #endif // TEST
