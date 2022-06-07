@@ -1342,23 +1342,28 @@ var server = {
 
    #+BEGIN_SRC C++
    #include <ezpwd/pid>
+   
+   typedef ezpwd::pid<float> control_t;
 
-   // Reed Solomon codec w/ 255 symbols, up to 251 data, 4 parity symbols
-   ezpwd::RS<255,251> rs;
+   // Create a PID controller which maintains a certain output, while the setpoint and process are unchanged
+   float setpoint = 5;
+   float process = 1;
+   float output = 13;
+   control_t control( typename control_t::pid_gains_t( 2.5, .1, 10.0 ), setpoint, process, output );
 
-   std::vector<uint8_t> data;
-
-   // ... fill data with up to 251 bytes ...
-
-   rs.encode( data ); // Adds 4 Reed-Solomon parity symbols (255-251 == 4)
-
-   // ... later, after data is possibly corrupted ...
-
-   int fixed = rs.decode( data );		// Correct errors, and
-   data.resize( data.size() - rs.nroots() );	// Discard the 4 R-S parity symbols
+   setpoint = 5;
+   // In control loop, measure responde and control some machine
+   while ( ! done ) {
+       // The process value is some measurement on some machine       
+       process = machine.measure();
+       // Compute new output value based on new setpoint and/or process values
+       output = control( setpoint, process );
+       // Adjust some control on a machine
+       machine.control( output );
+       // Wait for the control to take effect, and then loop
+       std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
+   }
    #+END_SRC
-
-
 
 * Background
 

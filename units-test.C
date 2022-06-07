@@ -182,14 +182,12 @@ namespace cut {
 
 
     CUT( Units_tests,	Units_Conversion,	"Units conversion" ) {
-	// 
-	ui_t::Mass		a( ui.Kilogram ); // 1000 g (see above)
-	ud_t::Mass		b( ud.Kilogram ); // 1.0 kg
-
 #if defined( DEBUG )
+	ui_t::Mass		a( ui.Kilogram ); // 1000 g (see above)
 	assert.ISEQUALPERCENT( double(   a          / ui.Kilogram ), double( 1.0  ), 0.001 );
 	assert.ISEQUALPERCENT( double( ( a * 1.49 ) / ui.Kilogram ), double( 1.0  ), 0.001 );	// compiler issues int-double conversion warning (expected)
 #endif
+	ud_t::Mass		b( ud.Kilogram ); // 1.0 kg
 	assert.ISEQUALPERCENT( double( ( b * 1.49 ) / ud.Kilogram ), double( 1.49 ), 0.001 );
 
 #if 0
@@ -218,11 +216,6 @@ namespace cut {
         assert.ISEQUALDELTA( double( mpg ),     12.0095, 0.001 );
     }
 #endif
-
-    CUT( Units_tests,	Units_Integer,		"Units w/ integer type" ) {
-	//
-
-    }
 }
 
 #endif // TEST
