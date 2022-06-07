@@ -1332,6 +1332,34 @@ var server = {
   detection and correction.
 
 ** Javascript Library: js/ezpwd/rspwd.js
+* PID Loop in C++
+
+  A PID loop implementation for C++-17 and later, which is:
+
+  - Robust against changes in loop frequency
+  - Integral anti-windup on output saturation
+  - Derivative is smooth on setpoint changes
+
+   #+BEGIN_SRC C++
+   #include <ezpwd/pid>
+
+   // Reed Solomon codec w/ 255 symbols, up to 251 data, 4 parity symbols
+   ezpwd::RS<255,251> rs;
+
+   std::vector<uint8_t> data;
+
+   // ... fill data with up to 251 bytes ...
+
+   rs.encode( data ); // Adds 4 Reed-Solomon parity symbols (255-251 == 4)
+
+   // ... later, after data is possibly corrupted ...
+
+   int fixed = rs.decode( data );		// Correct errors, and
+   data.resize( data.size() - rs.nroots() );	// Discard the 4 R-S parity symbols
+   #+END_SRC
+
+
+
 * Background
 
   An excellent and easy to understand [[https://innovation.vivint.com/introduction-to-reed-solomon-bc264d0794f8][overview of basic Reed-Solomon]].

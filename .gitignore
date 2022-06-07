@@ -48,3 +48,7 @@ swig/python/BCH/BCH_wrap.cpp
 c++/ezpwd/ezpwd
 libezpwd-*
 /result
+pid-test
+units-test
+cut-test
+cutone

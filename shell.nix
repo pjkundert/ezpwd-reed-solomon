@@ -2,7 +2,7 @@
 
 with pkgs;
 
-mkShell {
+mkShell.override { stdenv = pkgs.gcc11Stdenv; } {
   inputsFrom = lib.attrValues  (import ./. {
     inherit pkgs;
     shell = true;
@@ -10,5 +10,6 @@ mkShell {
 
   buildInputs = [
     # additional packages go here
+    ncurses
   ];
 }
