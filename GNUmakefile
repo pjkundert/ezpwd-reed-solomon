@@ -490,7 +490,7 @@ pid-test.o:	pid-test.C c++/ezpwd/pid
 pid-test:	pid-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lncurses
 
-cut-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE
+cut-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG
 cut-test.o:	cut-test.C c++/ezpwd/cut
 cut-test:	cut-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $<

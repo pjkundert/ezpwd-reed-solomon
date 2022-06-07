@@ -654,8 +654,8 @@ namespace units {
     /// type.
     /// 
     template < typename T = double >
-    struct type {
-
+    class type {
+    public:
 	// 
 	//     Define the basic dimensioned and dimensionless types.  A value may be declared to
 	// have any of these types; such a variable must be assigned a value<...> that resolves to
