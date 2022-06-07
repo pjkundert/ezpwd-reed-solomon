@@ -1332,6 +1332,39 @@ var server = {
   detection and correction.
 
 ** Javascript Library: js/ezpwd/rspwd.js
+* PID Loop in C++
+
+  A PID loop implementation for C++-17 and later, which is:
+
+  - Robust against changes in loop frequency
+  - Integral anti-windup on output saturation
+  - Derivative is smooth on setpoint changes
+
+   #+BEGIN_SRC C++
+   #include <ezpwd/pid>
+   
+   typedef ezpwd::pid<float> control_t;
+
+   // Create a PID controller which maintains a certain output, while the setpoint and process are unchanged
+   float setpoint = 5;
+   float process = 1;
+   float output = 13;
+   control_t control( typename control_t::pid_gains_t( 2.5, .1, 10.0 ), setpoint, process, output );
+
+   setpoint = 5;
+   // In control loop, measure responde and control some machine
+   while ( ! done ) {
+       // The process value is some measurement on some machine       
+       process = machine.measure();
+       // Compute new output value based on new setpoint and/or process values
+       output = control( setpoint, process );
+       // Adjust some control on a machine
+       machine.control( output );
+       // Wait for the control to take effect, and then loop
+       std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
+   }
+   #+END_SRC
+
 * Background
 
   An excellent and easy to understand [[https://innovation.vivint.com/introduction-to-reed-solomon-bc264d0794f8][overview of basic Reed-Solomon]].

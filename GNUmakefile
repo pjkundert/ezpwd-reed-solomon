@@ -194,7 +194,11 @@ EXCOMP =	rsencode rsencode_9 rsencode_16			\
 		bchsimple					\
 		bchclassic					\
 		bch_test					\
-		bch_itron
+		bch_itron					\
+		pid-test					\
+		units-test					\
+		cut-test cutone
+
 
 
 EXTEST =	$(EXCOMP)
@@ -210,7 +214,9 @@ print-%:
 	@echo $* = $($*) 
 	@echo $*\'s origin is $(origin $*)
 
-env:		print-CFLAGS print-CXXFLAGS print-LDFLAGS
+env:			print-CURDIR print-NIX_LDFLAGS print-CFLAGS print-CXXFLAGS print-LDFLAGS
+	command -v c++
+	c++ --version
 #	export
 
 help:
@@ -475,6 +481,30 @@ boost_test:	qi_test_1 qi_test_2
 	./qi_test_1 < qi_test_1_good.txt	&& exit 0 || exit 1 # expect success
 	./qi_test_1 < qi_test_1_bad.txt		&& exit 1 || exit 0 # expect failure
 	./qi_test_2 				&& exit 0 || exit 1 # expect success
+
+# 
+# PID tests
+# 
+pid-test.o:	CXXFLAGS       += -std=c++17
+pid-test.o:	pid-test.C c++/ezpwd/pid
+pid-test:	pid-test.o
+	$(CXX) $(CXXFLAGS) -o $@ $< -lncurses
+
+cut-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG
+cut-test.o:	cut-test.C c++/ezpwd/cut
+cut-test:	cut-test.o
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+cutone.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE
+cutone.o:	cutone.C c++/ezpwd/cut
+cutone:		cutone.o
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
+units-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG
+units-test.o:	units-test.C c++/ezpwd/cut c++/ezpwd/units
+units-test:	units-test.o
+	$(CXX) $(CXXFLAGS) -o $@ $<
+
 
 # 
 # Build Phil Karn's R-S implementation.  Used by some tests.

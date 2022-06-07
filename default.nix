@@ -5,6 +5,8 @@ with pkgs;
 let
   inherit (rust.packages.stable) rustPlatform;
   inherit (darwin.apple_sdk.frameworks) Security;
+
+  stdenv = pkgs.gcc11Stdenv;
 in
 
 {
@@ -23,6 +25,7 @@ in
       perl
       bash
       boost
+      ncurses
     ];
 
     buildPhase = ''
