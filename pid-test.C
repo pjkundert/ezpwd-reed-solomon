@@ -20,8 +20,6 @@ std::minstd_rand		randomizer;
 std::uniform_int_distribution<uint8_t>
 				random_byte( 0, 255 );
 
-
-
 template <typename T, typename PRECISION=std::chrono::milliseconds, typename CLOCK=std::chrono::system_clock>
 class rocket {
 
@@ -130,7 +128,7 @@ public:
 	thrust			= typename units_t::Force( autopilot( goal, y0.scalar(), now_ ));
 	
 	std::ostringstream	oss;
-	oss << "rocket now:" << now_.value()
+	oss << "rocket:"
 	    << " dt: " << std::setw( 10 ) << std::setprecision( 6 ) << dt << " / " << PRECISION( 1s ).count()
 	    << " dv: " << std::setw( 10 ) << std::setprecision( 6 ) << dv
 	    << " dy: " << std::setw( 10 ) << std::setprecision( 6 ) << dy
@@ -230,6 +228,29 @@ void test_pid_steady( ezpwd::asserter &assert )
     
 }
 
+
+/*
+ * For testing output of time_point<...>
+ *
+//
+// std::ostream << std::chrono::time_point<...>
+//
+template <typename CLOCK, typename DURATION>
+inline
+std::ostream		       &operator<<(
+				    std::ostream       &lhs,
+				    const std::chrono::time_point<CLOCK, DURATION> &rhs )
+{
+    std::ios_base::fmtflags	flg	= lhs.flags();
+    lhs
+	<< std::fixed << std::setw( 20 ) << std::setprecision( 3 )
+	<< double( std::chrono::duration_cast<std::chrono::milliseconds>( rhs.time_since_epoch() ).count() ) / std::chrono::milliseconds( 1s ).count();
+    lhs.flags( flg );
+    return lhs;
+}
+ *
+ */
+
 int main()
 {
     ezpwd::asserter		assert;
@@ -262,7 +283,9 @@ int main()
 	    mvprintw( row-1, col, "|" );
 	    mvaddch(  row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
 	    std::ostringstream	oss;
-	    oss << "now: " << r.autopilot.now << ": " << r;
+	    oss
+		//<< "now: " << r.autopilot.now << ": "
+		<< r;
 	    mvprintw( LINES-1, 0, oss.str().c_str() );
 	    refresh();
 	    std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
@@ -286,7 +309,9 @@ int main()
 	    mvprintw( row-1, col, "|" );
 	    mvaddch(  row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
 	    std::ostringstream	oss;
-	    oss << "now: " << r.autopilot.now << ": " << r;
+	    oss
+		// << "now: " << r.autopilot.now << ": "
+		<< r;
 	    mvprintw( LINES-1, 0, oss.str().c_str() );
 	    refresh();
 	    std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
