@@ -500,7 +500,7 @@ cutone.o:	cutone.C c++/ezpwd/cut
 cutone:		cutone.o
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
-units-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG
+units-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG=1
 units-test.o:	units-test.C c++/ezpwd/cut c++/ezpwd/units
 units-test:	units-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $<

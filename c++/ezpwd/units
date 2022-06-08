@@ -925,7 +925,7 @@ namespace units {
 				    , Yard( 	Mile 		/ 1760 )
 				    , Feet( 	Yard		/ 3 )
 				    , Inch( 	Feet	        / 12 )
-				    , Pound( 	base.Newton	 * 4448.22161526 / 1000 )
+				    , Pound( 	base.Newton	* 4448.22161526 / 1000 )
 				    , OZ( 	Pound		/ 16 )
 				    , Gallon( 	base.Meter * base.Meter * base.Meter
 								* 4546.09 / 1000000 )
@@ -1047,6 +1047,12 @@ namespace units {
     }; // units::type<T>
 }; // unit
 
+// 
+// std::ostream << units::value<...>
+// 
+//     A default output formatter for units::value<...> types.  Not ideal (defined your own), but
+// defaults to fixed sizes for scalar value and units suffix for a decent default representation.
+// 
 template< int A, int B, int C, int D, int E, int F, int G, typename T >
 inline
 std::ostream	       	       &operator<<(
@@ -1068,24 +1074,25 @@ std::ostream	       	       &operator<<(
 	out << "<                    , T>";
     }
 #endif
-    out << std::setw( 13 ) << t.scalar();
-
-    if ( A > 0 ) { out << "kg"; if (A > 1) out << "^" << A; }
-    if ( B > 0 ) { out <<  "m"; if (B > 1) out << "^" << B; }
-    if ( C > 0 ) { out <<  "s"; if (C > 1) out << "^" << C; }
-    if ( D > 0 ) { out <<  "A"; if (D > 1) out << "^" << D; }
-    if ( E > 0 ) { out <<  "°"; if (E > 1) out << "^" << E; }
-    if ( F > 0 ) { out << "mol";if (F > 1) out << "^" << F; }
-    if ( G > 0 ) { out << "lm"; if (G > 1) out << "^" << G; }
-    if ( A < 0 || B < 0 || C < 0 || D < 0 || E < 0 || F < 0 || G < 0 ) out << "/";
-    if ( A < 0 ) { out << "kg"; if (A <-1) out << "^" <<-A; }
-    if ( B < 0 ) { out <<  "m"; if (B <-1) out << "^" <<-B; }
-    if ( C < 0 ) { out <<  "s"; if (C <-1) out << "^" <<-C; }
-    if ( D < 0 ) { out <<  "A"; if (D <-1) out << "^" <<-D; }
-    if ( E < 0 ) { out <<  "°"; if (E <-1) out << "^" <<-E; }
-    if ( F < 0 ) { out << "mol";if (F <-1) out << "^" << F; }
-    if ( G < 0 ) { out << "lm"; if (G <-1) out << "^" <<-G; }
-
+    std::string		suf;
+    if ( A > 0 ) { suf += "kg"; if (A > 1) suf += "^" + std::to_string( A ); }
+    if ( B > 0 ) { suf +=  "m"; if (B > 1) suf += "^" + std::to_string( B ); }
+    if ( C > 0 ) { suf +=  "s"; if (C > 1) suf += "^" + std::to_string( C ); }
+    if ( D > 0 ) { suf +=  "A"; if (D > 1) suf += "^" + std::to_string( D ); }
+    if ( E > 0 ) { suf +=  "C"; if (E > 1) suf += "^" + std::to_string( E ); }
+    if ( F > 0 ) { suf +="mol"; if (F > 1) suf += "^" + std::to_string( F ); }
+    if ( G > 0 ) { suf += "lm"; if (G > 1) suf += "^" + std::to_string( G ); }
+    if ( A < 0 || B < 0 || C < 0 || D < 0 || E < 0 || F < 0 || G < 0 ) suf += "/";
+    if ( A < 0 ) { suf += "kg"; if (A <-1) suf += "^" + std::to_string(-A ); }
+    if ( B < 0 ) { suf +=  "m"; if (B <-1) suf += "^" + std::to_string(-B ); }
+    if ( C < 0 ) { suf +=  "s"; if (C <-1) suf += "^" + std::to_string(-C ); }
+    if ( D < 0 ) { suf +=  "A"; if (D <-1) suf += "^" + std::to_string(-D ); }
+    if ( E < 0 ) { suf +=  "C"; if (E <-1) suf += "^" + std::to_string(-E ); }
+    if ( F < 0 ) { suf +="mol"; if (F <-1) suf += "^" + std::to_string(-F ); }
+    if ( G < 0 ) { suf += "lm"; if (G <-1) suf += "^" + std::to_string(-G ); }
+    auto			flags	= out.flags();
+    out << std::setw( 13 ) << t.scalar() << std::left << std::setw( 10 ) << suf;
+    out.flags( flags );
     return out;
 }
 
