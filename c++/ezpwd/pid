@@ -122,25 +122,39 @@ namespace ezpwd {
 	    throw std::logic_error( "pid_gains have inconsistent sign" );
 	}
 
+	// 
+	// normalize -- return the pid_gains of the desired type O, normalized to a divisor of scale (default: 1)
+	// 
+	template <typename O=T>
+	pid_gains<O>		normalize( O scale = 1 )
+	{
+	    return pid_gains<O>( divisor ? O( p ) * scale / O( divisor ) : O( 0 ),
+				 divisor ? O( i ) * scale / O( divisor ) : O( 0 ),
+				 divisor ? O( d ) * scale / O( divisor ) : O( 0 ),
+				 divisor ? O( f ) * scale / O( divisor ) : O( 0 ),
+				 scale );
+	}
+
 	std::ostream	       &print(
 				    std::ostream       &lhs )
 	    const
 	{
 	    lhs	<< "PID gains ";
-	    lhs << "Pro: "	<< std::setw( 10 ) << std::setprecision( 6 ) << p;
+	    lhs << "P: " << std::setw( 8 ) << std::setprecision( 4 ) << p;
 	    if ( p and divisor != T( 1 ))
-		lhs << " / "	<< std::setw( 10 ) << std::setprecision( 6 ) << divisor;
-	    lhs << ", Int: "	<< std::setw( 10 ) << std::setprecision( 6 ) << i;
+		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
+	    lhs << ", I: "	<< std::setw( 8 ) << std::setprecision( 4 ) << i;
 	    if ( i and divisor != T( 1 ))
-		lhs << " / "	<< std::setw( 10 ) << std::setprecision( 6 ) << divisor;
-	    lhs << ", Dif: "	<< std::setw( 10 ) << std::setprecision( 6 ) << d;
+		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
+	    lhs << ", D: "	<< std::setw( 8 ) << std::setprecision( 4 ) << d;
 	    if ( d and divisor != T( 1 ))
-		lhs << " / "	<< std::setw( 10 ) << std::setprecision( 6 ) << divisor;
-	    lhs << ", Ffw: "	<< std::setw( 10 ) << std::setprecision( 6 ) << f;
+		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
+	    lhs << ", F: "	<< std::setw( 8 ) << std::setprecision( 4 ) << f;
 	    if ( f and divisor != T( 1 ))
-		lhs << " / "	 << std::setw( 10 ) << std::setprecision( 6 ) << divisor;
+		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
 	    return lhs;
 	}
+
     };
     
     // 
@@ -341,29 +355,35 @@ namespace ezpwd {
 	pid_gains_t		contribution()
 	    const
 	{
-	    auto		Op	= P * K.p;
-	    auto		Od	= D * K.d;
-	    auto		Of	= setpoint * K.f;
+	    auto		Op	= K.p * P;
+	    auto		Od	= K.d * D;
+	    auto		Of	= K.f * setpoint;
 	    auto		Oi	= output - Op - Od - Of;
 
-	    return pid_gains_t( Op, Oi, Od, Of, 1 );
+	    return pid_gains_t( Op, Oi, Od, Of, output * K.divisor );
 	}
 
 	std::ostream	       &print(
 				    std::ostream       &lhs )
 	{
+	    auto		pct	= contribution().normalize( 100 );
+	    auto		Kn	= K.normalize( 1.f );
+
 	    lhs
 		// << "now "	<< CLOCK::now().time_since_epoch().count()
-		<< " T+"	<< std::setw( 10 ) << std::setprecision( 6 ) << count() / PRECISION( 1s ).count()
-		<< " P: "	<< std::setw( 10 ) << std::setprecision( 6 ) << K.p
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << P
-		<< " + I: "	<< std::setw( 10 ) << std::setprecision( 6 ) << K.i
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << I
-		<< " + D: "	<< std::setw( 10 ) << std::setprecision( 6 ) << K.d
+		<< " T+"	<< std::setw( 10 ) << std::setprecision( 6 ) << count() / PRECISION( 1s ).count();
+	    if ( K.p ) lhs
+		<< " P ("	<< std::setw( 4 ) << pct.p << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.p
+		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << P;
+	    if ( K.i ) lhs
+		<< " + I ("	<< std::setw( 4 ) << pct.i << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.i
+		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << I;
+	    if ( K.d ) lhs
+		<< " + D ("	<< std::setw( 4 ) << pct.d << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.d
 		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << D;
-	    if ( K.divisor != 1 )
-		lhs
-		    << " /"	<< std::setw( 10 ) << std::setprecision( 6 ) << K.divisor;
+	    if ( K.f ) lhs
+		<< " + F ("	<< std::setw( 4 ) << pct.f << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.f
+		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << D;
 	    lhs
 		<< " == "	<< std::setw( 10 ) << std::setprecision( 6 ) << value;
 	    return lhs;
