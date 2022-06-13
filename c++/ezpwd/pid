@@ -128,10 +128,10 @@ namespace ezpwd {
 	template <typename O=T>
 	pid_gains<O>		normalize( O scale = 1 )
 	{
-	    return pid_gains<O>( divisor ? O( p ) * scale / O( divisor ) : O( 0 ),
-				 divisor ? O( i ) * scale / O( divisor ) : O( 0 ),
-				 divisor ? O( d ) * scale / O( divisor ) : O( 0 ),
-				 divisor ? O( f ) * scale / O( divisor ) : O( 0 ),
+	    return pid_gains<O>( O( divisor ) ? O( p ) * scale / O( divisor ) : O( 0 ),
+				 O( divisor ) ? O( i ) * scale / O( divisor ) : O( 0 ),
+				 O( divisor ) ? O( d ) * scale / O( divisor ) : O( 0 ),
+				 O( divisor ) ? O( f ) * scale / O( divisor ) : O( 0 ),
 				 scale );
 	}
 
