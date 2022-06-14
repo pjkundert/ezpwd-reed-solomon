@@ -279,14 +279,14 @@ int main()
 	for ( float t = 0; t < 10 * rocket_f::precision_t( 1s ).count(); t = r( now )) {
 	    auto		row	= LINES - 3 - r.altitude();
 	    auto		col	= COLS / 2;
-	    mvprintw( row-2, col, "^" );
-	    mvprintw( row-1, col, "|" );
-	    mvaddch(  row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
+	    mvaddch( row-2, col, '^' );
+	    mvaddch( row-1, col, '|' );
+	    mvaddch( row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
 	    std::ostringstream	oss;
 	    oss
 		//<< "now: " << r.autopilot.now << ": "
 		<< r;
-	    mvprintw( LINES-1, 0, oss.str().c_str() );
+	    mvprintw( LINES-1, 0, "%s", oss.str().c_str() );
 	    refresh();
 	    std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
 	    now				= rocket_f::clock_t::now();
@@ -305,14 +305,14 @@ int main()
 	for ( float t = 0; t < 10 * rocket_i::precision_t( 1s ).count(); t = r( now )) {
 	    auto		row	= LINES - 3 - r.altitude();
 	    auto		col	= COLS / 2;
-	    mvprintw( row-2, col, "^" );
-	    mvprintw( row-1, col, "|" );
-	    mvaddch(  row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
+	    mvaddch( row-2, col, '^' );
+	    mvaddch( row-1, col, '|' );
+	    mvaddch( row-0, col, ";'`^!*.,"[random_byte( randomizer ) % 8] );
 	    std::ostringstream	oss;
 	    oss
 		// << "now: " << r.autopilot.now << ": "
 		<< r;
-	    mvprintw( LINES-1, 0, oss.str().c_str() );
+	    mvprintw( LINES-1, 0, "%s", oss.str().c_str() );
 	    refresh();
 	    std::this_thread::sleep_for(std::chrono::milliseconds( 50 ));
 	    now				= rocket_i::clock_t::now();
