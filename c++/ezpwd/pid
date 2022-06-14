@@ -128,10 +128,10 @@ namespace ezpwd {
 	template <typename O=T>
 	pid_gains<O>		normalize( O scale = 1 )
 	{
-	    return pid_gains<O>( O( divisor ) ? O( p ) * scale / O( divisor ) : O( 0 ),
-				 O( divisor ) ? O( i ) * scale / O( divisor ) : O( 0 ),
-				 O( divisor ) ? O( d ) * scale / O( divisor ) : O( 0 ),
-				 O( divisor ) ? O( f ) * scale / O( divisor ) : O( 0 ),
+	    return pid_gains<O>( divisor ? O( p * scale / divisor ) : O( 0 ),
+				 divisor ? O( i * scale / divisor ) : O( 0 ),
+				 divisor ? O( d * scale / divisor ) : O( 0 ),
+				 divisor ? O( f * scale / divisor ) : O( 0 ),
 				 scale );
 	}
 
@@ -366,26 +366,26 @@ namespace ezpwd {
 	std::ostream	       &print(
 				    std::ostream       &lhs )
 	{
-	    auto		pct	= contribution().normalize( 100 );
-	    auto		Kn	= K.normalize( 1.f );
+	    auto		pct	= contribution().normalize( 100L );
+	    auto		Kn	= K.normalize( 1.0F );
 
 	    lhs
 		// << "now "	<< CLOCK::now().time_since_epoch().count()
 		<< " T+"	<< std::setw( 10 ) << std::setprecision( 6 ) << count() / PRECISION( 1s ).count();
 	    if ( K.p ) lhs
 		<< " P ("	<< std::setw( 4 ) << pct.p << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.p
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << P;
+		<< " x"		<< std::setw( 10 ) << std::setprecision( 4 ) << P;
 	    if ( K.i ) lhs
 		<< " + I ("	<< std::setw( 4 ) << pct.i << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.i
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << I;
+		<< " x"		<< std::setw( 7 ) << std::setprecision( 4 ) << I;
 	    if ( K.d ) lhs
 		<< " + D ("	<< std::setw( 4 ) << pct.d << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.d
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << D;
+		<< " x"		<< std::setw( 7 ) << std::setprecision( 4 ) << D;
 	    if ( K.f ) lhs
 		<< " + F ("	<< std::setw( 4 ) << pct.f << "%): " << std::setw( 8 ) << std::setprecision( 4 ) << Kn.f
-		<< " x"		<< std::setw( 10 ) << std::setprecision( 6 ) << D;
+		<< " x"		<< std::setw( 7 ) << std::setprecision( 4 ) << D;
 	    lhs
-		<< " == "	<< std::setw( 10 ) << std::setprecision( 6 ) << value;
+		<< " == "	<< std::setw( 7 ) << std::setprecision( 4 ) << value;
 	    return lhs;
 	}
     }; // class pid
