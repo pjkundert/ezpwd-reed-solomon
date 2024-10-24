@@ -701,16 +701,16 @@ var client = {
 #+BEGIN_SRC Javascript
 
 /*
- * rskey_node.js -- Demonstrate use of rskey in Node.js application
- * 
- *     Node.js "crypto" uses the Buffer type to manipulate binary data.  The
- * rskey library uses ArrayBuffer, because it is intended to be used in both
- * Node.js and Browser Javascript applications.
- * 
- *    The server will expect an Object containing (at least) card.id and
- * card.customer.id, and produce/consume card.keydata.
- * 
- */
+ ,* rskey_node.js -- Demonstrate use of rskey in Node.js application
+ ,* 
+ ,*     Node.js "crypto" uses the Buffer type to manipulate binary data.  The
+ ,* rskey library uses ArrayBuffer, because it is intended to be used in both
+ ,* Node.js and Browser Javascript applications.
+ ,* 
+ ,*    The server will expect an Object containing (at least) card.id and
+ ,* card.customer.id, and produce/consume card.keydata.
+ ,* 
+ ,*/
 var crypto		= require( "crypto" );
 var crypto_algo		= 'blowfish'; // 64-bit block cipher
 var crypto_secret	= 'not.here'; // Super secret master key; don't keep in Git...
@@ -761,7 +761,7 @@ var server = {
         return card;
     }
 };
-#+END_SRC    
+#+END_SRC
 
     Assuming that an attacker does not have access to the encryption key used
     by the server to encrypt the customer and card IDs in a single 64-bit
