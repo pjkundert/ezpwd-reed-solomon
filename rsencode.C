@@ -203,17 +203,17 @@ int main( int argc, const char **argv )
 	// Set 'inp' to std::cin, or a newly opened file (which will be released at end of scope)
 	std::unique_ptr<std::ifstream>
 				inpfile;
-	if ( argc > 0 and strcmp( argv[0], "-" )) {
-	    inpfile.reset( new std::ifstream( argv[1], std::ifstream::binary ));
+	if ( argc > 0 && strcmp( argv[0], "-" )) {
+	    inpfile.reset( new std::ifstream( argv[0], std::ifstream::binary ));
 	}
 	std::istream	       &inp( inpfile ? *inpfile : std::cin );
 
 	// Set 'out' to std::cout, or a newly removed and opened file (also release at end of scope)
 	std::unique_ptr<std::ofstream>
 				outfile;
-	if ( argc > 1 and strcmp( argv[1], "-" )) {
-	    std::remove( argv[2] );
-	    outfile.reset( new std::ofstream( argv[2], std::ifstream::binary ));
+	if ( argc > 1 && strcmp( argv[1], "-" )) {
+	    std::remove( argv[1] );
+	    outfile.reset( new std::ofstream( argv[1], std::ifstream::binary ));
 	}
 	std::ostream	       &out( outfile ? *outfile : std::cout );
 
