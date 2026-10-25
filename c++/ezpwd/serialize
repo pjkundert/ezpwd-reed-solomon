@@ -363,9 +363,9 @@ namespace ezpwd {
 				    char		pad	= '=' ) // '=' for standards-compliance
 	    {
 		for ( I i = begin; i != end; ++i ) {
-		    if ( *i >= 0 and size_t( *i ) < TABLES::encoder.size() )
+		    if ( *i >= 0 && size_t( *i ) < TABLES::encoder.size() )
 			*i		= TABLES::encoder[*i];
-		    else if ( pd == *i and pad )
+		    else if ( pd == *i && pad )
 			*i		= pad;
 		    else
 			throw std::runtime_error(
@@ -526,10 +526,10 @@ namespace ezpwd {
 		    return previous >= 0 ? nv : pd;
 		}
 		int		c	= *beg++;
-		if ( previous < 0 and c >= 0 )
+		if ( previous < 0 && c >= 0 )
 		    throw std::logic_error(
 		        std::string( "base-" ) << N << " gather error; data following padding" );
-		if ( c >= char( N ) or c < pd )
+		if ( c >= char( N ) || c < pd )
 		    throw std::logic_error(
 		        std::string( "base-" ) << N << " gather error; symbol value " << int( c ) << " beyond capacity" );
 		return c;
@@ -646,7 +646,7 @@ namespace ezpwd {
 		while ( beg != end ) {
 		    int		c0	= gather_next( beg, end, pd_use, 0 );
 		    int		c1	= gather_next( beg, end, pd_use, c0 );
-		    if ( c0 >= 0 and c1 >= 0 )
+		    if ( c0 >= 0 && c1 >= 0 )
 			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 4)
 					   | (c1 < 0 ? 0 : c1 ));
 		}
@@ -933,27 +933,27 @@ namespace ezpwd {
 		while ( beg != end ) {
 		    int		c0	= gather_next( beg, end, pd_use, 0 );
 		    int		c1	= gather_next( beg, end, pd_use, c0 );
-		    if ( c0 >= 0 and c1 >= 0 )
+		    if ( c0 >= 0 && c1 >= 0 )
 			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 3)
 					   | (c1 < 0 ? 0 : c1 ) >> 2 );
 		    int		c2	= gather_next( beg, end, pd_use, c1 );
 		    int		c3 	= gather_next( beg, end, pd_use, c2 );
-		    if ( c1 >= 0 and c2 >= 0 and c3 >= 0 )
+		    if ( c1 >= 0 && c2 >= 0 && c3 >= 0 )
 			*out++ 		= ( ((c1 < 0 ? 0 : c1) & 0x03) << 6 
 					   | (c2 < 0 ? 0 : c2) << 1
 					   | (c3 < 0 ? 0 : c3) >> 4 );
 		    int		c4	= gather_next( beg, end, pd_use, c3 );
-		    if ( c3 >= 0 and c4 >= 0 )
+		    if ( c3 >= 0 && c4 >= 0 )
 			*out++		= ( ((c3 < 0 ? 0 : c3) & 0x0f) << 4
 					   | (c4 < 0 ? 0 : c4) >> 1 );
 		    int		c5	= gather_next( beg, end, pd_use, c4 );
 		    int		c6	= gather_next( beg, end, pd_use, c5 );
-		    if ( c4 >=0 and c5 >= 0 and c6 >= 0 )
+		    if ( c4 >=0 && c5 >= 0 && c6 >= 0 )
 			*out++		= ( ((c4 < 0 ? 0 : c4) & 0x01) << 7 
 					   | (c5 < 0 ? 0 : c5) << 2
 					   | (c6 < 0 ? 0 : c6) >> 3 );
 		    int		c7	= gather_next( beg, end, pd_use, c6 );
-		    if ( c6 >= 0 and c7 >= 0 )
+		    if ( c6 >= 0 && c7 >= 0 )
 			*out++		= ( ((c6 < 0 ? 0 : c6 ) & 0x07) << 5 
 					   | (c7 < 0 ? 0 : c7 ));
 		}
@@ -1143,15 +1143,15 @@ namespace ezpwd {
 		while ( beg != end ) {
 		    int		c0	= gather_next( beg, end, pd_use, 0 );
 		    int		c1	= gather_next( beg, end, pd_use, c0 );
-		    if ( c0 >= 0 and c1 >= 0 )
+		    if ( c0 >= 0 && c1 >= 0 )
 			*out++		= ( ((c0 < 0 ? 0 : c0 ) << 2 )
 					   | (c1 < 0 ? 0 : c1 ) >> 4 );
 		    int		c2	= gather_next( beg, end, pd_use, c1 );
-		    if ( c1 >= 0 and c2 >= 0 )
+		    if ( c1 >= 0 && c2 >= 0 )
 			*out++ 		= ( ((c1 < 0 ? 0 : c1) & 0x0f) << 4 
 				           | (c2 < 0 ? 0 : c2) >> 2 );
 		    int		c3	= gather_next( beg, end, pd_use, c2 );
-		    if ( c2 >= 0 and c3 >= 0 )
+		    if ( c2 >= 0 && c3 >= 0 )
 			*out++		= ( ((c2 < 0 ? 0 : c2) & 0x03) << 6
 				           | (c3 < 0 ? 0 : c3));
 		}

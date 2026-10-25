@@ -141,16 +141,16 @@ namespace ezpwd {
 	{
 	    lhs	<< "PID gains ";
 	    lhs << "P: " << std::setw( 8 ) << std::setprecision( 4 ) << p;
-	    if ( p and divisor != T( 1 ))
+	    if ( p && divisor != T( 1 ))
 		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
 	    lhs << ", I: "	<< std::setw( 8 ) << std::setprecision( 4 ) << i;
-	    if ( i and divisor != T( 1 ))
+	    if ( i && divisor != T( 1 ))
 		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
 	    lhs << ", D: "	<< std::setw( 8 ) << std::setprecision( 4 ) << d;
-	    if ( d and divisor != T( 1 ))
+	    if ( d && divisor != T( 1 ))
 		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
 	    lhs << ", F: "	<< std::setw( 8 ) << std::setprecision( 4 ) << f;
-	    if ( f and divisor != T( 1 ))
+	    if ( f && divisor != T( 1 ))
 		lhs << " / "	<< std::setw( 8 ) << std::setprecision( 4 ) << divisor;
 	    return lhs;
 	}

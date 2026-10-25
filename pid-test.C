@@ -134,7 +134,7 @@ public:
 	    << " dy: " << std::setw( 10 ) << std::setprecision( 6 ) << dy
 	    ;
 	    
-	mvprintw( LINES - 5, 0, oss.str().c_str() );
+	mvprintw( LINES - 5, 0, "%s", oss.str().c_str() );
 
 	// Finally, return the current simulation runtime.
 	return autopilot.count();

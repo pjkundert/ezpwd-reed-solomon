@@ -18,14 +18,17 @@
           gnumake
           gnused
           bash
+          bash-completion
           which
           jq
           curl
 
-          # C++ toolchain from nixpkgs.  This also supplies a working C
-          # compiler/linker via the stdenv, so builds do not depend on the
-          # host having Xcode or build-essential installed.
+          # C++ toolchains from nixpkgs (compiler selection & versioning is
+          # defined here, not on the host).  On Darwin these use the system
+          # libc++, which is the norm for macOS+Nix and avoids common
+          # SDK pain-points.
           gcc
+          clang
           cmake
           ninja
 
@@ -33,6 +36,9 @@
           perl
           ncurses
           boost
+
+          # Deployment
+          vcpkg
         ];
       in {
         # The project is distributed as header-only; local builds exist

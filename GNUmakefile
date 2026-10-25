@@ -87,7 +87,7 @@ export ERRNUMS_BCH
 
 
 # Enable  baseline C++ build-time include of <ezpwd/...> targets
-CXXFLAGS       += -std=c++11 $(INCLUDE)
+CXXFLAGS       += -std=c++17 $(INCLUDE)
 
 export CFLAGS
 export CXXFLAGS
@@ -307,6 +307,7 @@ js/ezpwd/rskey.js: rskey.C rskey.h COPYRIGHT rskey_wrap.js			\
 
 ezcod.o:	ezcod.C ezcod.h c++/ezpwd/ezcod					\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector
+ezcod.o:	CXXFLAGS += -std=c++20	# c++/ezpwd/ezcod uses std::numbers; C++20 for portability across toolchains
 
 js/ezpwd/ezcod.js: ezcod.C ezcod.h COPYRIGHT ezcod_wrap.js c++/ezpwd/ezcod	\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
@@ -411,7 +412,7 @@ rsvalidate: CXXFLAGS += $(INCLUDE_KARN) -ftemplate-depth=1000
 rsvalidate:	rsvalidate.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 
-rsvalidate_RS_255_250_64: CXXFLAGS += $(INCLUDE_KARN) -ftemplate-depth=1000 -std=c++17
+rsvalidate_RS_255_250_64: CXXFLAGS += $(INCLUDE_KARN) -ftemplate-depth=1000
 rsvalidate_RS_255_250_64.o: rsvalidate_RS_255_250_64.C c++/ezpwd/rs c++/ezpwd/rs_base phil-karn/fec/rs-common.h
 rsvalidate_RS_255_250_64: rsvalidate_RS_255_250_64.o phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
@@ -422,7 +423,7 @@ rspwd_test:	rspwd_test.o
 
 ezcod_test.o:	ezcod_test.C ezcod.C ezcod.h					\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector c++/ezpwd/ezcod
-ezcod_test.o: CXXFLAGS += $(INCLUDE_KARN)	# if DEBUG set, include phil-karn/
+ezcod_test.o: CXXFLAGS += $(INCLUDE_KARN) -std=c++20	# if DEBUG set, include phil-karn/; C++20 for std::numbers
 ezcod_test:	ezcod_test.o ezcod.o  phil-karn/librs.a # if DEBUG set, link w/ phil-karn/librs.a
 	$(CXX) $(CXXFLAGS) -o $@ $^
 ezcod_test.js: CXXFLAGS += $(INCLUDE_KARN)	# if DEBUG set, include phil-karn/
@@ -458,9 +459,8 @@ bch_test.o:	bch_test.C c++/ezpwd/bch
 bch_test:	bch_test.o $(LIBS_BCH)
 	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a
 
-bch_itron.o:	CXXFLAGS += -std=c++17 $(INCLUDE_BCH)
+bch_itron.o:	CXXFLAGS += $(INCLUDE_BCH)
 bch_itron.o:	bch_itron.C djelic/include
-bch_itron: 	CXXFLAGS += -std=c++17
 bch_itron:	bch_itron.o $(LIBS_BCH)
 	$(CXX) $(CXXFLAGS) -o $@ $< libezpwd-bch.a -lboost_filesystem
 
@@ -485,7 +485,7 @@ boost_test:	qi_test_1 qi_test_2
 # 
 # PID tests
 # 
-pid-test.o:	CXXFLAGS       += -std=c++17
+pid-test.o:	CXXFLAGS += -std=c++20	# includes c++/ezpwd/units, which uses std::numbers
 pid-test.o:	pid-test.C c++/ezpwd/pid
 pid-test:	pid-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $< -lncurses
@@ -500,7 +500,7 @@ cutone.o:	cutone.C c++/ezpwd/cut
 cutone:		cutone.o
 	$(CXX) $(CXXFLAGS) -o $@ $<
 
-units-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG=1
+units-test.o:	CXXFLAGS       += -DTEST -DTESTSTANDALONE -DDEBUG=1 -std=c++20	# c++/ezpwd/units uses std::numbers
 units-test.o:	units-test.C c++/ezpwd/cut c++/ezpwd/units
 units-test:	units-test.o
 	$(CXX) $(CXXFLAGS) -o $@ $<

@@ -16,8 +16,8 @@
 #ifndef _EZPWD_EZCOD
 #define _EZPWD_EZCOD
 
-#include <math.h> // M_PI
 #include <cmath>
+#include <numbers>
 #include <cctype>
 
 #include <cstdint>
@@ -641,12 +641,12 @@ namespace ezpwd {
 	    // The maximum distance is the length of the diagonal of the error rectangle defined by
 	    // 1/2 the latitude/longitude error bars.
 	    // 
-	    double		lon_circ= 1 * M_PI * 6371000;
-	    double		lat_circ= 2 * M_PI * 6371000 * std::cos( latitude * M_PI / 180 );
+	    double		lon_circ= 1 * std::numbers::pi * 6371000;
+	    double		lat_circ= 2 * std::numbers::pi * 6371000 * std::cos( latitude * std::numbers::pi / 180 );
 	    latitude_error		= lat_err * lon_circ;
 	    longitude_error		= lon_err * lat_circ;
 
-	    accuracy			= sqrt(  latitude_error  / 2 * latitude_error  / 2
+	    accuracy			= std::sqrt(  latitude_error  / 2 * latitude_error  / 2
 					       + longitude_error / 2 * longitude_error / 2 );
 	    return confidence;
 	}

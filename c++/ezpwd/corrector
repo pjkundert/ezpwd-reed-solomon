@@ -63,13 +63,13 @@ namespace ezpwd {
 	    bool		uni	= false;
 	    for ( const_iterator i = begin(); i != end(); ++i ) {
 		if ( top == end()
-		     or i->second.second/i->second.first > top->second.second/top->second.first
-		     or ( i->second.second/i->second.first == top->second.second/top->second.first
-			  and i->first.size() > top->first.size())) {
+		     || i->second.second/i->second.first > top->second.second/top->second.first
+		     || ( i->second.second/i->second.first == top->second.second/top->second.first
+			  && i->first.size() > top->first.size())) {
 		    top			= i;
 		    uni			= true;
 		} else if ( i->second.second/i->second.first == top->second.second/top->second.first
-			    and i->first.size() == top->first.size()) {
+			    && i->first.size() == top->first.size()) {
 		    uni			= false;
 		}
 	    }
@@ -266,7 +266,7 @@ namespace ezpwd {
 		    continue; // too few password symbols to start checking parity
 		}
 
-		if ( maximum and password.size() > maximum + PARITY - era ) {
+		if ( maximum && password.size() > maximum + PARITY - era ) {
 #if defined( DEBUG ) && DEBUG >= 1
 		    output( std::cout )
 			<< " Rejected too long password \""
@@ -368,7 +368,7 @@ namespace ezpwd {
 #endif
 		    continue; // too few password symbols to start checking parity
 		}
-		if ( maximum and password.size() > maximum + PARITY - era ) {
+		if ( maximum && password.size() > maximum + PARITY - era ) {
 #if defined( DEBUG ) && DEBUG >= 1
 		    output( std::cout )
 			<< " Rejected too long password \""
@@ -413,7 +413,7 @@ namespace ezpwd {
 	    // requirements.
 	    confidence			= -1;
 	    if ( password.size() >= ( minimum ? minimum : 1 )
-		 and ( maximum == 0 or password.size() <= maximum ))
+		 && ( maximum == 0 || password.size() <= maximum ))
 		confidence		= 0;
 
 	    typename best_avg::const_iterator

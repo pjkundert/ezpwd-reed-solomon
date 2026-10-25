@@ -66,7 +66,7 @@
 #include <iostream>
 #include <iomanip>
 
-#include <math.h>
+#include <numbers>
 
 // 
 // namespace units
@@ -879,7 +879,7 @@ namespace units {
 
 				    , KM_H( 	Kilo * Meter	/ Hour )
 
-				    , Revolution( Radian	* 2 * M_PI )
+				    , Revolution( Radian	* 2 * std::numbers::pi )
 				    , Degree(	Revolution	/ 360 )
 				    , Clock(	Revolution	/ 12 )
 

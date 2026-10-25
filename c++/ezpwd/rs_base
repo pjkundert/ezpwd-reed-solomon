@@ -52,6 +52,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <iostream>
@@ -582,7 +583,7 @@ namespace ezpwd {
 
     protected:
 	static std::array<TYP,
-#if not defined( EZPWD_ARRAY_TEST )
+#if ! defined( EZPWD_ARRAY_TEST )
                               NN + 1>
 #else
                               NN    >
@@ -780,10 +781,10 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    if ( data.second < data.first or data.second - data.first <= ssize_t( NROOTS )) {
+	    if ( data.second < data.first || data.second - data.first <= std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
 	    }
-	    if ( data.second - data.first > ssize_t( SIZE )) {
+	    if ( data.second - data.first > std::ptrdiff_t( SIZE )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
 	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
@@ -799,7 +800,7 @@ namespace ezpwd {
 	    if ( data.second < data.first ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
 	    }
-	    if ( parity.second - parity.first != ssize_t( NROOTS )) {
+	    if ( parity.second - parity.first != std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode( data.first, data.second - data.first, parity.first );
@@ -810,10 +811,10 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    if ( data.second < data.first or data.second - data.first <= ssize_t( NROOTS )) {
+	    if ( data.second < data.first || data.second - data.first <= std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
 	    }
-	    if ( data.second - data.first > ssize_t( SIZE )) {
+	    if ( data.second - data.first > std::ptrdiff_t( SIZE )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
 	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
@@ -829,7 +830,7 @@ namespace ezpwd {
 	    if ( data.second < data.first ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
 	    }
-	    if ( parity.second - parity.first != ssize_t (NROOTS )) {
+	    if ( parity.second - parity.first != std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode( data.first, data.second - data.first, parity.first );
@@ -840,10 +841,10 @@ namespace ezpwd {
 						       &data )
 	    const
 	{
-	    if ( data.second < data.first or data.second - data.first <= ssize_t( NROOTS )) {
+	    if ( data.second < data.first || data.second - data.first <= std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data too short for some payload + parity", -1 );
 	    }
-	    if ( data.second - data.first > ssize_t( SIZE )) {
+	    if ( data.second - data.first > std::ptrdiff_t( SIZE )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: supplied data longer than max. payload + parity", -1 );
 	    }
 	    return encode( data.first, data.second - data.first - NROOTS, data.second - NROOTS );
@@ -859,7 +860,7 @@ namespace ezpwd {
 	    if ( data.second < data.first ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: data length invalid", -1 );
 	    }
-	    if ( parity.second - parity.first != ssize_t( NROOTS )) {
+	    if ( parity.second - parity.first != std::ptrdiff_t( NROOTS )) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: parity length incompatible with number of roots", -1 );
 	    }
 	    return encode( data.first, data.second - data.first, parity.first );
@@ -1185,7 +1186,7 @@ namespace ezpwd {
 		parity			= data + len;
 	    }
 
-	    if ( DUAL and SYMBOL != 8 ) {
+	    if ( DUAL && SYMBOL != 8 ) {
 	        EZPWD_RAISE_OR_RETURN( std::runtime_error, "reed-solomon: input data symbols must be exactly 8 bits for dual-basis encoding", -1 );
 	    }
 	    constexpr unsigned	INPUT	= 8 * sizeof ( INP );
@@ -1729,7 +1730,7 @@ namespace ezpwd {
 
     template < typename TYP, unsigned SYM, unsigned PRM, class PLY >
         std::array< TYP, reed_solomon_tabs< TYP, SYM, PRM, PLY >
-#if not defined( EZPWD_ARRAY_TEST )
+#if ! defined( EZPWD_ARRAY_TEST )
                                                                           ::NN + 1 >
 #else
                                                                           ::NN     >
