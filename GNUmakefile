@@ -323,6 +323,72 @@ clean:
 		$(LIBRARIES) $(OBJECTS)
 	make -C phil-karn clean
 
+# ---------------------------------------------------------------------------
+# Nix flake environment targets
+#
+# `nix-<target>` runs <target> inside the Nix flake dev shell (flake.nix),
+# so the compilers / cmake / vcpkg come from Nix, not the host.  E.g.:
+#
+#     make nix-vcpkg-test
+#
+# Set TARGET to select a specific flake dev-shell output (.#<name>); set
+# NIX_OPTS for extra `nix develop` flags.
+# ---------------------------------------------------------------------------
+NIX_OPTS ?=
+nix-%:
+	@if [ -n "$(TARGET)" ]; then \
+		nix develop .#$(TARGET) $(NIX_OPTS) --command $(MAKE) $*; \
+	else \
+		nix develop $(NIX_OPTS) --command $(MAKE) $*; \
+	fi
+
+# ---------------------------------------------------------------------------
+# CMake build (header-only distribution package)
+# ---------------------------------------------------------------------------
+CMAKE_BUILD_DIR ?= build
+cmake-build:
+	cmake -B $(CMAKE_BUILD_DIR) -G Ninja -DCMAKE_BUILD_TYPE=Release
+	cmake --build $(CMAKE_BUILD_DIR)
+cmake-test:	cmake-build
+	ctest --test-dir $(CMAKE_BUILD_DIR) --output-on-failure
+cmake-install:	cmake-build
+	cmake --install $(CMAKE_BUILD_DIR) --prefix $(or $(PREFIX),/tmp/ezpwd-prefix)
+cmake-clean:
+	rm -rf $(CMAKE_BUILD_DIR)
+
+# ---------------------------------------------------------------------------
+# vcpkg port test (run as `make nix-vcpkg-test` / `make nix-vcpkg-consumer`)
+#
+# Uses the Nix-provided vcpkg, injecting the local fork's port as an overlay
+# (VCPKG_OVERLAY_PORTS).  `vcpkg install` builds the port and runs its CTest
+# suite; `vcpkg-consumer` additionally builds + runs a find_package(ezpwd)
+# consumer to validate the installed package.
+# ---------------------------------------------------------------------------
+VCPKG_ROOT         ?= ../vcpkg
+VCPKG_PORT         := ezpwd-reed-solomon
+VCPKG_CONSUMER_SRC := cmake/vcpkg-consumer
+VCPKG_CONSUMER_DIR := build/vcpkg-consumer
+
+# Install the ezpwd-reed-solomon port (vcpkg builds it + runs its CTest suite).
+# (This vcpkg finds the manifest from the CWD, so we cd into it.)
+vcpkg-test:
+	@rm -rf $(VCPKG_CONSUMER_DIR) && mkdir -p $(VCPKG_CONSUMER_DIR)
+	@cp $(VCPKG_CONSUMER_SRC)/vcpkg.json $(VCPKG_CONSUMER_DIR)/
+	@(cd $(VCPKG_CONSUMER_DIR) && \
+	    VCPKG_OVERLAY_PORTS=$(abspath $(VCPKG_ROOT)/ports) vcpkg install)
+
+# Build + run a find_package(ezpwd) consumer against the installed port.
+vcpkg-consumer:	vcpkg-test
+	@cp $(VCPKG_CONSUMER_SRC)/CMakeLists.txt $(VCPKG_CONSUMER_SRC)/main.cpp $(VCPKG_CONSUMER_DIR)/
+	@(cd $(VCPKG_CONSUMER_DIR) && \
+	    VCPKG_OVERLAY_PORTS=$(abspath $(VCPKG_ROOT)/ports) \
+	    cmake -B build -S . \
+	    -DCMAKE_TOOLCHAIN_FILE=$$(dirname $$(dirname $$(which vcpkg)))/share/vcpkg/scripts/buildsystems/vcpkg.cmake)
+	@cmake --build $(VCPKG_CONSUMER_DIR)/build
+	@$(VCPKG_CONSUMER_DIR)/build/consumer
+
+.PHONY:	cmake-build cmake-test cmake-install cmake-clean vcpkg-test vcpkg-consumer
+
 rspwd_test.js:	rspwd_test.C rspwd.C						\
 		c++/ezpwd/rs c++/ezpwd/rs_base c++/ezpwd/serialize c++/ezpwd/corrector \
 		emscripten

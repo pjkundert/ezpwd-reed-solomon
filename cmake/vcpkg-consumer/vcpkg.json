@@ -1,0 +1,5 @@
+{
+  "name": "ezpwd-vcpkg-consumer",
+  "version": "0.0.0",
+  "dependencies": ["ezpwd-reed-solomon"]
+}
